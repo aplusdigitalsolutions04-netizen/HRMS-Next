@@ -1,0 +1,34 @@
+import { NextRequest } from 'next/server';
+import { getAuthUser, jsonError, jsonSuccess, uuidv4, now, checkPermission } from '@/lib/utils';
+import { query, execute } from '@/lib/db';
+import { RowDataPacket } from 'mysql2';
+
+export async function GET(req: NextRequest) {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return jsonError('Not authenticated', 401);
+    const rows = await query<RowDataPacket[]>('SELECT * FROM departments WHERE is_deleted = 0 ORDER BY name');
+    return jsonSuccess(rows);
+  } catch (e: any) {
+    return jsonError(e, 500);
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return jsonError('Not authenticated', 401);
+    if (!checkPermission(user, 'manage_departments')) return jsonError('Insufficient permissions', 403);
+    const body = await req.json();
+    if (!body.name) return jsonError('Department name is required', 422);
+    const id = uuidv4();
+    const t = now();
+    await execute(
+      'INSERT INTO departments (id, name, description, created_by, created_date, modified_by, modified_date, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+      [id, body.name, body.description || '', user.email, t, user.email, t]
+    );
+    return jsonSuccess({ id, name: body.name, message: 'Department created' }, 201);
+  } catch (e: any) {
+    return jsonError(e, 500);
+  }
+}
