@@ -47,8 +47,10 @@ export default function ManageDesignations() {
       })
         .then(res => {
           if (res.ok) {
-            Swal.fire('Designation deleted successfully', '', 'success')
-              .then(() => window.location.reload());
+            setDesignations(prev => prev.filter(d => d.id !== id));
+            Swal.fire('Designation deleted successfully', '', 'success');
+          } else {
+            Swal.fire('Error', 'Failed to delete designation', 'error');
           }
         });
     });

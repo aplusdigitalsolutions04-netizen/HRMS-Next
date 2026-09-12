@@ -40,8 +40,8 @@ export default function ManageDepartments() {
       })
         .then(res => {
           if (res.ok) {
-            Swal.fire('Deleted!', 'Department deleted successfully', 'success')
-              .then(() => window.location.reload());
+            setDepartments(prev => prev.filter(d => d.id !== id));
+            Swal.fire('Deleted!', 'Department deleted successfully', 'success');
           } else {
             Swal.fire('Error', 'Failed to delete department', 'error');
           }

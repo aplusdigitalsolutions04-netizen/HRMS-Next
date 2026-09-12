@@ -49,6 +49,26 @@ export default function UserManagement() {
     load();
   };
 
+  const deleteUser = (id, label) => {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: `"${label}" will be permanently deleted`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Delete'
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
+      const res = await fetch(`${API}/settings/users/${id}`, { method: 'DELETE', headers: auth() });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => u.id !== id));
+        Swal.fire('Deleted!', 'User deleted successfully', 'success');
+      } else {
+        Swal.fire('Error', d.detail || d.message || 'Failed to delete user', 'error');
+      }
+    });
+  };
+
   const roleBadge = (role) => {
     const styles = {
       ADMIN: { bg: '#e0e7ff', c: '#3730a3', label: 'Admin' },
@@ -79,7 +99,14 @@ export default function UserManagement() {
                       <td><span className={`badge-premium ${u.is_active ? 'badge-success' : 'badge-danger'}`}>{u.is_active ? 'Active' : 'Disabled'}</span></td>
                       <td>
                         <span style={{ fontSize: '.78rem', color: '#94a3b8', marginRight: 8 }}>🔑 Managed in Roles</span>
-                        <button className="tbl-action tbl-view" onClick={() => toggleActive(u.id, u.is_active)}>{u.is_active ? '🔴 Disable' : '🟢 Enable'}</button>
+                        {u.role === 'ADMIN' ? (
+                          <span style={{ fontSize: '.78rem', color: '#94a3b8' }}>🛡️ Protected</span>
+                        ) : (
+                          <>
+                            <button className="tbl-action tbl-view" onClick={() => toggleActive(u.id, u.is_active)}>{u.is_active ? '🔴 Disable' : '🟢 Enable'}</button>
+                            <button className="tbl-action tbl-view" style={{ marginLeft: 8, color: '#dc2626' }} onClick={() => deleteUser(u.id, u.name || u.email)}>🗑️ Delete</button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}
