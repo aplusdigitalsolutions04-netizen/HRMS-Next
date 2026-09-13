@@ -31,10 +31,11 @@ export async function POST(req: NextRequest) {
       const driveFileId = await uploadFileToDrive(folderId, file.name, buf, file.type);
       storedPath = `drive:${driveFileId}`;
     } else {
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
+      const employeeFolderName = `${emp[0].emp_code} - ${emp[0].full_name}`.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents', employeeFolderName);
       await mkdir(uploadDir, { recursive: true });
       await writeFile(path.join(uploadDir, fileName), buf);
-      storedPath = `uploads/documents/${fileName}`;
+      storedPath = `uploads/documents/${employeeFolderName}/${fileName}`;
     }
 
     const t = now();

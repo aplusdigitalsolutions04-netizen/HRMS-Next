@@ -11,6 +11,7 @@ const NotificationSettings = lazy(() => import('./NotificationSettings'));
 const CommunicationSettings = lazy(() => import('./CommunicationSettings'));
 const TemplateManagement = lazy(() => import('./TemplateManagement'));
 const RoleManagement = lazy(() => import('./RoleManagement'));
+const GoogleDriveSettings = lazy(() => import('./GoogleDriveSettings'));
 
 export default function SettingsWorkspace() {
   const { section } = useParams();
@@ -50,6 +51,8 @@ function renderSection(key, saving, setSaving) {
       return <CommunicationSettings saving={saving} setSaving={setSaving} />;
     case 'templates':
       return <TemplateManagement />;
+    case 'google-drive':
+      return <GoogleDriveSettings />;
     default:
       return <PlaceholderSection />;
   }

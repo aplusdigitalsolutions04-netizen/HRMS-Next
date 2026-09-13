@@ -37,20 +37,24 @@ export async function POST(req: NextRequest) {
     const id = uuidv4();
     const t = now();
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
-    await mkdir(uploadDir, { recursive: true });
+    const documentsRoot = path.join(process.cwd(), 'public', 'uploads', 'documents');
 
-    // emp_code is needed up front to name the employee's Drive folder, before
-    // the actual insert (which re-derives/retries it below on a race).
+    // emp_code is needed up front to name the employee's Drive/local folder,
+    // before the actual insert (which re-derives/retries it below on a race).
+    let prelimEmpCode = body.emp_code;
+    if (!prelimEmpCode) {
+      const empCount = await query<RowDataPacket[]>('SELECT COUNT(*) as cnt FROM employees');
+      prelimEmpCode = String(empCount[0].cnt + 1).padStart(4, '0');
+    }
+
     let driveFolderId: string | null = null;
     if (isDriveConfigured()) {
-      let prelimEmpCode = body.emp_code;
-      if (!prelimEmpCode) {
-        const empCount = await query<RowDataPacket[]>('SELECT COUNT(*) as cnt FROM employees');
-        prelimEmpCode = String(empCount[0].cnt + 1).padStart(4, '0');
-      }
       driveFolderId = await getEmployeeFolderId(prelimEmpCode, body.full_name);
     }
+
+    const employeeFolderName = `${prelimEmpCode} - ${body.full_name}`.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
+    const uploadDir = path.join(documentsRoot, employeeFolderName);
+    await mkdir(uploadDir, { recursive: true });
 
     async function saveDoc(file: File): Promise<string> {
       const buf = Buffer.from(await file.arrayBuffer());
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
       const ext = path.extname(file.name) || '';
       const fileName = `${uuidv4()}${ext}`;
       await writeFile(path.join(uploadDir, fileName), buf);
-      return `uploads/documents/${fileName}`;
+      return `uploads/documents/${employeeFolderName}/${fileName}`;
     }
 
     const docColumns = {
