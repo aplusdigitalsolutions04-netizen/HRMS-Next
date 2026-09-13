@@ -70,13 +70,13 @@ const EditDepartment = () => {
             box-shadow: 0 15px 30px rgba(0,0,0,.08);
         }
 
-        label {
+        .form-card label {
             font-weight: 600;
             margin-top: 12px;
             display: block;
         }
 
-        input, textarea {
+        .form-card input, .form-card textarea {
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -84,7 +84,7 @@ const EditDepartment = () => {
             margin-top: 6px;
         }
 
-        textarea {
+        .form-card textarea {
             resize: none;
             height: 100px;
         }
@@ -106,9 +106,12 @@ const EditDepartment = () => {
             font-weight: 600;
         }
 
-        /* ✅ GLOBAL BUTTON CSS (SAME EVERYWHERE) */
-        button {
-            cursor: pointer; /* ⭐ cursor issue FIX */
+        /* Scoped to this form's own submit button - a bare "button" element
+           selector here would leak (this style tag isn't scoped by React)
+           and repaint every button on the page, including the sidebar's nav
+           buttons, white-on-transparent and invisible. */
+        .form-actions button {
+            cursor: pointer;
             box-shadow: -5px 15px 30px rgb(17 23 77 / 18%);
             color: #fff !important;
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
@@ -121,7 +124,7 @@ const EditDepartment = () => {
             font-weight: 600;
         }
 
-            button:hover {
+            .form-actions button:hover {
                 box-shadow: none;
                 background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
                 background-position: left bottom;
