@@ -248,18 +248,18 @@ const EmployeeManagement = () => {
             <h1>Employee Management</h1>
             <div className="emp-hdr-g">{total} employee{total !== 1 ? 's' : ''} registered</div>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <a href={`${API}/employee/import-template`} onClick={handleDownloadTemplate} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: 'pointer' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <a href={`${API}/employee/import-template`} onClick={handleDownloadTemplate} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: 'pointer', padding: '6px 14px', fontSize: '.78rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Download Template
             </a>
-            <label className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: importing ? 'default' : 'pointer', opacity: importing ? 0.6 : 1 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <label className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: importing ? 'default' : 'pointer', opacity: importing ? 0.6 : 1, padding: '6px 14px', fontSize: '.78rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               {importing ? 'Importing...' : 'Import from Excel'}
               <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importing} onChange={handleImportExcel} />
             </label>
-            <button onClick={handleExportEmployees} disabled={exporting} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: exporting ? 'default' : 'pointer', opacity: exporting ? 0.6 : 1 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <button onClick={handleExportEmployees} disabled={exporting} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: exporting ? 'default' : 'pointer', opacity: exporting ? 0.6 : 1, padding: '6px 14px', fontSize: '.78rem' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               {exporting ? 'Exporting...' : 'Export (with Documents)'}
             </button>
             <Link to="/employees/add" className="emp-add-btn">
