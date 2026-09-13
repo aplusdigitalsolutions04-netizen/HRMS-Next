@@ -20,13 +20,23 @@ export default function GoogleDriveSettings() {
     }
   };
 
-  // /api/google-drive/authorize needs to be a real browser navigation (it
-  // redirects to Google's consent screen), so it can't carry the app's usual
-  // Authorization header the way fetch calls do - the session token is
-  // appended as ?token= instead, which the route checks directly.
-  const handleConnect = () => {
-    const token = localStorage.getItem('token');
-    window.location.href = `${API}/google-drive/authorize${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  const [connecting, setConnecting] = useState(false);
+
+  // The redirect to Google's consent screen has to be a real browser
+  // navigation, but getting *there* is a normal authenticated POST (with the
+  // usual Authorization header) that hands back the one-time Google URL -
+  // the session token never appears in a URL/query string.
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch(`${API}/google-drive/authorize`, { method: 'POST', headers: auth() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to start Google authorization');
+      window.location.href = data.url;
+    } catch (e) {
+      setResult({ connected: false, message: e.message || 'Failed to start Google authorization' });
+      setConnecting(false);
+    }
   };
 
   return (
@@ -61,10 +71,11 @@ export default function GoogleDriveSettings() {
             {!result.connected && (
               <button
                 onClick={handleConnect}
+                disabled={connecting}
                 className="btn-premium"
                 style={{ marginTop: 12, background: '#dc2626' }}
               >
-                🔐 Connect Google Account
+                {connecting ? 'Redirecting...' : '🔐 Connect Google Account'}
               </button>
             )}
           </div>

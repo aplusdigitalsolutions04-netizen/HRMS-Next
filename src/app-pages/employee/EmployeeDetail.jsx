@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { openEmployeeDocument } from '@/lib/clientDocs';
 
 const EmployeeDetail = () => {
     const [searchParams] = useSearchParams();
@@ -11,18 +12,7 @@ const EmployeeDetail = () => {
     const [employee, setEmployee] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const openDoc = async (field) => {
-        try {
-            const res = await fetch(`/api/employee/document/${employee.id}?field=${field}`, {
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-            });
-            if (!res.ok) { Swal.fire('Error', 'Could not open document', 'error'); return; }
-            const blob = await res.blob();
-            window.open(URL.createObjectURL(blob), '_blank');
-        } catch {
-            Swal.fire('Error', 'Could not open document', 'error');
-        }
-    };
+    const openDoc = (field) => openEmployeeDocument(employee.id, field);
 
     useEffect(() => {
         if (id) {

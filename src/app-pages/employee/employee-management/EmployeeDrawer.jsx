@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initials, statusBadge, formatDT } from './helpers';
+import { openEmployeeDocument } from '@/lib/clientDocs';
 
 function LeaveHistorySection({ employeeId, API, auth }) {
   const [requests, setRequests] = useState([]);
@@ -143,7 +144,7 @@ export default function EmployeeDrawer({ selectedEmp, drawerLoading, drawerError
                           <span className="val">
                             {path ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <a href={`/api/employee/document/${selectedEmp.id}?field=${field}&token=${encodeURIComponent(localStorage.getItem('token') || '')}`} target="_blank" rel="noreferrer" style={{ color: '#6366f1', textDecoration: 'none', fontWeight: 500, fontSize: 13 }}>
+                                <a href="#" onClick={(e) => { e.preventDefault(); openEmployeeDocument(selectedEmp.id, field); }} style={{ color: '#6366f1', textDecoration: 'none', fontWeight: 500, fontSize: 13 }}>
                                   View &darr;
                                 </a>
                                 {isEmployeeUploaded && (

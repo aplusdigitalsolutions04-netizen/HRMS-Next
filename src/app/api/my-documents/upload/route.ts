@@ -3,9 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import { isDriveConfigured, getEmployeeFolderId, uploadFileToDrive } from '@/lib/googleDrive';
+import { saveEmployeeDocument } from '@/lib/googleDrive';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,23 +18,8 @@ export async function POST(req: NextRequest) {
 
     if (!(file instanceof File)) return jsonError('No file provided', 400);
 
-    const ext = path.extname(file.name) || '';
     const id = uuidv4();
-    const fileName = `${id}${ext}`;
-    const buf = Buffer.from(await file.arrayBuffer());
-
-    let storedPath: string;
-    if (await isDriveConfigured()) {
-      const folderId = await getEmployeeFolderId(emp[0].emp_code, emp[0].full_name);
-      const driveFileId = await uploadFileToDrive(folderId, file.name, buf, file.type);
-      storedPath = `drive:${driveFileId}`;
-    } else {
-      const employeeFolderName = `${emp[0].emp_code} - ${emp[0].full_name}`.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents', employeeFolderName);
-      await mkdir(uploadDir, { recursive: true });
-      await writeFile(path.join(uploadDir, fileName), buf);
-      storedPath = `uploads/documents/${employeeFolderName}/${fileName}`;
-    }
+    const storedPath = await saveEmployeeDocument(emp[0].emp_code, emp[0].full_name, file);
 
     const t = now();
     await execute(

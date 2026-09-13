@@ -1,12 +1,10 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4 } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { hashPassword } from '@/lib/auth';
 import { execute, query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import { isDriveConfigured, getEmployeeFolderId, uploadFileToDrive } from '@/lib/googleDrive';
+import { saveEmployeeDocument } from '@/lib/googleDrive';
 
 const allowedFields = ['emp_code', 'full_name', 'email_id', 'mobile_no', 'father_spouse_name', 'dob', 'present_address',
   'permanent_address', 'college_name', 'course_name', 'specialization', 'course_duration', 'cgpa',
@@ -66,41 +64,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const empCode = body.emp_code || existing[0].emp_code;
       const fullName = body.full_name || existing[0].full_name;
 
-      const documentsRoot = path.join(process.cwd(), 'public', 'uploads', 'documents');
-      const employeeFolderName = `${empCode} - ${fullName}`.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
-      const uploadDir = path.join(documentsRoot, employeeFolderName);
-
-      let driveFolderId: string | null = null;
-      if (await isDriveConfigured()) {
-        driveFolderId = await getEmployeeFolderId(empCode, fullName);
-      } else {
-        await mkdir(uploadDir, { recursive: true });
-      }
-
-      async function saveDoc(file: File): Promise<string> {
-        const buf = Buffer.from(await file.arrayBuffer());
-        if (driveFolderId) {
-          const driveFileId = await uploadFileToDrive(driveFolderId, file.name, buf, file.type);
-          return `drive:${driveFileId}`;
-        }
-        const ext = path.extname(file.name) || '';
-        const fileName = `${uuidv4()}${ext}`;
-        await writeFile(path.join(uploadDir, fileName), buf);
-        return `uploads/documents/${employeeFolderName}/${fileName}`;
-      }
-
-      for (const [col, file] of Object.entries(fileMap)) {
-        const savedPath = await saveDoc(file);
-        sets.push(`\`${col}\` = ?`); vals.push(savedPath);
-      }
+      const fileCols = Object.keys(fileMap);
+      const savedPaths = await Promise.all(fileCols.map(col => saveEmployeeDocument(empCode, fullName, fileMap[col])));
+      fileCols.forEach((col, i) => { sets.push(`\`${col}\` = ?`); vals.push(savedPaths[i]); });
 
       if (additionalFiles.length > 0) {
         let current: string[] = [];
         try { current = JSON.parse(existing[0].additional_documents || '[]'); } catch { current = []; }
-        for (const file of additionalFiles) {
-          current.push(await saveDoc(file));
-        }
-        sets.push('`additional_documents` = ?'); vals.push(JSON.stringify(current));
+        const newPaths = await Promise.all(additionalFiles.map(file => saveEmployeeDocument(empCode, fullName, file)));
+        sets.push('`additional_documents` = ?'); vals.push(JSON.stringify([...current, ...newPaths]));
       }
     }
 

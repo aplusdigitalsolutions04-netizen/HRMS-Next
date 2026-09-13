@@ -36,25 +36,24 @@ function sanitize(name: string): string {
 }
 
 async function fetchDoc(storedPath: string): Promise<{ buf: Buffer; ext: string } | null> {
-  try {
-    if (storedPath.startsWith('drive:')) {
-      const fileId = storedPath.slice('drive:'.length);
-      const [buf, meta] = await Promise.all([downloadFileFromDrive(fileId), getDriveFileMeta(fileId)]);
-      const ext = path.extname(meta.name || '') || '';
-      return { buf, ext };
-    }
-    const buf = await readFile(path.join(process.cwd(), 'public', storedPath));
-    return { buf, ext: path.extname(storedPath) || '' };
-  } catch {
-    return null;
+  if (storedPath.startsWith('drive:')) {
+    const fileId = storedPath.slice('drive:'.length);
+    const [buf, meta] = await Promise.all([downloadFileFromDrive(fileId), getDriveFileMeta(fileId)]);
+    const ext = path.extname(meta.name || '') || '';
+    return { buf, ext };
   }
+  const buf = await readFile(path.join(process.cwd(), 'public', storedPath));
+  return { buf, ext: path.extname(storedPath) || '' };
 }
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
-    if (!checkPermission(user, 'view_employees')) return jsonError('Insufficient permissions', 403);
+    // This export includes every employee's PAN, bank details, and identity
+    // documents - the same sensitivity as viewing one employee's detail page
+    // (which requires view_employee_details), not just the employee list.
+    if (!checkPermission(user, 'view_employee_details')) return jsonError('Insufficient permissions', 403);
 
     const { searchParams } = new URL(req.url);
     const s = searchParams.get('search') || '';
@@ -88,24 +87,37 @@ export async function GET(req: NextRequest) {
 
     const zip = new JSZip();
     zip.file('employees.xlsx', xlsxBuf);
+    const warnings: string[] = [];
 
     for (const emp of employees) {
       const folderName = sanitize(`${emp.emp_code} - ${emp.full_name}`);
       const empFolder = zip.folder(`documents/${folderName}`);
 
-      for (const { label, field } of DOC_FIELDS) {
-        const storedPath = emp[field];
-        if (!storedPath) continue;
-        const doc = await fetchDoc(storedPath);
-        if (doc) empFolder.file(`${sanitize(label)}${doc.ext}`, doc.buf);
-      }
-
       let additionalDocs: string[] = [];
       try { additionalDocs = JSON.parse(emp.additional_documents || '[]'); } catch { additionalDocs = []; }
-      for (let i = 0; i < additionalDocs.length; i++) {
-        const doc = await fetchDoc(additionalDocs[i]);
-        if (doc) empFolder.file(`Additional Document ${i + 1}${doc.ext}`, doc.buf);
-      }
+
+      // Independent per-document fetches for this employee - run them
+      // concurrently instead of one at a time, since neither Drive calls
+      // nor local reads depend on each other.
+      const tasks = [
+        ...DOC_FIELDS.filter(({ field }) => emp[field]).map(({ label, field }) => ({ label, storedPath: emp[field] })),
+        ...additionalDocs.map((storedPath, i) => ({ label: `Additional Document ${i + 1}`, storedPath })),
+      ];
+
+      await Promise.all(tasks.map(async ({ label, storedPath }) => {
+        try {
+          const doc = await fetchDoc(storedPath);
+          empFolder.file(`${sanitize(label)}${doc.ext}`, doc.buf);
+        } catch (e: any) {
+          console.error(`[employee_export] Failed to fetch "${label}" for ${folderName} (${storedPath}):`, e?.message || e);
+          warnings.push(`${folderName} - ${label}: ${e?.message || 'failed to fetch'}`);
+        }
+      }));
+    }
+
+    if (warnings.length > 0) {
+      zip.file('export_warnings.txt',
+        `${warnings.length} document(s) could not be included in this export:\n\n${warnings.join('\n')}`);
     }
 
     const zipBuf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });

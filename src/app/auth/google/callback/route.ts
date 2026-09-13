@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens, saveRefreshToken } from '@/lib/googleDrive';
+import { verifyPurposeToken } from '@/lib/auth';
 
 // Visiting /api/google-drive/authorize sends the admin through Google's
 // consent screen, which redirects back here with a code. We exchange it for
@@ -8,10 +9,20 @@ import { exchangeCodeForTokens, saveRefreshToken } from '@/lib/googleDrive';
 // .env.local instead would only work for local dev: on a real deployment
 // (e.g. Hostinger) that file isn't reliably writable/restartable by the app,
 // so authorizing on the live site would silently never take effect.
+//
+// `state` is required and must be a valid, unexpired token minted by
+// /api/google-drive/authorize for an ADMIN - without this check, anyone
+// could complete their own OAuth flow against this app's public client ID
+// and hit this URL directly with their own `code`, silently redirecting the
+// whole company's Drive storage to an attacker-controlled account.
 export async function GET(req: NextRequest) {
   try {
     const code = req.nextUrl.searchParams.get('code');
+    const state = req.nextUrl.searchParams.get('state');
     if (!code) return NextResponse.json({ detail: 'Missing authorization code' }, { status: 400 });
+    if (!state || !verifyPurposeToken(state, 'google_drive_connect')) {
+      return NextResponse.json({ detail: 'Missing or expired authorization state. Start over from Settings > Google Drive.' }, { status: 401 });
+    }
 
     const tokens = await exchangeCodeForTokens(code);
     if (!tokens.refresh_token) {

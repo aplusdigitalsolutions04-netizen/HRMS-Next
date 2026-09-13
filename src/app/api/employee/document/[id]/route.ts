@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
-import { authUserFromToken } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { readFile } from 'fs/promises';
@@ -16,12 +15,11 @@ const ALLOWED_FIELDS = [
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Opened as a plain <a href> navigation (to view/download the file
-    // inline), which can't carry the app's usual Authorization header - the
-    // token is appended as ?token= instead, same trick as the Google Drive
-    // authorize route.
-    const queryToken = req.nextUrl.searchParams.get('token');
-    const user = queryToken ? await authUserFromToken(queryToken) : await getAuthUser(req);
+    // Callers fetch this with the usual Authorization header and open the
+    // resulting blob themselves (see getDocumentUrl in src/lib/clientDocs.js)
+    // rather than navigating here directly, so the JWT never has to travel
+    // in the URL (query strings end up in logs/history/Referer headers).
+    const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (!checkPermission(user, 'view_employee_details')) return jsonError('Insufficient permissions', 403);
 

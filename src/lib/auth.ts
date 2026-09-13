@@ -48,6 +48,26 @@ export function decodeToken(token: string): TokenPayload | null {
   }
 }
 
+// Short-lived, purpose-scoped tokens for flows that need to prove "this
+// request continues one a specific admin started" without a real session
+// cookie - e.g. an OAuth `state` param, so the callback can't be replayed by
+// an unrelated request carrying someone else's authorization `code`. Kept
+// separate from createToken/decodeToken (which mint full, long-lived login
+// sessions) so a leaked state value can't be mistaken for a session token.
+export function signPurposeToken(purpose: string, subject: string, expiresInSeconds = 600): string {
+  return jwt.sign({ purpose, sub: subject }, getSecret(), { algorithm: 'HS256', expiresIn: expiresInSeconds });
+}
+
+export function verifyPurposeToken(token: string, purpose: string): { sub: string } | null {
+  try {
+    const payload = jwt.verify(token, getSecret(), { algorithms: ['HS256'] }) as { purpose?: string; sub?: string };
+    if (payload.purpose !== purpose || !payload.sub) return null;
+    return { sub: payload.sub };
+  } catch {
+    return null;
+  }
+}
+
 export function generateTempPassword(length = 12): string {
   const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const lower = 'abcdefghijklmnopqrstuvwxyz';

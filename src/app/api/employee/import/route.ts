@@ -42,6 +42,12 @@ function parseExcelDate(val: any): string | null {
   if (!val) return null;
   if (val instanceof Date) return val.toISOString().slice(0, 10);
   if (typeof val === 'number') {
+    // Excel serial dates realistically fall within [1900, next year] for a
+    // DOB/joining-date column - a stray small number (a percentage, a 0 from
+    // an empty cell Excel serializes as numeric, a copy-paste mistake) would
+    // otherwise silently convert to a bogus date like "1899-12-30" instead
+    // of being rejected.
+    if (val < 1 || val > 60000) return null;
     const date = new Date((val - 25569) * 86400 * 1000);
     return date.toISOString().slice(0, 10);
   }

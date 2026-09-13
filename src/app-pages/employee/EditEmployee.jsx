@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { openEmployeeDocument } from '@/lib/clientDocs';
 
 export default function EditEmployee() {
     const navigate = useNavigate();
@@ -130,10 +131,7 @@ export default function EditEmployee() {
     let ds = {};
     try { ds = JSON.parse(employee.document_sources || '{}'); } catch (e) {}
 
-    const docUrl = (field) => {
-        const token = localStorage.getItem('token');
-        return `/api/employee/document/${employee.id || id}?field=${field}&token=${encodeURIComponent(token || '')}`;
-    };
+    const viewDoc = (field) => openEmployeeDocument(employee.id || id, field);
 
     const docFields = [
         { label: 'Identity Proof', field: 'identity_proof' },
@@ -320,7 +318,7 @@ export default function EditEmployee() {
                                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Bank Document (PDF/Photo, Max 5MB)</label>
                                 {employee.bank_document && (
                                     <div style={{ fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <a href={docUrl('bank_document')} target="_blank" rel="noreferrer" style={s.link}>View current</a>
+                                        <a href="#" onClick={(e) => { e.preventDefault(); viewDoc('bank_document'); }} style={s.link}>View current</a>
                                         {ds['bank_document'] === 'employee' && <span style={s.badge}>Employee Upload</span>}
                                     </div>
                                 )}
@@ -340,7 +338,7 @@ export default function EditEmployee() {
                                         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{label}</label>
                                         {path && (
                                             <div style={{ fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <a href={docUrl(field)} target="_blank" rel="noreferrer" style={s.link}>View current</a>
+                                                <a href="#" onClick={(e) => { e.preventDefault(); viewDoc(field); }} style={s.link}>View current</a>
                                                 {isEmpUploaded && <span style={s.badge}>Employee Upload</span>}
                                             </div>
                                         )}

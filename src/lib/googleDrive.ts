@@ -1,7 +1,10 @@
 import { google } from 'googleapis';
 import { Readable } from 'stream';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 import { query, execute } from './db';
 import { RowDataPacket } from 'mysql2';
+import { uuidv4 } from './utils';
 
 // Employee documents live in Drive under one folder per employee, named
 // "<emp_code> - <full_name>", inside GOOGLE_DRIVE_ROOT_FOLDER_ID.
@@ -57,6 +60,10 @@ export async function saveRefreshToken(token: string): Promise<void> {
   );
   cachedToken = { value: token, expiresAt: Date.now() + 30_000 };
   driveClient = null; // force re-creation with the new token on next use
+  // Cached folder IDs belong to whichever account was connected when they
+  // were resolved - reusing them after switching accounts would silently
+  // target a folder the new account can't see (or doesn't own).
+  folderCache.clear();
 }
 
 export function isOAuthClientConfigured(): boolean {
@@ -86,12 +93,13 @@ async function getOAuthClient() {
   return oAuth2Client;
 }
 
-export async function getAuthUrl(): Promise<string> {
+export async function getAuthUrl(state: string): Promise<string> {
   const oAuth2Client = await getOAuthClient();
   return oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
     scope: ['https://www.googleapis.com/auth/drive'],
+    state,
   });
 }
 
@@ -189,6 +197,38 @@ export async function getDriveFileMeta(fileId: string): Promise<{ name: string; 
 export async function deleteFileFromDrive(fileId: string): Promise<void> {
   const drive = await getDrive();
   await drive.files.delete({ fileId, supportsAllDrives: true }).catch(() => {});
+}
+
+// Folder/file names must survive both the local filesystem and Drive's
+// naming rules - strip characters that are illegal in a Windows/local path
+// (rather than truncating at them, the way path.basename would) instead of
+// rejecting or mangling legitimate names that happen to contain them.
+export function sanitizeEmployeeFolderName(empCode: string, fullName: string): string {
+  return `${empCode} - ${fullName}`.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim();
+}
+
+function employeeUploadDir(empCode: string, fullName: string): { dir: string; folderName: string } {
+  const folderName = sanitizeEmployeeFolderName(empCode, fullName);
+  return { dir: path.join(process.cwd(), 'public', 'uploads', 'documents', folderName), folderName };
+}
+
+// Single entry point for "save this uploaded document somewhere durable" -
+// Drive when configured, otherwise a per-employee local folder. Centralizing
+// this (previously copy-pasted per route) means a future storage backend, or
+// a fix to the save path itself, only needs to change in one place.
+export async function saveEmployeeDocument(empCode: string, fullName: string, file: File): Promise<string> {
+  const buf = Buffer.from(await file.arrayBuffer());
+  if (await isDriveConfigured()) {
+    const folderId = await getEmployeeFolderId(empCode, fullName);
+    const driveFileId = await uploadFileToDrive(folderId, file.name, buf, file.type);
+    return `drive:${driveFileId}`;
+  }
+  const { dir, folderName } = employeeUploadDir(empCode, fullName);
+  await mkdir(dir, { recursive: true });
+  const ext = path.extname(file.name) || '';
+  const fileName = `${uuidv4()}${ext}`;
+  await writeFile(path.join(dir, fileName), buf);
+  return `uploads/documents/${folderName}/${fileName}`;
 }
 
 export async function testDriveConnection(): Promise<{ folderId: string; folderName: string }> {
