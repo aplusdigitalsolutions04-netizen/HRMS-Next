@@ -34,7 +34,12 @@ export async function GET(req: NextRequest) {
     await saveRefreshToken(tokens.refresh_token);
 
     return new NextResponse(
-      "<html><body style='font-family:sans-serif;padding:2rem'><h2>Google Drive connected</h2><p>You're all set - uploads and downloads will use this account right away.</p></body></html>",
+      `<html><head><meta http-equiv="refresh" content="2;url=/settings/google-drive"></head>
+      <body style='font-family:sans-serif;padding:2rem'>
+        <h2>Google Drive connected</h2>
+        <p>You're all set - uploads and downloads will use this account right away.</p>
+        <p>Redirecting back to Settings... <a href="/settings/google-drive">Click here</a> if it doesn't happen automatically.</p>
+      </body></html>`,
       { headers: { 'Content-Type': 'text/html' } }
     );
   } catch (e: any) {
