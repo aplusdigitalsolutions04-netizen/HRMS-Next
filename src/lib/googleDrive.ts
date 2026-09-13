@@ -71,9 +71,17 @@ export function isOAuthClientConfigured(): boolean {
 }
 
 export async function isDriveConfigured(): Promise<boolean> {
-  if (!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID) return false;
+  if (!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
+    console.error('[googleDrive] isDriveConfigured: false - GOOGLE_DRIVE_ROOT_FOLDER_ID is not set');
+    return false;
+  }
   if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) return true;
-  if (isOAuthClientConfigured() && (await getStoredRefreshToken())) return true;
+  const oauthConfigured = isOAuthClientConfigured();
+  const refreshToken = await getStoredRefreshToken();
+  if (oauthConfigured && refreshToken) return true;
+  console.error(
+    `[googleDrive] isDriveConfigured: false - oauthClientConfigured=${oauthConfigured} (GOOGLE_CLIENT_ID=${!!process.env.GOOGLE_CLIENT_ID}, GOOGLE_CLIENT_SECRET=${!!process.env.GOOGLE_CLIENT_SECRET}), hasStoredRefreshToken=${!!refreshToken}, envRefreshTokenFallback=${!!process.env.GOOGLE_REFRESH_TOKEN}`
+  );
   return false;
 }
 
