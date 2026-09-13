@@ -43,12 +43,14 @@ export async function POST(req: NextRequest) {
     // before the actual insert (which re-derives/retries it below on a race).
     let prelimEmpCode = body.emp_code;
     if (!prelimEmpCode) {
-      const empCount = await query<RowDataPacket[]>('SELECT COUNT(*) as cnt FROM employees');
-      prelimEmpCode = String(empCount[0].cnt + 1).padStart(4, '0');
+      const maxCodeRow = await query<RowDataPacket[]>(
+        `SELECT MAX(CAST(emp_code AS UNSIGNED)) as maxCode FROM employees WHERE emp_code REGEXP '^[0-9]+$'`
+      );
+      prelimEmpCode = String((maxCodeRow[0].maxCode || 0) + 1).padStart(4, '0');
     }
 
     let driveFolderId: string | null = null;
-    if (isDriveConfigured()) {
+    if (await isDriveConfigured()) {
       driveFolderId = await getEmployeeFolderId(prelimEmpCode, body.full_name);
     }
 
@@ -114,9 +116,14 @@ export async function POST(req: NextRequest) {
       if (!body.emp_code) {
           // Plain zero-padded number, no "EMP" prefix - matches the emp_code
           // format TeamOffice/E-Timeoffice sends, so attendance sync can
-          // match new employees against this code directly.
-          const empCount = await query<RowDataPacket[]>('SELECT COUNT(*) as cnt FROM employees');
-          empCode = String(empCount[0].cnt + 1).padStart(4, '0');
+          // match new employees against this code directly. Based on the
+          // current max (not a row count), which can be sparse/non-sequential
+          // when employees were created out of order (e.g. via TeamOffice
+          // sync) - a row count would keep colliding with an existing code.
+          const maxCodeRow = await query<RowDataPacket[]>(
+            `SELECT MAX(CAST(emp_code AS UNSIGNED)) as maxCode FROM employees WHERE emp_code REGEXP '^[0-9]+$'`
+          );
+          empCode = String((maxCodeRow[0].maxCode || 0) + 1).padStart(4, '0');
       }
 
       const insertValues = [id, empCode, body.email_id, tempPassword, body.full_name, body.mobile_no, 'pending', t,

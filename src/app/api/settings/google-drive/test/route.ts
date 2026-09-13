@@ -8,8 +8,8 @@ export async function GET(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     if (user.role !== 'ADMIN') return jsonError('Only ADMIN can test the Google Drive connection.', 403);
 
-    if (!isDriveConfigured()) {
-      return jsonSuccess({ connected: false, message: 'Google Drive is not configured. Set the required environment variables and restart the server.' });
+    if (!(await isDriveConfigured())) {
+      return jsonSuccess({ connected: false, message: 'Google Drive is not connected. Click "Connect Google Account" below, or configure GOOGLE_SERVICE_ACCOUNT_KEY_BASE64.', needsAuth: true });
     }
 
     try {

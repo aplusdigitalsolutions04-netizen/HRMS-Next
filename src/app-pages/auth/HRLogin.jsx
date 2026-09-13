@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function HRLogin() {
     const navigate = useNavigate();
@@ -207,7 +207,14 @@ export default function HRLogin() {
                             </div>
                         </div>
 
-                        <div className="lr-footer">&copy; 2026 A Plus Digital Solutions</div>
+                        <div className="lr-footer">
+                            &copy; 2026 A Plus Digital Solutions
+                            <div style={{ marginTop: 6, textTransform: 'none', letterSpacing: 'normal' }}>
+                                <Link to="/privacy-policy" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</Link>
+                                <span style={{ margin: '0 8px' }}>·</span>
+                                <Link to="/terms-conditions" style={{ color: '#64748b', textDecoration: 'none' }}>Terms &amp; Conditions</Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

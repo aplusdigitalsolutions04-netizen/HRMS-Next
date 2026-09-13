@@ -1,5 +1,7 @@
 import { google } from 'googleapis';
 import { Readable } from 'stream';
+import { query, execute } from './db';
+import { RowDataPacket } from 'mysql2';
 
 // Employee documents live in Drive under one folder per employee, named
 // "<emp_code> - <full_name>", inside GOOGLE_DRIVE_ROOT_FOLDER_ID.
@@ -9,35 +11,109 @@ import { Readable } from 'stream';
 //    (or a Shared Drive) must be shared with the service account's
 //    client_email as Editor, since service accounts have no My Drive of
 //    their own.
-// 2. OAuth2 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REFRESH_TOKEN)
-//    - acts as the Google account that generated the refresh token, so the
-//    folder just needs to belong to (or be shared with) that account.
+// 2. OAuth2 (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET, refresh token) - acts
+//    as the Google account that connected via Settings > Google Drive, so
+//    the folder just needs to belong to (or be shared with) that account.
+//    The refresh token is stored in the google_drive_auth table (not
+//    .env.local) so connecting from Settings takes effect immediately, with
+//    no server restart - important on hosts where the app process can't
+//    rewrite its own .env file or restart itself. GOOGLE_REFRESH_TOKEN in
+//    the env is still honored as a fallback for a manually-configured token.
 
 let driveClient: ReturnType<typeof google.drive> | null = null;
 const folderCache = new Map<string, string>();
 
-export function isDriveConfigured(): boolean {
-  const hasServiceAccount = !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64;
-  const hasOAuth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN);
-  return (hasServiceAccount || hasOAuth) && !!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+let authTableEnsured = false;
+async function ensureAuthTable() {
+  if (authTableEnsured) return;
+  await execute(`
+    CREATE TABLE IF NOT EXISTS google_drive_auth (
+      id INT PRIMARY KEY,
+      refresh_token TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  authTableEnsured = true;
 }
 
-function getDrive() {
-  if (driveClient) return driveClient;
+// Short-lived cache, same tradeoff as other lookup caches in this codebase -
+// avoids a DB round trip on every single Drive call.
+let cachedToken: { value: string | null; expiresAt: number } = { value: null, expiresAt: 0 };
 
+async function getStoredRefreshToken(): Promise<string | null> {
+  if (cachedToken.expiresAt > Date.now()) return cachedToken.value;
+  await ensureAuthTable();
+  const rows = await query<RowDataPacket[]>('SELECT refresh_token FROM google_drive_auth WHERE id = 1');
+  const value = rows[0]?.refresh_token || process.env.GOOGLE_REFRESH_TOKEN || null;
+  cachedToken = { value, expiresAt: Date.now() + 30_000 };
+  return value;
+}
+
+export async function saveRefreshToken(token: string): Promise<void> {
+  await ensureAuthTable();
+  await execute(
+    'INSERT INTO google_drive_auth (id, refresh_token) VALUES (1, ?) ON DUPLICATE KEY UPDATE refresh_token = VALUES(refresh_token)',
+    [token]
+  );
+  cachedToken = { value: token, expiresAt: Date.now() + 30_000 };
+  driveClient = null; // force re-creation with the new token on next use
+}
+
+export function isOAuthClientConfigured(): boolean {
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+export async function isDriveConfigured(): Promise<boolean> {
+  if (!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID) return false;
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) return true;
+  if (isOAuthClientConfigured() && (await getStoredRefreshToken())) return true;
+  return false;
+}
+
+function getRedirectUri(): string {
+  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
+}
+
+async function getOAuthClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  if (!clientId || !clientSecret) {
+    throw new Error('Google OAuth client credentials are not configured (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET)');
+  }
+  const oAuth2Client = new google.auth.OAuth2(clientId, clientSecret, getRedirectUri());
+  const refreshToken = await getStoredRefreshToken();
+  if (refreshToken) oAuth2Client.setCredentials({ refresh_token: refreshToken });
+  return oAuth2Client;
+}
 
-  if (clientId && clientSecret && refreshToken) {
-    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-    driveClient = google.drive({ version: 'v3', auth: oauth2Client });
-    return driveClient;
+export async function getAuthUrl(): Promise<string> {
+  const oAuth2Client = await getOAuthClient();
+  return oAuth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: ['https://www.googleapis.com/auth/drive'],
+  });
+}
+
+export async function exchangeCodeForTokens(code: string) {
+  const oAuth2Client = await getOAuthClient();
+  const { tokens } = await oAuth2Client.getToken(code);
+  return tokens;
+}
+
+async function getDrive() {
+  if (driveClient) return driveClient;
+
+  if (isOAuthClientConfigured()) {
+    const refreshToken = await getStoredRefreshToken();
+    if (refreshToken) {
+      driveClient = google.drive({ version: 'v3', auth: await getOAuthClient() });
+      return driveClient;
+    }
   }
 
   const keyBase64 = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64;
-  if (!keyBase64) throw new Error('Google Drive is not configured: set either GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_REFRESH_TOKEN or GOOGLE_SERVICE_ACCOUNT_KEY_BASE64');
+  if (!keyBase64) throw new Error('Google Drive is not authorized yet. Connect an account from Settings > Google Drive, or configure GOOGLE_SERVICE_ACCOUNT_KEY_BASE64.');
   const credentials = JSON.parse(Buffer.from(keyBase64, 'base64').toString('utf8'));
   const auth = new google.auth.GoogleAuth({ credentials, scopes: ['https://www.googleapis.com/auth/drive'] });
   driveClient = google.drive({ version: 'v3', auth });
@@ -51,7 +127,7 @@ function rootFolderId(): string {
 }
 
 async function findFolder(name: string, parentId: string): Promise<string | null> {
-  const drive = getDrive();
+  const drive = await getDrive();
   const safeName = name.replace(/'/g, "\\'");
   const res = await drive.files.list({
     q: `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`,
@@ -63,7 +139,7 @@ async function findFolder(name: string, parentId: string): Promise<string | null
 }
 
 async function createFolder(name: string, parentId: string): Promise<string> {
-  const drive = getDrive();
+  const drive = await getDrive();
   const res = await drive.files.create({
     requestBody: { name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
     fields: 'id',
@@ -85,7 +161,7 @@ export async function getEmployeeFolderId(empCode: string, employeeName?: string
 }
 
 export async function uploadFileToDrive(folderId: string, fileName: string, buffer: Buffer, mimeType: string): Promise<string> {
-  const drive = getDrive();
+  const drive = await getDrive();
   const res = await drive.files.create({
     requestBody: { name: fileName, parents: [folderId] },
     media: { mimeType: mimeType || 'application/octet-stream', body: Readable.from(buffer) },
@@ -96,7 +172,7 @@ export async function uploadFileToDrive(folderId: string, fileName: string, buff
 }
 
 export async function downloadFileFromDrive(fileId: string): Promise<Buffer> {
-  const drive = getDrive();
+  const drive = await getDrive();
   const res = await drive.files.get(
     { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'arraybuffer' }
@@ -104,13 +180,19 @@ export async function downloadFileFromDrive(fileId: string): Promise<Buffer> {
   return Buffer.from(res.data as ArrayBuffer);
 }
 
+export async function getDriveFileMeta(fileId: string): Promise<{ name: string; mimeType: string }> {
+  const drive = await getDrive();
+  const res = await drive.files.get({ fileId, fields: 'name, mimeType', supportsAllDrives: true });
+  return { name: res.data.name as string, mimeType: res.data.mimeType as string };
+}
+
 export async function deleteFileFromDrive(fileId: string): Promise<void> {
-  const drive = getDrive();
+  const drive = await getDrive();
   await drive.files.delete({ fileId, supportsAllDrives: true }).catch(() => {});
 }
 
 export async function testDriveConnection(): Promise<{ folderId: string; folderName: string }> {
-  const drive = getDrive();
+  const drive = await getDrive();
   const folderId = rootFolderId();
 
   const res = await drive.files.get({

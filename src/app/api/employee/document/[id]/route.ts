@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
+import { authUserFromToken } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { downloadFileFromDrive } from '@/lib/googleDrive';
+import { downloadFileFromDrive, getDriveFileMeta } from '@/lib/googleDrive';
 
 const ALLOWED_FIELDS = [
   'identity_proof', 'address_proof', 'resume_path', 'ug_document', 'marksheet10', 'marksheet12',
@@ -15,7 +16,12 @@ const ALLOWED_FIELDS = [
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getAuthUser(req);
+    // Opened as a plain <a href> navigation (to view/download the file
+    // inline), which can't carry the app's usual Authorization header - the
+    // token is appended as ?token= instead, same trick as the Google Drive
+    // authorize route.
+    const queryToken = req.nextUrl.searchParams.get('token');
+    const user = queryToken ? await authUserFromToken(queryToken) : await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (!checkPermission(user, 'view_employee_details')) return jsonError('Insufficient permissions', 403);
 
@@ -27,16 +33,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (rows.length === 0 || !rows[0].val) return jsonError('Document not found', 404);
     const storedPath = rows[0].val as string;
 
-    const buf = storedPath.startsWith('drive:')
-      ? await downloadFileFromDrive(storedPath.slice('drive:'.length))
-      : await readFile(path.join(process.cwd(), 'public', storedPath));
-
-    const ext = path.extname(storedPath).toLowerCase();
-    const mime = ext === '.pdf' ? 'application/pdf'
-      : ext === '.png' ? 'image/png'
-      : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
-      : ext === '.doc' || ext === '.docx' ? 'application/msword'
-      : 'application/octet-stream';
+    let buf: Buffer;
+    let mime: string;
+    if (storedPath.startsWith('drive:')) {
+      const fileId = storedPath.slice('drive:'.length);
+      const [fileBuf, meta] = await Promise.all([downloadFileFromDrive(fileId), getDriveFileMeta(fileId)]);
+      buf = fileBuf;
+      mime = meta.mimeType || 'application/octet-stream';
+    } else {
+      buf = await readFile(path.join(process.cwd(), 'public', storedPath));
+      const ext = path.extname(storedPath).toLowerCase();
+      mime = ext === '.pdf' ? 'application/pdf'
+        : ext === '.png' ? 'image/png'
+        : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+        : ext === '.doc' || ext === '.docx' ? 'application/msword'
+        : 'application/octet-stream';
+    }
 
     return new NextResponse(buf, { headers: { 'Content-Type': mime } });
   } catch (e: any) {

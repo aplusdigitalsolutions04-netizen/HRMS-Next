@@ -20,6 +20,15 @@ export default function GoogleDriveSettings() {
     }
   };
 
+  // /api/google-drive/authorize needs to be a real browser navigation (it
+  // redirects to Google's consent screen), so it can't carry the app's usual
+  // Authorization header the way fetch calls do - the session token is
+  // appended as ?token= instead, which the route checks directly.
+  const handleConnect = () => {
+    const token = localStorage.getItem('token');
+    window.location.href = `${API}/google-drive/authorize${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  };
+
   return (
     <SettingsCard title="Google Drive" desc="Employee documents are stored in Google Drive when configured. Test the connection here anytime to confirm it's still working.">
       <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: 24 }}>
@@ -49,6 +58,15 @@ export default function GoogleDriveSettings() {
                 ? `Uploads are saving to the "${result.folderName}" Drive folder.`
                 : (result.message || 'Could not reach Google Drive.')}
             </p>
+            {!result.connected && (
+              <button
+                onClick={handleConnect}
+                className="btn-premium"
+                style={{ marginTop: 12, background: '#dc2626' }}
+              >
+                🔐 Connect Google Account
+              </button>
+            )}
           </div>
         )}
       </div>

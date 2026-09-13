@@ -16,6 +16,7 @@ export default function EditEmployee() {
         date_of_joining: '', account_number: '', bank_name: '', pan: '', uan: '', location: 'Gurgaon, HR', pay_mode: 'Online'
     });
     const [employeeOptions, setEmployeeOptions] = useState([]);
+    const [designationOptions, setDesignationOptions] = useState([]);
 
     useEffect(() => {
         if (id) {
@@ -40,11 +41,29 @@ export default function EditEmployee() {
             .then(res => res.json())
             .then(data => setEmployeeOptions(Array.isArray(data) ? data : []))
             .catch(() => {});
+
+        fetch('/api/designations', {
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        })
+            .then(res => res.json())
+            .then(data => setDesignationOptions(Array.isArray(data) ? data : []))
+            .catch(() => {});
     }, [id]);
+
+    const [docFiles, setDocFiles] = useState({});
+    const [additionalFiles, setAdditionalFiles] = useState([]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setEmployee(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleDocFileChange = (field) => (e) => {
+        setDocFiles(prev => ({ ...prev, [field]: e.target.files[0] || null }));
+    };
+
+    const handleAdditionalFilesChange = (e) => {
+        setAdditionalFiles(Array.from(e.target.files || []));
     };
 
     const handleSubmit = (e) => {
@@ -57,10 +76,15 @@ export default function EditEmployee() {
             payload[key] = val;
         });
 
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, val]) => formData.append(key, val));
+        Object.entries(docFiles).forEach(([field, file]) => { if (file) formData.append(field, file); });
+        additionalFiles.forEach(file => formData.append('additional_documents_new', file));
+
         fetch(`/api/employee/edit/${employee.id || id}`, {
             method: 'PUT',
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            body: formData
         })
         .then(async res => {
             if (!res.ok) {
@@ -105,6 +129,11 @@ export default function EditEmployee() {
 
     let ds = {};
     try { ds = JSON.parse(employee.document_sources || '{}'); } catch (e) {}
+
+    const docUrl = (field) => {
+        const token = localStorage.getItem('token');
+        return `/api/employee/document/${employee.id || id}?field=${field}&token=${encodeURIComponent(token || '')}`;
+    };
 
     const docFields = [
         { label: 'Identity Proof', field: 'identity_proof' },
@@ -216,7 +245,15 @@ export default function EditEmployee() {
                             </div>
                             <div style={s.field}>
                                 <label style={s.label}>Designation</label>
-                                <input style={s.input} name="designation" value={employee.designation} onChange={handleChange} />
+                                <select style={s.select} name="designation" value={employee.designation || ''} onChange={handleChange}>
+                                    <option value="">— Select Designation —</option>
+                                    {employee.designation && !designationOptions.some(d => d.name === employee.designation) && (
+                                        <option value={employee.designation}>{employee.designation}</option>
+                                    )}
+                                    {designationOptions.map(d => (
+                                        <option key={d.id} value={d.name}>{d.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div style={s.field}>
                                 <label style={s.label}>Reporting Manager</label>
@@ -283,11 +320,11 @@ export default function EditEmployee() {
                                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Bank Document (PDF/Photo, Max 5MB)</label>
                                 {employee.bank_document && (
                                     <div style={{ fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <a href={`/${employee.bank_document.replace(/\\/g, '/')}`} target="_blank" rel="noreferrer" style={s.link}>View current</a>
+                                        <a href={docUrl('bank_document')} target="_blank" rel="noreferrer" style={s.link}>View current</a>
                                         {ds['bank_document'] === 'employee' && <span style={s.badge}>Employee Upload</span>}
                                     </div>
                                 )}
-                                <input type="file" accept="application/pdf,image/jpeg,image/jpg,image/png" style={s.fileInput} />
+                                <input type="file" accept="application/pdf,image/jpeg,image/jpg,image/png" style={s.fileInput} onChange={handleDocFileChange('bank_document')} />
                             </div>
                         </div>
 
@@ -303,17 +340,17 @@ export default function EditEmployee() {
                                         <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{label}</label>
                                         {path && (
                                             <div style={{ fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <a href={`/${path.replace(/\\/g, '/')}`} target="_blank" rel="noreferrer" style={s.link}>View current</a>
+                                                <a href={docUrl(field)} target="_blank" rel="noreferrer" style={s.link}>View current</a>
                                                 {isEmpUploaded && <span style={s.badge}>Employee Upload</span>}
                                             </div>
                                         )}
-                                        <input type="file" accept="application/pdf,image/jpeg,image/jpg,image/png" style={s.fileInput} />
+                                        <input type="file" accept="application/pdf,image/jpeg,image/jpg,image/png" style={s.fileInput} onChange={handleDocFileChange(field)} />
                                     </div>
                                 );
                             })}
                             <div style={s.field}>
                                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>📁 Additional Documents (PDF/Photo)</label>
-                                <input type="file" multiple accept="application/pdf,image/jpeg,image/jpg,image/png" style={s.fileInput} />
+                                <input type="file" multiple accept="application/pdf,image/jpeg,image/jpg,image/png" style={s.fileInput} onChange={handleAdditionalFilesChange} />
                             </div>
                         </div>
 

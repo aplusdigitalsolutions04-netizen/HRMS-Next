@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const buf = Buffer.from(await file.arrayBuffer());
 
     let storedPath: string;
-    if (isDriveConfigured()) {
+    if (await isDriveConfigured()) {
       const folderId = await getEmployeeFolderId(emp[0].emp_code, emp[0].full_name);
       const driveFileId = await uploadFileToDrive(folderId, file.name, buf, file.type);
       storedPath = `drive:${driveFileId}`;

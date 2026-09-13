@@ -18,6 +18,8 @@ const Departments = dynamic(() => import('@/app-pages/department/Departments'), 
 const Employees = dynamic(() => import('@/app-pages/employee/Employees'), { ssr: false });
 const HRLogin = dynamic(() => import('@/app-pages/auth/HRLogin'), { ssr: false });
 const EmployeeRegister = dynamic(() => import('@/app-pages/auth/EmployeeRegister'), { ssr: false });
+const PrivacyPolicy = dynamic(() => import('@/app-pages/legal/PrivacyPolicy'), { ssr: false });
+const TermsConditions = dynamic(() => import('@/app-pages/legal/TermsConditions'), { ssr: false });
 const AttendanceUpload = dynamic(() => import('@/app-pages/attendance/AttendanceUpload'), { ssr: false });
 const AttendanceResult = dynamic(() => import('@/app-pages/attendance/AttendanceResult'), { ssr: false });
 const DailyAttendance = dynamic(() => import('@/app-pages/attendance/DailyAttendance'), { ssr: false });
@@ -60,7 +62,7 @@ function MainLayout() {
   const location = useLocation();
   const pathname = location.pathname;
 
-  const isAuthPage = ['/login', '/register'].includes(pathname);
+  const isAuthPage = ['/login', '/register', '/privacy-policy', '/terms-conditions'].includes(pathname);
   const isUserPortal = (() => {
     const role = localStorage.getItem('role');
     const userPaths = ['/', '/my-attendance', '/my-payslips', '/profile', '/change-password', '/notifications', '/settings/view-notifications', '/force-change-password'];
@@ -73,6 +75,8 @@ function MainLayout() {
         <Routes>
           <Route path="/login" element={<HRLogin />} />
           <Route path="/register" element={<EmployeeRegister />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-conditions" element={<TermsConditions />} />
         </Routes>
       ) : isUserPortal ? (
         <>
@@ -165,6 +169,8 @@ export default function ClientApp() {
       <Routes>
         <Route path="/login" element={<HRLogin />} />
         <Route path="/register" element={<EmployeeRegister />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-conditions" element={<TermsConditions />} />
         <Route path="/force-change-password" element={<ForceChangePassword />} />
         <Route path="/*" element={<MainLayout />} />
       </Routes>

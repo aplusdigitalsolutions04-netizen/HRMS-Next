@@ -24,7 +24,78 @@ const EmployeeManagement = () => {
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerError, setDrawerError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const perPage = 25;
+
+  const handleExportEmployees = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('search', search.trim());
+      if (statusFilter) params.set('status', statusFilter);
+      if (deptFilter) params.set('department', deptFilter);
+      const res = await fetch(`${API}/employee/export?${params}`, { headers: auth() });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Export failed');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `employees_export_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      Swal.fire('Error', err.message || 'Export failed', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API}/employee/import-template`, { headers: auth() });
+      if (!res.ok) throw new Error('Could not download template');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'employee_import_template.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      Swal.fire('Error', err.message || 'Could not download template', 'error');
+    }
+  };
+
+  const handleImportExcel = (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    fetch(`${API}/employee/import`, { method: 'POST', headers: auth(), body: fd })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Import failed');
+        const errorList = data.errors && data.errors.length > 0
+          ? `<div style="text-align:left;max-height:200px;overflow:auto;margin-top:10px;font-size:12px;color:#b91c1c">${data.errors.map(x => `• ${x}`).join('<br/>')}</div>`
+          : '';
+        Swal.fire({
+          icon: data.importCount > 0 ? 'success' : 'warning',
+          title: 'Import Complete',
+          html: `${data.message}${errorList}`,
+        });
+        fetchPage(1, search, statusFilter, deptFilter);
+        fetch(`${API}/employee/stats`, { headers: auth() }).then(r => r.json()).then(d => setStats(d));
+      })
+      .catch(err => Swal.fire('Error', err.message || 'Import failed', 'error'))
+      .finally(() => setImporting(false));
+  };
 
   const fetchPage = (p = page, s = search, st = statusFilter, d = deptFilter) => {
     setLoading(true);
@@ -177,10 +248,25 @@ const EmployeeManagement = () => {
             <h1>Employee Management</h1>
             <div className="emp-hdr-g">{total} employee{total !== 1 ? 's' : ''} registered</div>
           </div>
-          <Link to="/employees/add" className="emp-add-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Employee
-          </Link>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <a href={`${API}/employee/import-template`} onClick={handleDownloadTemplate} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: 'pointer' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Template
+            </a>
+            <label className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: importing ? 'default' : 'pointer', opacity: importing ? 0.6 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              {importing ? 'Importing...' : 'Import from Excel'}
+              <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importing} onChange={handleImportExcel} />
+            </label>
+            <button onClick={handleExportEmployees} disabled={exporting} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: exporting ? 'default' : 'pointer', opacity: exporting ? 0.6 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              {exporting ? 'Exporting...' : 'Export (with Documents)'}
+            </button>
+            <Link to="/employees/add" className="emp-add-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Employee
+            </Link>
+          </div>
         </div>
 
         <div className="emp-grid">
