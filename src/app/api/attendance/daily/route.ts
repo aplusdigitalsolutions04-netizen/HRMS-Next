@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
         ON a.emp_code = e.emp_code
         AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?
         AND a.attendance_date <= CURDATE()
-      WHERE e.status != 'dropped'
+      WHERE e.status != 'dropped' AND e.is_deleted = 0
 
       UNION ALL
 

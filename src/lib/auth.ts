@@ -172,7 +172,7 @@ export async function authUserFromToken(token: string): Promise<AuthUser | null>
       permissions: finalPerms,
     };
   } else {
-    const emps = await query<EmployeeRow[]>('SELECT * FROM employees WHERE id = ?', [payload.sub]);
+    const emps = await query<EmployeeRow[]>('SELECT * FROM employees WHERE id = ? AND is_deleted = 0', [payload.sub]);
     if (emps.length === 0) return null;
     const e = emps[0];
     return {
@@ -215,7 +215,7 @@ export async function authenticateUser(email: string, password: string, type: 'a
     // based on status, rather than blocking the login itself. 'dropped' and
     // anything else stays blocked.
     const emps = await query<EmployeeRow[]>(
-      "SELECT * FROM employees WHERE email_id = ? AND status IN ('active','invited','pending','needs_correction')",
+      "SELECT * FROM employees WHERE email_id = ? AND is_deleted = 0 AND status IN ('active','invited','pending','needs_correction')",
       [email]
     );
     if (emps.length === 0) return null;

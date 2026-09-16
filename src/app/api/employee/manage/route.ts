@@ -15,10 +15,12 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || '';
     const department = searchParams.get('department') || '';
 
-    let where = 'WHERE 1=1';
+    // 'deleted' is a pseudo-status: soft-deleted employees live in is_deleted,
+    // not the status column, and are hidden from every other filter.
+    let where = status === 'deleted' ? 'WHERE is_deleted = 1' : 'WHERE is_deleted = 0';
     const params: any[] = [];
     if (s.trim()) { where += ' AND (full_name LIKE ? OR emp_code LIKE ? OR email_id LIKE ? OR mobile_no LIKE ?)'; const q = `%${s.trim()}%`; params.push(q, q, q, q); }
-    if (status) { where += ' AND status = ?'; params.push(status); }
+    if (status && status !== 'deleted') { where += ' AND status = ?'; params.push(status); }
     if (department) {
       where += ' AND designation IN (SELECT de.name FROM designations de JOIN departments d ON de.department_id = d.id WHERE d.name = ?)';
       params.push(department);

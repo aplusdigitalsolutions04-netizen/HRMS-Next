@@ -162,14 +162,52 @@ const EmployeeManagement = () => {
   };
 
   const handleDelete = (emp) => {
-    const confirmed = window.confirm(`Are you sure you want to permanently delete "${emp.full_name}" (${emp.emp_code || emp.email_id})?\n\nThis will also remove all attendance records. This action cannot be undone.`);
-    if (!confirmed) return;
-    fetch(`${API}/employee/${emp.id}`, { method: 'DELETE', headers: auth() })
-      .then(r => {
-        if (!r.ok) throw new Error('Delete failed');
-        fetchPage(page, search, statusFilter, deptFilter);
+    Swal.fire({
+      title: `Delete "${emp.full_name}"?`,
+      html: `Their record (${emp.emp_code || emp.email_id}) will be hidden, not erased - attendance, payroll, and other history stay intact and this can be undone from the "Deleted" filter.<br/><br/>
+             Should their email/ID (<strong>${emp.email_id}</strong>) be freed up for a new invite right away?`,
+      icon: 'warning',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Delete & free email/ID',
+      denyButtonText: 'Delete & keep locked',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc2626',
+      denyButtonColor: '#64748b',
+    }).then(result => {
+      if (!result.isConfirmed && !result.isDenied) return;
+      const freeIdentity = result.isConfirmed;
+      fetch(`${API}/employee/${emp.id}`, {
+        method: 'DELETE',
+        headers: { ...auth(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ free_identity: freeIdentity }),
       })
-      .catch(() => alert('Failed to delete employee.'));
+        .then(r => {
+          if (!r.ok) throw new Error('Delete failed');
+          fetchPage(page, search, statusFilter, deptFilter);
+        })
+        .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete employee.' }));
+    });
+  };
+
+  const handleRestore = (emp) => {
+    Swal.fire({
+      title: `Restore "${emp.full_name}"?`,
+      text: 'They will reappear in the normal employee list and can log in again.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Restore',
+      confirmButtonColor: '#4338ca',
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      fetch(`${API}/employee/${emp.id}/restore`, { method: 'POST', headers: auth() })
+        .then(async r => {
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.detail || 'Restore failed');
+          fetchPage(page, search, statusFilter, deptFilter);
+        })
+        .catch(e => Swal.fire({ icon: 'error', title: 'Error', text: e.message }));
+    });
   };
 
   const handleDraftEmail = (emp) => {
@@ -323,6 +361,7 @@ const EmployeeManagement = () => {
             <option value="active">Active</option>
             <option value="pending">Pending</option>
             <option value="dropped">Dropped</option>
+            <option value="deleted">Deleted</option>
           </select>
           <button className="emp-filter-btn" onClick={applyFilters}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
@@ -402,11 +441,15 @@ const EmployeeManagement = () => {
                         <button className="emp-action-btn download" title="Download Attendance" onClick={e => { e.stopPropagation(); downloadAttendance(emp); }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         </button>
-                        {canDeleteEmployee() && (
+                        {canDeleteEmployee() && (statusFilter === 'deleted' ? (
+                          <button className="emp-action-btn view" title="Restore" onClick={e => { e.stopPropagation(); handleRestore(emp); }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+                          </button>
+                        ) : (
                           <button className="emp-action-btn delete" title="Delete" onClick={e => { e.stopPropagation(); handleDelete(emp); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                           </button>
-                        )}
+                        ))}
                       </div>
                     </td>
                   </tr>

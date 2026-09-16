@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || '';
     const department = searchParams.get('department') || '';
 
-    let where = 'WHERE 1=1';
+    let where = 'WHERE is_deleted = 0';
     const params: any[] = [];
     if (s.trim()) { where += ' AND (full_name LIKE ? OR emp_code LIKE ? OR email_id LIKE ? OR mobile_no LIKE ?)'; const q = `%${s.trim()}%`; params.push(q, q, q, q); }
     if (status) { where += ' AND status = ?'; params.push(status); }

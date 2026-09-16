@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (!checkPermission(user, 'approve_employee')) return jsonError('Insufficient permissions', 403);
-    const rows = await query<RowDataPacket[]>('SELECT * FROM employees WHERE status = ? ORDER BY created_on DESC', ['pending']);
+    const rows = await query<RowDataPacket[]>('SELECT * FROM employees WHERE status = ? AND is_deleted = 0 ORDER BY created_on DESC', ['pending']);
     return jsonSuccess(rows);
   } catch (e: any) {
     return jsonError(e, 500);

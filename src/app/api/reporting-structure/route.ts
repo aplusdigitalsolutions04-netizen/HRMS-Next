@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const { page, perPage, offset } = parsePagination(searchParams, 25);
     const s = searchParams.get('search') || '';
     
-    let where = "WHERE e.status != 'deleted'";
+    let where = "WHERE e.is_deleted = 0";
     const params: any[] = [];
     if (s.trim()) { 
       where += ' AND (e.full_name LIKE ? OR e.emp_code LIKE ?)'; 

@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       `SELECT ${baseSelect}
        FROM employees e
        LEFT JOIN attendance_summary asm ON ${joinCondition}
-       WHERE e.status != 'dropped'
+       WHERE e.status != 'dropped' AND e.is_deleted = 0
        GROUP BY e.emp_code
        ORDER BY employee_name`,
       params

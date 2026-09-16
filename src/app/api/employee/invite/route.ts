@@ -25,8 +25,13 @@ export async function POST(req: NextRequest) {
       return jsonError('Name, email, and employee ID are required', 422);
     }
 
-    const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id = ? OR emp_code = ?', [emailId, empCode]);
-    if (existing.length > 0) return jsonError('An employee with this email or employee ID already exists', 409);
+    const existing = await query<RowDataPacket[]>('SELECT id, is_deleted FROM employees WHERE email_id = ? OR emp_code = ?', [emailId, empCode]);
+    if (existing.length > 0) {
+      if (existing[0].is_deleted) {
+        return jsonError('This email/employee ID belongs to a deleted employee whose identity was kept locked. Restore that employee first, or delete them again choosing to free it up for reuse.', 409);
+      }
+      return jsonError('An employee with this email or employee ID already exists', 409);
+    }
 
     const tmplRows = await query<RowDataPacket[]>('SELECT subject, body FROM email_templates WHERE name = ? LIMIT 1', [INVITE_TEMPLATE_NAME]);
     if (tmplRows.length === 0) {

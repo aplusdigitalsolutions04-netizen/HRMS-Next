@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       LEFT JOIN designations de ON e.designation = de.name
       LEFT JOIN departments d ON de.department_id = d.id
       LEFT JOIN employees m ON e.manager_id = m.id
-      WHERE e.status != 'deleted'
+      WHERE e.is_deleted = 0
       ORDER BY e.full_name ASC
     `);
 
