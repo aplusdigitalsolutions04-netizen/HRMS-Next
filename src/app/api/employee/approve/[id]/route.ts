@@ -13,10 +13,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!checkPermission(user, 'approve_employee')) return jsonError('Insufficient permissions', 403);
     const { id } = await params;
 
-    const emps = await query<RowDataPacket[]>('SELECT full_name, emp_code, email_id, mobile_no, official_email, official_no FROM employees WHERE id = ?', [id]);
+    const emps = await query<RowDataPacket[]>('SELECT full_name, emp_code, email_id, mobile_no, official_email, official_no, must_change_password FROM employees WHERE id = ?', [id]);
     if (emps.length === 0) return jsonError('Employee not found', 404);
 
     const emp = emps[0];
+    // If the employee already personalized their password (e.g. via the
+    // invite -> first-login forced change flow), don't reset it again here -
+    // only employees who never set their own password get the mobile-number
+    // fallback password on approval.
+    const alreadyHasOwnPassword = !emp.must_change_password;
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');
     const companyLogo = companyRows[0]?.company_logo || '';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
@@ -43,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let templateName = '';
     let createDraft = false;
 
-    if (templateId) {
+    if (templateId && !alreadyHasOwnPassword) {
       const tmplRows = await query<RowDataPacket[]>('SELECT name, subject, body FROM email_templates WHERE id = ?', [templateId]);
       if (tmplRows.length > 0) {
         const tmpl = tmplRows[0];
@@ -89,11 +94,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       );
     }
 
-    await execute('UPDATE employees SET status = ?, password = ?, must_change_password = 1 WHERE id = ?', ['active', hashed, id]);
+    if (alreadyHasOwnPassword) {
+      await execute('UPDATE employees SET status = ? WHERE id = ?', ['active', id]);
+    } else {
+      await execute('UPDATE employees SET status = ?, password = ?, must_change_password = 1 WHERE id = ?', ['active', hashed, id]);
+    }
 
     return jsonSuccess({
-      message: 'Employee approved and activation email draft created for HR review.',
-      draft_created: true,
+      message: alreadyHasOwnPassword
+        ? 'Employee approved. They can log in with their existing password.'
+        : 'Employee approved and activation email draft created for HR review.',
+      draft_created: createDraft,
     });
   } catch (e: any) {
     return jsonError(e, 500);
