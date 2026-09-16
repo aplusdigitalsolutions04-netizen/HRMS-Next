@@ -154,6 +154,13 @@ const EmployeeDetail = () => {
                     {/* HEADER */}
                     <div className="d-flex justify-content-between align-items-center mb-3">
                         <h4 className="mb-0">Employee Full Details</h4>
+                        <button
+                            type="button"
+                            className="hrms-btn px-4"
+                            onClick={() => fromPending ? navigate('/employees/pending') : navigate(-1)}
+                        >
+                            ← Back
+                        </button>
                     </div>
 
                     {/* DETAILS */}
