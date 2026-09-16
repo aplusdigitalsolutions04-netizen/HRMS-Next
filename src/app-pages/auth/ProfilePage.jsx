@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
@@ -14,6 +15,7 @@ export default function ProfilePage() {
   const [emailForm, setEmailForm] = useState({ sender_email: '', app_password: '', sender_name: '' });
   const [editingEmail, setEditingEmail] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => { fetchProfile(); fetchEmailAccount(); }, []);
 
@@ -39,6 +41,17 @@ export default function ProfilePage() {
     })
       .then(r => { if (r.ok) { setEditingEmail(false); fetchEmailAccount(); } })
       .finally(() => setSavingEmail(false));
+  };
+
+  const testEmailConnection = () => {
+    setTestingEmail(true);
+    fetch(`${API}/settings/my-email-account/test`, { method: 'POST', headers: auth() })
+      .then(async r => {
+        const d = await r.json();
+        Swal.fire({ icon: r.ok ? 'success' : 'error', title: r.ok ? 'Connected!' : 'Failed', text: (r.ok ? d.message : d.detail) || '' });
+      })
+      .catch(e => Swal.fire({ icon: 'error', title: 'Error', text: e.message }))
+      .finally(() => setTestingEmail(false));
   };
 
   const handleRemoveEmailAccount = () => {
@@ -341,6 +354,9 @@ export default function ProfilePage() {
               </div>
               <div className="profile-actions">
                 <button className="btn-premium" onClick={() => setEditingEmail(true)}>Update</button>
+                <button className="btn-premium-outline" onClick={testEmailConnection} disabled={testingEmail}>
+                  {testingEmail ? 'Testing...' : '🔌 Test Connection'}
+                </button>
                 <button className="btn-premium-outline" onClick={handleRemoveEmailAccount}>Disconnect</button>
               </div>
             </>
