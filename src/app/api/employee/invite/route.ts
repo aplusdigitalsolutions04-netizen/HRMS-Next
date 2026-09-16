@@ -50,27 +50,24 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const fullName = (body.full_name || '').trim();
     const emailId = (body.email_id || '').trim();
-    const mobileNo = (body.mobile_no || '').trim();
-    if (!fullName || !emailId || !mobileNo) {
-      return jsonError('Name, email, and mobile are required', 422);
+    const empCode = (body.emp_code || '').trim();
+    if (!fullName || !emailId || !empCode) {
+      return jsonError('Name, email, and employee ID are required', 422);
     }
 
-    const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id = ? OR mobile_no = ?', [emailId, mobileNo]);
-    if (existing.length > 0) return jsonError('An employee with this email or mobile already exists', 409);
-
-    const maxCodeRow = await query<RowDataPacket[]>(
-      `SELECT MAX(CAST(emp_code AS UNSIGNED)) as maxCode FROM employees WHERE emp_code REGEXP '^[0-9]+$'`
-    );
-    const empCode = String((maxCodeRow[0].maxCode || 0) + 1).padStart(4, '0');
+    const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id = ? OR emp_code = ?', [emailId, empCode]);
+    if (existing.length > 0) return jsonError('An employee with this email or employee ID already exists', 409);
 
     const tempPassword = generateTempPassword();
     const id = uuidv4();
     const t = now();
 
+    // mobile_no is required by the schema but is filled in by the employee
+    // themselves during Complete Profile, just like alternate_mobile_no.
     await execute(
       `INSERT INTO employees (id, emp_code, email_id, full_name, mobile_no, password, status, created_on, must_change_password)
        VALUES (?,?,?,?,?,?,?,?,1)`,
-      [id, empCode, emailId, fullName, mobileNo, hashPassword(tempPassword), 'invited', t]
+      [id, empCode, emailId, fullName, '', hashPassword(tempPassword), 'invited', t]
     );
 
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');

@@ -13,11 +13,12 @@ const DOC_COLUMNS = {
 };
 
 // Fields the invited employee is allowed to fill in themselves. Deliberately
-// excludes email_id/mobile_no (their login identity, set at invite time) and
-// anything HR-only (designation, emp_code, status).
+// excludes email_id (their login identity, set at invite time) and anything
+// HR-only (designation, emp_code, status). mobile_no is set by the employee
+// here rather than by HR at invite time.
 const EDITABLE_FIELDS = [
   'full_name', 'father_spouse_name', 'dob', 'present_address', 'permanent_address',
-  'college_name', 'course_name', 'specialization', 'course_duration', 'cgpa',
+  'mobile_no', 'college_name', 'course_name', 'specialization', 'course_duration', 'cgpa',
   'alternate_mobile_no', 'previous_company', 'bank_name', 'account_number', 'pan',
   'location', 'date_of_joining',
 ];
@@ -50,6 +51,16 @@ export async function PUT(req: NextRequest) {
       } else {
         body[key] = val;
       }
+    }
+
+    if (!(body.mobile_no || '').trim()) {
+      return jsonError('Mobile number is required', 422);
+    }
+    const mobileConflict = await query<RowDataPacket[]>(
+      'SELECT id FROM employees WHERE mobile_no = ? AND id != ?', [body.mobile_no.trim(), user.id]
+    );
+    if (mobileConflict.length > 0) {
+      return jsonError('This mobile number is already registered with another employee', 409);
     }
 
     const sets: string[] = [];

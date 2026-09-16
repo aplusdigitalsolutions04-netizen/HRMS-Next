@@ -7,7 +7,7 @@ const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') }
 
 export default function InviteEmployee() {
     const navigate = useNavigate();
-    const [form, setForm] = useState({ full_name: '', email_id: '', mobile_no: '' });
+    const [form, setForm] = useState({ full_name: '', email_id: '', emp_code: '' });
     const [submitting, setSubmitting] = useState(false);
 
     const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -55,9 +55,9 @@ export default function InviteEmployee() {
         <div style={s.card}>
             <h2 style={s.title}>📨 Invite Employee</h2>
             <p style={s.subtitle}>
-                Create a login for a new employee. They'll receive an Employee ID and a temporary
-                password to log in and fill in the rest of their own details themselves - which then
-                lands in Pending Approval for your review.
+                Create a login for a new employee. They'll receive a temporary password to log in
+                and fill in the rest of their own details (including mobile number) themselves -
+                which then lands in Pending Approval for your review.
             </p>
             <form onSubmit={handleSubmit}>
                 <div style={s.field}>
@@ -69,8 +69,8 @@ export default function InviteEmployee() {
                     <input type="email" style={s.input} name="email_id" value={form.email_id} onChange={handleChange} required />
                 </div>
                 <div style={s.field}>
-                    <label style={s.label}>Mobile *</label>
-                    <input style={s.input} name="mobile_no" value={form.mobile_no} onChange={handleChange} maxLength={10} required />
+                    <label style={s.label}>Employee ID *</label>
+                    <input style={s.input} name="emp_code" value={form.emp_code} onChange={handleChange} required />
                 </div>
                 <div style={s.actions}>
                     <Link to="/employees/manage" style={s.backBtn}>Cancel</Link>

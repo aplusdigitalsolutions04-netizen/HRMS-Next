@@ -38,7 +38,7 @@ export default function CompleteProfile({ onSubmitted }) {
     };
     const [form, setForm] = useState({
         full_name: '', father_spouse_name: '', dob: '', present_address: '', permanent_address: '',
-        college_name: '', course_name: '', specialization: '', course_duration: '', cgpa: '',
+        mobile_no: '', college_name: '', course_name: '', specialization: '', course_duration: '', cgpa: '',
         alternate_mobile_no: '', previous_company: '', bank_name: '', account_number: '', pan: '',
         location: '', date_of_joining: '',
     });
@@ -69,7 +69,7 @@ export default function CompleteProfile({ onSubmitted }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!form.full_name.trim() || !form.father_spouse_name.trim() || !form.dob || !form.present_address.trim()) {
+        if (!form.full_name.trim() || !form.father_spouse_name.trim() || !form.dob || !form.present_address.trim() || !form.mobile_no.trim()) {
             alert('Please fill in all required fields.');
             return;
         }
@@ -135,6 +135,10 @@ export default function CompleteProfile({ onSubmitted }) {
                         <div style={s.field}>
                             <label style={s.label}>Date of Birth *</label>
                             <input type="date" style={s.input} name="dob" value={form.dob} onChange={handleChange} required />
+                        </div>
+                        <div style={s.field}>
+                            <label style={s.label}>Mobile Number *</label>
+                            <input style={s.input} name="mobile_no" value={form.mobile_no} onChange={handleChange} maxLength={10} required />
                         </div>
                         <div style={s.field}>
                             <label style={s.label}>Alternate Mobile</label>
