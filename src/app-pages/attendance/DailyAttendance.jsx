@@ -12,7 +12,7 @@ const s = {
   ctrls: { display: 'flex', gap: 12, alignItems: 'center' },
   sel: { padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 14, color: '#334155', background: '#fff', outline: 'none' },
   card: { background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' },
-  tableWrap: { width: '100%', overflowX: 'auto', maxHeight: 'calc(100vh - 200px)' },
+  tableWrap: { width: '100%', overflowX: 'auto' },
   th: { padding: '12px 16px', background: '#f8fafc', fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 },
   td: { padding: '12px 16px', fontSize: 14, color: '#334155', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' },
   tr: { transition: 'background 0.2s', cursor: 'pointer' },
