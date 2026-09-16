@@ -42,6 +42,7 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                     >
                         <option value="Interview">Interview</option>
                         <option value="General">General</option>
+                        <option value="Employee Invite">Employee Invite</option>
                     </select>
                 </div>
             </div>

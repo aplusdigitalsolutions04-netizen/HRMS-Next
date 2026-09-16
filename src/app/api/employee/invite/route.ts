@@ -6,9 +6,14 @@ import { RowDataPacket } from 'mysql2';
 import { hashPassword, generateTempPassword } from '@/lib/auth';
 import { fillEmployeeTemplate } from '@/lib/emailTemplates';
 
-const INVITE_SUBJECT = 'Complete Your Profile - Welcome to {{company_name}}';
+// Editable from Settings -> Template Management (the row seeded with this
+// exact name). These constants are only the fallback used if that row is
+// ever missing, e.g. right after a fresh DB setup.
+const INVITE_TEMPLATE_NAME = 'Employee Invite';
 
-const INVITE_TEMPLATE = `
+const DEFAULT_INVITE_SUBJECT = 'Complete Your Profile - Welcome to {{company_name}}';
+
+const DEFAULT_INVITE_TEMPLATE = `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f8fafc">
   {{company_logo}}
   <div style="background:#fff;border-radius:12px;padding:32px;box-shadow:0 4px 12px rgba(0,0,0,.06)">
@@ -77,8 +82,12 @@ export async function POST(req: NextRequest) {
       : '';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
-    const subject = INVITE_SUBJECT.replace('{{company_name}}', companyName);
-    const htmlBody = fillEmployeeTemplate(INVITE_TEMPLATE, {
+    const tmplRows = await query<RowDataPacket[]>('SELECT subject, body FROM email_templates WHERE name = ? LIMIT 1', [INVITE_TEMPLATE_NAME]);
+    const rawSubject = tmplRows[0]?.subject || DEFAULT_INVITE_SUBJECT;
+    const rawBody = tmplRows[0]?.body || DEFAULT_INVITE_TEMPLATE;
+
+    const subject = rawSubject.replace('{{company_name}}', companyName);
+    const htmlBody = fillEmployeeTemplate(rawBody, {
       fullName,
       email: emailId,
       password: tempPassword,
