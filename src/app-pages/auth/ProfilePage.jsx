@@ -12,7 +12,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({});
 
   const [emailAccount, setEmailAccount] = useState(null);
-  const [emailForm, setEmailForm] = useState({ sender_email: '', app_password: '', sender_name: '' });
+  const [emailForm, setEmailForm] = useState({ sender_email: '', app_password: '', sender_name: '', smtp_host: 'smtp.gmail.com', smtp_port: 587, encryption: 'TLS' });
   const [editingEmail, setEditingEmail] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
@@ -24,12 +24,22 @@ export default function ProfilePage() {
       .then(r => r.json())
       .then(d => {
         setEmailAccount(d);
-        if (d) setEmailForm({ sender_email: d.sender_email || '', app_password: '', sender_name: d.sender_name || '' });
+        if (d) setEmailForm({
+          sender_email: d.sender_email || '',
+          app_password: '',
+          sender_name: d.sender_name || '',
+          smtp_host: d.smtp_host || 'smtp.gmail.com',
+          smtp_port: d.smtp_port || 587,
+          encryption: d.encryption || 'TLS',
+        });
       })
       .catch(() => {});
   };
 
-  const handleEmailChange = (e) => setEmailForm({ ...emailForm, [e.target.name]: e.target.value });
+  const handleEmailChange = (e) => {
+    const { name, value } = e.target;
+    setEmailForm({ ...emailForm, [name]: name === 'smtp_port' ? parseInt(value) || '' : value });
+  };
 
   const handleSaveEmailAccount = () => {
     if (!emailForm.sender_email || !emailForm.app_password) return;
@@ -351,6 +361,7 @@ export default function ProfilePage() {
               <div className="profile-details">
                 <div className="profile-field"><label>Sender Email</label><span>{emailAccount.sender_email}</span></div>
                 <div className="profile-field"><label>Sender Name</label><span>{emailAccount.sender_name || '—'}</span></div>
+                <div className="profile-field"><label>SMTP Host</label><span>{emailAccount.smtp_host || 'smtp.gmail.com'}:{emailAccount.smtp_port || 587} ({emailAccount.encryption || 'TLS'})</span></div>
               </div>
               <div className="profile-actions">
                 <button className="btn-premium" onClick={() => setEditingEmail(true)}>Update</button>
@@ -381,13 +392,28 @@ export default function ProfilePage() {
                 <label>Display Name (optional)</label>
                 <input name="sender_name" value={emailForm.sender_name} onChange={handleEmailChange} placeholder="Your Name" />
               </div>
+              <div className="profile-field">
+                <label>SMTP Host</label>
+                <input name="smtp_host" value={emailForm.smtp_host} onChange={handleEmailChange} placeholder="smtp.gmail.com" />
+              </div>
+              <div className="profile-field">
+                <label>SMTP Port</label>
+                <input name="smtp_port" type="number" value={emailForm.smtp_port} onChange={handleEmailChange} placeholder="587" />
+              </div>
+              <div className="profile-field">
+                <label>Encryption</label>
+                <select name="encryption" value={emailForm.encryption} onChange={handleEmailChange}>
+                  <option value="TLS">TLS</option>
+                  <option value="SSL">SSL</option>
+                </select>
+              </div>
             </div>
             <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
-              For Gmail, use an <strong>App Password</strong> (not your regular login password) — generate one from Google Account → Security → App Passwords. Defaults to Gmail's SMTP server; other providers aren't supported yet.
+              Most providers reject your regular login password for sending mail — use an <strong>App Password</strong> instead (for Gmail: Google Account → Security → App Passwords). If your email isn't Gmail, set the correct SMTP Host/Port for your provider (e.g. your company's mail server) — it defaults to Gmail's otherwise.
             </p>
             <div className="profile-actions">
               <button className="btn-premium" onClick={handleSaveEmailAccount} disabled={savingEmail || !emailForm.sender_email || !emailForm.app_password}>{savingEmail ? 'Saving...' : 'Save'}</button>
-              <button className="btn-premium-outline" onClick={() => { setEditingEmail(false); if (emailAccount) setEmailForm({ sender_email: emailAccount.sender_email, app_password: '', sender_name: emailAccount.sender_name || '' }); }}>Cancel</button>
+              <button className="btn-premium-outline" onClick={() => { setEditingEmail(false); if (emailAccount) setEmailForm({ sender_email: emailAccount.sender_email, app_password: '', sender_name: emailAccount.sender_name || '', smtp_host: emailAccount.smtp_host || 'smtp.gmail.com', smtp_port: emailAccount.smtp_port || 587, encryption: emailAccount.encryption || 'TLS' }); }}>Cancel</button>
             </div>
           </>
         )}
