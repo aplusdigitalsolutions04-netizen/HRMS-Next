@@ -29,6 +29,10 @@ export default function TemplateManagement() {
     const [loadingList, setLoadingList] = useState(true);
     const [expandedId, setExpandedId] = useState(null);
 
+    /* ── upload/create panel is collapsed behind a button so the table is
+       what you see first ── */
+    const [showAddPanel, setShowAddPanel] = useState(false);
+
     /* ── load list on mount ── */
     useEffect(() => { fetchTemplates(); }, []);
 
@@ -143,6 +147,7 @@ export default function TemplateManagement() {
             variables: Array.isArray(vars) ? vars : [],
             template_type: t.template_type || 'General',
         });
+        setShowAddPanel(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -174,6 +179,7 @@ export default function TemplateManagement() {
         setPreview(null);
         setUploadError('');
         if (fileInputRef.current) fileInputRef.current.value = '';
+        setShowAddPanel(false);
     };
 
     const createManually = () => {
@@ -223,31 +229,45 @@ export default function TemplateManagement() {
                 >
 
                 <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>
-                    <UploadSection
-                        file={file}
-                        dragging={dragging}
-                        uploading={uploading}
-                        uploadError={uploadError}
-                        fileInputRef={fileInputRef}
-                        onDragOver={onDragOver}
-                        onDragLeave={onDragLeave}
-                        onDrop={onDrop}
-                        onFileChange={onFileChange}
-                        resetUpload={resetUpload}
-                        extractWithAI={extractWithAI}
-                        createManually={createManually}
-                    />
+                    {!showAddPanel ? (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                            <button className="extract-btn" onClick={() => setShowAddPanel(true)}>
+                                + Add Template
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                                <button className="reset-btn" onClick={resetUpload}>✕ Close</button>
+                            </div>
 
-                    <PreviewSection
-                        preview={preview}
-                        setPreview={setPreview}
-                        saving={saving}
-                        saveTemplate={saveTemplate}
-                        resetUpload={resetUpload}
-                        bodyRef={bodyRef}
-                    />
+                            <UploadSection
+                                file={file}
+                                dragging={dragging}
+                                uploading={uploading}
+                                uploadError={uploadError}
+                                fileInputRef={fileInputRef}
+                                onDragOver={onDragOver}
+                                onDragLeave={onDragLeave}
+                                onDrop={onDrop}
+                                onFileChange={onFileChange}
+                                resetUpload={resetUpload}
+                                extractWithAI={extractWithAI}
+                                createManually={createManually}
+                            />
 
-                    <AvailableVariables onInsert={preview ? insertVariable : undefined} />
+                            <PreviewSection
+                                preview={preview}
+                                setPreview={setPreview}
+                                saving={saving}
+                                saveTemplate={saveTemplate}
+                                resetUpload={resetUpload}
+                                bodyRef={bodyRef}
+                            />
+
+                            <AvailableVariables onInsert={preview ? insertVariable : undefined} />
+                        </>
+                    )}
 
                     <SavedTemplatesTable
                         templates={templates}

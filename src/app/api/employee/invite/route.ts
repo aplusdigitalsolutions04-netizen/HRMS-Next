@@ -7,44 +7,9 @@ import { hashPassword, generateTempPassword } from '@/lib/auth';
 import { fillEmployeeTemplate } from '@/lib/emailTemplates';
 
 // Editable from Settings -> Template Management (the row seeded with this
-// exact name). These constants are only the fallback used if that row is
-// ever missing, e.g. right after a fresh DB setup.
+// exact name via scratchpad/seed_invite_template.sql). No hardcoded fallback -
+// if this row is missing, the invite is refused until HR creates it there.
 const INVITE_TEMPLATE_NAME = 'Employee Invite';
-
-const DEFAULT_INVITE_SUBJECT = 'Complete Your Profile - Welcome to {{company_name}}';
-
-const DEFAULT_INVITE_TEMPLATE = `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f8fafc">
-  {{company_logo}}
-  <div style="background:#fff;border-radius:12px;padding:32px;box-shadow:0 4px 12px rgba(0,0,0,.06)">
-    <h2 style="color:#0f172a;margin:0 0 16px">Welcome, {{name}}! &#128075;</h2>
-    <p style="color:#334155;font-size:14px;line-height:1.6">
-      You've been invited to join our HR Management Portal. To get started,
-      please log in using the credentials below and complete your profile.
-    </p>
-
-    <div style="background:#f1f5f9;border-radius:10px;padding:18px;margin:20px 0">
-      <p style="margin:0 0 8px;font-size:13px;color:#64748b">EMPLOYEE ID</p>
-      <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#0f172a">{{emp_code}}</p>
-      <p style="margin:0 0 8px;font-size:13px;color:#64748b">LOGIN EMAIL</p>
-      <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#0f172a">{{email}}</p>
-      <p style="margin:0 0 8px;font-size:13px;color:#64748b">TEMPORARY PASSWORD</p>
-      <p style="margin:0;font-size:16px;font-weight:700;color:#0f172a">{{password}}</p>
-    </div>
-
-    <p style="text-align:center;margin:28px 0">
-      <a href="{{login_url}}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
-        Log In &amp; Complete Profile
-      </a>
-    </p>
-
-    <p style="color:#94a3b8;font-size:12px;line-height:1.6;margin-top:24px">
-      Please change your password after logging in. Once you submit your
-      details, our HR team will review and activate your account.
-    </p>
-  </div>
-</div>
-`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,6 +27,11 @@ export async function POST(req: NextRequest) {
 
     const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id = ? OR emp_code = ?', [emailId, empCode]);
     if (existing.length > 0) return jsonError('An employee with this email or employee ID already exists', 409);
+
+    const tmplRows = await query<RowDataPacket[]>('SELECT subject, body FROM email_templates WHERE name = ? LIMIT 1', [INVITE_TEMPLATE_NAME]);
+    if (tmplRows.length === 0) {
+      return jsonError(`No "${INVITE_TEMPLATE_NAME}" email template found. Create it in Settings -> Email Templates before inviting employees.`, 422);
+    }
 
     const tempPassword = generateTempPassword();
     const id = uuidv4();
@@ -82,12 +52,8 @@ export async function POST(req: NextRequest) {
       : '';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
-    const tmplRows = await query<RowDataPacket[]>('SELECT subject, body FROM email_templates WHERE name = ? LIMIT 1', [INVITE_TEMPLATE_NAME]);
-    const rawSubject = tmplRows[0]?.subject || DEFAULT_INVITE_SUBJECT;
-    const rawBody = tmplRows[0]?.body || DEFAULT_INVITE_TEMPLATE;
-
-    const subject = rawSubject.replace('{{company_name}}', companyName);
-    const htmlBody = fillEmployeeTemplate(rawBody, {
+    const subject = (tmplRows[0].subject || '').replace('{{company_name}}', companyName);
+    const htmlBody = fillEmployeeTemplate(tmplRows[0].body || '', {
       fullName,
       email: emailId,
       password: tempPassword,
