@@ -189,10 +189,10 @@ const PendingEmployees = () => {
         .pe-email { color:#6b7280; font-size:.78rem; }
         .pe-mobile { color:#6b7280; font-size:.82rem; font-weight:500; }
 
-        .pe-actions { display:flex; gap:5px; flex-wrap:nowrap; }
-        .pe-btn-view { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:#fff; color:#6366f1; border:1.5px solid #ddd6fe; border-radius:7px; font-weight:600; font-size:.7rem; text-decoration:none; transition:all .2s; white-space:nowrap; }
+        .pe-actions { display:flex; gap:4px; flex-wrap:nowrap; }
+        .pe-btn-view { display:inline-flex; align-items:center; gap:3px; padding:3px 7px; background:#fff; color:#6366f1; border:1px solid #ddd6fe; border-radius:6px; font-weight:600; font-size:.65rem; text-decoration:none; transition:all .2s; white-space:nowrap; }
         .pe-btn-view:hover { background:#f5f4ff; border-color:#6366f1; transform:translateY(-1px); }
-        .pe-btn-approve { display:inline-flex; align-items:center; gap:4px; padding:5px 11px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:7px; font-weight:600; font-size:.7rem; cursor:pointer; transition:all .2s; white-space:nowrap; position:relative; overflow:hidden; }
+        .pe-btn-approve { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:6px; font-weight:600; font-size:.65rem; cursor:pointer; transition:all .2s; white-space:nowrap; position:relative; overflow:hidden; }
         .pe-btn-approve:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(99,102,241,.35); }
         .pe-btn-approve:disabled { opacity:.7; cursor:default; }
 
@@ -336,7 +336,7 @@ const PendingEmployees = () => {
                     <td style={{textAlign:'right'}}>
                       <div className="pe-actions" style={{justifyContent:'flex-end'}}>
                         <Link to={`/employees/detail/${e.id}?fromPending=true`} className="pe-btn-view">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                             <circle cx="12" cy="12" r="3"/>
                           </svg>
@@ -344,14 +344,14 @@ const PendingEmployees = () => {
                         </Link>
                         <button className="pe-btn-approve" onClick={() => approveEmployee(e.id)} disabled={approvingId === e.id}>
                           {approvingId === e.id ? (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:'pePulse 1s infinite'}}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:'pePulse 1s infinite'}}>
                               <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
                               <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
                               <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
                               <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
                             </svg>
                           ) : (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="20 6 9 17 4 12"/>
                             </svg>
                           )}
@@ -363,7 +363,7 @@ const PendingEmployees = () => {
                           onClick={() => sendBackEmployee(e.id)}
                           disabled={approvingId === e.id}
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
                           </svg>
                           Send Back
