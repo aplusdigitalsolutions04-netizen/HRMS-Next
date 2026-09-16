@@ -25,6 +25,61 @@ function toHtmlBody(content: string): string {
   return `<div style="white-space:pre-line;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6">${content}</div>`;
 }
 
+async function resolveSmtpConfig(asUser?: { id: string; type: string }): Promise<SmtpRow | null> {
+  if (asUser?.id) {
+    const personal = await query<SmtpRow[]>(
+      'SELECT * FROM user_email_accounts WHERE user_id=? AND user_type=?',
+      [asUser.id, asUser.type]
+    );
+    if (personal.length > 0) return personal[0];
+  }
+
+  const rows = await query<SmtpRow[]>('SELECT * FROM smtp_settings LIMIT 1');
+  return rows.length > 0 ? rows[0] : null;
+}
+
+function buildTransporter(s: SmtpRow) {
+  const secure = (s.encryption || '').toUpperCase() === 'SSL';
+  return nodemailer.createTransport({
+    host: s.smtp_host,
+    port: s.smtp_port || (secure ? 465 : 587),
+    secure,
+    auth: {
+      user: s.sender_email,
+      pass: s.app_password,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
+  });
+}
+
+// Checks that the SMTP host/credentials actually authenticate, without
+// sending any mail - used by the "Test Connection" buttons so testing
+// doesn't spam an inbox every time someone clicks it.
+export async function verifyEmailConnection(
+  asUser?: { id: string; type: string }
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const s = await resolveSmtpConfig(asUser);
+    if (!s) {
+      return { ok: false, message: 'No SMTP settings configured.' };
+    }
+    if (!s.smtp_host || !s.sender_email || !s.app_password) {
+      return { ok: false, message: 'Incomplete SMTP configuration (missing host/sender/password).' };
+    }
+
+    const transporter = buildTransporter(s);
+    await transporter.verify();
+    return { ok: true, message: `Connected to ${s.smtp_host} as ${s.sender_email}.` };
+  } catch (e: any) {
+    return { ok: false, message: e?.message || 'Connection failed.' };
+  }
+}
+
 export async function sendEmail(
   to: string,
   subject: string,
@@ -40,23 +95,10 @@ export async function sendEmail(
   }
 ): Promise<boolean> {
   try {
-    let s: SmtpRow | undefined;
-
-    if (options?.asUser?.id) {
-      const personal = await query<SmtpRow[]>(
-        'SELECT * FROM user_email_accounts WHERE user_id=? AND user_type=?',
-        [options.asUser.id, options.asUser.type]
-      );
-      if (personal.length > 0) s = personal[0];
-    }
-
+    const s = await resolveSmtpConfig(options?.asUser);
     if (!s) {
-      const rows = await query<SmtpRow[]>('SELECT * FROM smtp_settings LIMIT 1');
-      if (rows.length === 0) {
-        console.error('[email] No SMTP settings configured');
-        return false;
-      }
-      s = rows[0];
+      console.error('[email] No SMTP settings configured');
+      return false;
     }
 
     if (!s.smtp_host || !s.sender_email || !s.app_password) {
@@ -64,22 +106,7 @@ export async function sendEmail(
       return false;
     }
 
-    const secure = (s.encryption || '').toUpperCase() === 'SSL';
-    const transporter = nodemailer.createTransport({
-      host: s.smtp_host,
-      port: s.smtp_port || (secure ? 465 : 587),
-      secure,
-      auth: {
-        user: s.sender_email,
-        pass: s.app_password,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000,
-    });
+    const transporter = buildTransporter(s);
 
     try {
       await transporter.verify();
@@ -96,7 +123,7 @@ export async function sendEmail(
 
     if (options?.cc) mailOptions.cc = options.cc;
     if (options?.bcc) mailOptions.bcc = options.bcc;
-    
+
     if (options?.attachments) {
       let atts = options.attachments;
       if (typeof atts === 'string') {
