@@ -18,6 +18,7 @@ const Departments = dynamic(() => import('@/app-pages/department/Departments'), 
 const Employees = dynamic(() => import('@/app-pages/employee/Employees'), { ssr: false });
 const HRLogin = dynamic(() => import('@/app-pages/auth/HRLogin'), { ssr: false });
 const EmployeeRegister = dynamic(() => import('@/app-pages/auth/EmployeeRegister'), { ssr: false });
+const InviteEmployee = dynamic(() => import('@/app-pages/employee/InviteEmployee'), { ssr: false });
 const PrivacyPolicy = dynamic(() => import('@/app-pages/legal/PrivacyPolicy'), { ssr: false });
 const TermsConditions = dynamic(() => import('@/app-pages/legal/TermsConditions'), { ssr: false });
 const AttendanceUpload = dynamic(() => import('@/app-pages/attendance/AttendanceUpload'), { ssr: false });
@@ -47,6 +48,7 @@ const EmployeeCredentials = dynamic(() => import('@/app-pages/employee/EmployeeC
 const AttendanceTemplateManager = dynamic(() => import('@/app-pages/attendance/AttendanceTemplateManager'), { ssr: false });
 const Unauthorized = dynamic(() => import('@/app-pages/auth/Unauthorized'), { ssr: false });
 const EmployeeDashboard = dynamic(() => import('@/app-pages/employee/EmployeeDashboard'), { ssr: false });
+const OnboardingGate = dynamic(() => import('@/app-pages/employee/onboarding/OnboardingGate'), { ssr: false });
 const ForceChangePassword = dynamic(() => import('@/app-pages/auth/ForceChangePassword'), { ssr: false });
 const AdminLeaveManagement = dynamic(() => import('@/app-pages/leave/AdminLeaveManagement'), { ssr: false });
 const AdminWFHManagement = dynamic(() => import('@/app-pages/leave/AdminWFHManagement'), { ssr: false });
@@ -59,6 +61,7 @@ const OrgChart = dynamic(() => import('@/app-pages/organization/OrgChart'), { ss
 const ReportingStructure = dynamic(() => import('@/app-pages/organization/ReportingStructure'), { ssr: false });
 function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [employeeStatus, setEmployeeStatus] = useState(() => localStorage.getItem('employee_status') || '');
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -68,6 +71,11 @@ function MainLayout() {
     const userPaths = ['/', '/my-attendance', '/my-payslips', '/profile', '/change-password', '/notifications', '/settings/view-notifications', '/force-change-password'];
     return role === 'USER' && (userPaths.includes(pathname) || pathname.startsWith('/employee-leave') || pathname.startsWith('/wfh'));
   })();
+  // An invited/pending/needs_correction employee only ever sees the
+  // onboarding gate (complete-profile form or a waiting screen), never the
+  // real dashboard or any other route - re-checked after they submit so the
+  // screen can swap to "pending" without a full reload.
+  const needsOnboarding = isUserPortal && pathname !== '/force-change-password' && employeeStatus && employeeStatus !== 'active';
 
   return (
     <>
@@ -82,6 +90,15 @@ function MainLayout() {
         <>
           {pathname === '/force-change-password' ? (
             <ForceChangePassword />
+          ) : needsOnboarding ? (
+            <OnboardingGate
+              status={employeeStatus}
+              onSubmitted={() => {
+                localStorage.setItem('employee_status', 'pending');
+                localStorage.removeItem('hr_remarks');
+                setEmployeeStatus('pending');
+              }}
+            />
           ) : (
             <EmployeeDashboard />
           )}
@@ -116,6 +133,7 @@ function MainLayout() {
                   <Route path="/attendance/update" element={<PrivateRoute allowedRoles={ADMIN_HR}><UpdateAttendance /></PrivateRoute>} />
                   <Route path="/attendance/templates" element={<PrivateRoute allowedRoles={ADMIN_HR}><AttendanceTemplateManager /></PrivateRoute>} />
                   <Route path="/employees/add" element={<PrivateRoute allowedRoles={ADMIN_HR}><EmployeeRegister /></PrivateRoute>} />
+                  <Route path="/employees/invite" element={<PrivateRoute allowedRoles={ADMIN_HR}><InviteEmployee /></PrivateRoute>} />
                   <Route path="/employees/pending" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><PendingEmployees /></PrivateRoute>} />
                   <Route path="/document-approvals" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><DocumentApprovals /></PrivateRoute>} />
                   <Route path="/employees/detail/:id" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><EmployeeDetail /></PrivateRoute>} />

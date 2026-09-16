@@ -113,6 +113,7 @@ interface EmployeeRow extends RowDataPacket {
   password: string;
   full_name?: string;
   status: string;
+  hr_remarks?: string;
   profile_photo?: string;
   last_login?: Date;
   must_change_password?: number;
@@ -134,6 +135,8 @@ export interface AuthUser {
   mobile_no?: string;
   designation?: string;
   department?: string;
+  status?: string;
+  hr_remarks?: string;
 }
 
 function parsePermissions(raw: string | null): Record<string, boolean> {
@@ -207,7 +210,14 @@ export async function authenticateUser(email: string, password: string, type: 'a
       token,
     };
   } else {
-    const emps = await query<EmployeeRow[]>('SELECT * FROM employees WHERE email_id = ? AND status = ?', [email, 'active']);
+    // 'invited'/'pending'/'needs_correction' can still log in - the frontend
+    // gates what they see (complete-profile form / "under review" screen)
+    // based on status, rather than blocking the login itself. 'dropped' and
+    // anything else stays blocked.
+    const emps = await query<EmployeeRow[]>(
+      "SELECT * FROM employees WHERE email_id = ? AND status IN ('active','invited','pending','needs_correction')",
+      [email]
+    );
     if (emps.length === 0) return null;
     const e = emps[0];
     if (!verifyPassword(password, e.password)) return null;
@@ -223,6 +233,7 @@ export async function authenticateUser(email: string, password: string, type: 'a
         profile_photo: e.profile_photo, last_login: new Date(),
         must_change_password: !!e.must_change_password,
         emp_code: e.emp_code, mobile_no: e.mobile_no, designation: e.designation,
+        status: e.status, hr_remarks: e.hr_remarks,
       },
       token,
     };

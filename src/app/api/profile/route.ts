@@ -26,7 +26,13 @@ export async function GET(req: NextRequest) {
         permissions: u.permissions ? JSON.parse(u.permissions) : {},
       });
     } else {
-      const rows = await query<RowDataPacket[]>('SELECT id, emp_code, email_id, full_name, status, profile_photo, last_login, designation, mobile_no, dob, present_address, father_spouse_name, college_name, course_name, specialization FROM employees WHERE id = ?', [user.id]);
+      const rows = await query<RowDataPacket[]>(
+        `SELECT id, emp_code, email_id, full_name, status, hr_remarks, profile_photo, last_login, designation, mobile_no,
+          dob, present_address, permanent_address, father_spouse_name, college_name, course_name, specialization,
+          course_duration, cgpa, alternate_mobile_no, previous_company, bank_name, account_number, pan, location, date_of_joining
+         FROM employees WHERE id = ?`,
+        [user.id]
+      );
       if (rows.length === 0) return jsonError('User not found', 404);
       const u = rows[0];
       return jsonSuccess({
@@ -35,16 +41,27 @@ export async function GET(req: NextRequest) {
         email: u.email_id,
         full_name: u.full_name || '',
         status: u.status,
+        hr_remarks: u.hr_remarks || '',
         profile_photo: u.profile_photo || '',
         last_login: u.last_login,
         designation: u.designation || '',
         mobile_no: u.mobile_no || '',
         dob: u.dob,
         present_address: u.present_address,
+        permanent_address: u.permanent_address,
         father_spouse_name: u.father_spouse_name,
         college_name: u.college_name,
         course_name: u.course_name,
         specialization: u.specialization,
+        course_duration: u.course_duration,
+        cgpa: u.cgpa,
+        alternate_mobile_no: u.alternate_mobile_no,
+        previous_company: u.previous_company,
+        bank_name: u.bank_name,
+        account_number: u.account_number,
+        pan: u.pan,
+        location: u.location,
+        date_of_joining: u.date_of_joining,
         role: 'USER',
       });
     }

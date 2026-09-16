@@ -8,6 +8,7 @@ export interface EmployeeTemplateVars {
   // Omit when the real password isn't available/appropriate to reveal
   // (e.g. re-sending to an already-active employee) - defaults to masked.
   password?: string;
+  empCode?: string;
   officialEmail?: string;
   officialNo?: string;
   loginUrl?: string;
@@ -20,6 +21,7 @@ export function fillEmployeeTemplate(rawBody: string, vars: EmployeeTemplateVars
   body = body.replace(/\{{1,2}(candidate_name|name)\}{1,2}/gi, vars.fullName || 'Employee');
   body = body.replace(/\{{1,2}email\}{1,2}/gi, vars.email || '');
   body = body.replace(/\{{1,2}password\}{1,2}/gi, vars.password ?? '********');
+  body = body.replace(/{{emp_code}}/gi, vars.empCode || '');
   body = body.replace(/{{login_url}}/gi, vars.loginUrl || '');
   body = body.replace(/{{official_email}}/gi, vars.officialEmail || '');
   body = body.replace(/{{official_no}}/gi, vars.officialNo || '');

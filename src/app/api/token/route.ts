@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     if (emps.length === 0) {
       return NextResponse.json({ detail: 'No account found with this email' }, { status: 401 });
     }
-    if (emps[0].status !== 'active') {
+    const loginableStatuses = ['active', 'invited', 'pending', 'needs_correction'];
+    if (!loginableStatuses.includes(emps[0].status)) {
       return NextResponse.json({ detail: `Account is ${emps[0].status}. Please contact HR to activate your account.` }, { status: 401 });
     }
     authResult = await authenticateUser(email, password, 'employee');
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
       role: authResult.user.role,
       permissions: authResult.user.permissions || {},
       must_change_password: authResult.user.must_change_password || false,
+      employee_status: authResult.user.status,
+      hr_remarks: authResult.user.hr_remarks || '',
       user: {
         id: authResult.user.id,
         email: authResult.user.email,

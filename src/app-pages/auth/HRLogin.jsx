@@ -29,6 +29,10 @@ export default function HRLogin() {
                 localStorage.setItem('token', data.access_token);
                 localStorage.setItem('role', data.role || 'USER');
                 localStorage.setItem('permissions', JSON.stringify(data.permissions || {}));
+                if (data.employee_status) localStorage.setItem('employee_status', data.employee_status);
+                else localStorage.removeItem('employee_status');
+                if (data.hr_remarks) localStorage.setItem('hr_remarks', data.hr_remarks);
+                else localStorage.removeItem('hr_remarks');
                 const mcp = data.must_change_password === true;
                 localStorage.setItem('must_change_password', mcp ? 'true' : 'false');
                 if (mcp) { navigate('/force-change-password', { replace: true }); }

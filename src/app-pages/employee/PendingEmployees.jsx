@@ -110,6 +110,33 @@ const PendingEmployees = () => {
     });
   };
 
+  const sendBackEmployee = (id) => {
+    Swal.fire({
+      title: 'Send Back for Correction',
+      input: 'textarea',
+      inputLabel: 'Tell the employee what needs to be fixed - they\'ll see this when they log back in.',
+      inputPlaceholder: 'e.g. Please re-upload a clearer photo of your PAN card.',
+      showCancelButton: true,
+      confirmButtonText: 'Send Back',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc2626',
+      inputValidator: (value) => !value.trim() && 'Please describe what needs to be corrected',
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      fetch(`${API}/employee/send-back/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...auth() },
+        body: JSON.stringify({ remarks: result.value }),
+      })
+        .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
+        .then(() => {
+          setEmployees(prev => prev.filter(e => e.id !== id));
+          Swal.fire({ icon: 'success', title: 'Sent back', text: 'The employee can log in and see your remarks.', timer: 3000, showConfirmButton: false });
+        })
+        .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to send back' }));
+    });
+  };
+
   return (
     <>
       <style>{`
@@ -329,6 +356,17 @@ const PendingEmployees = () => {
                             </svg>
                           )}
                           {approvingId === e.id ? 'Approving...' : 'Approve'}
+                        </button>
+                        <button
+                          className="pe-btn-view"
+                          style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                          onClick={() => sendBackEmployee(e.id)}
+                          disabled={approvingId === e.id}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+                          </svg>
+                          Send Back
                         </button>
                       </div>
                     </td>
