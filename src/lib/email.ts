@@ -80,30 +80,34 @@ export async function verifyEmailConnection(
   }
 }
 
-export async function sendEmail(
+interface SendEmailOptions {
+  cc?: string;
+  bcc?: string;
+  attachments?: any;
+  // If the acting user has connected their own webmail account (see
+  // user_email_accounts / Profile > "My Email Account"), send through it
+  // instead of the shared company SMTP account.
+  asUser?: { id: string; type: string };
+}
+
+// Same as sendEmail, but returns the actual SMTP error instead of a bare
+// boolean - callers that surface failures to the user (rather than just
+// logging "sent"/"failed") should use this so the error isn't stuck in
+// server logs the user can't see on a live deployment.
+export async function sendEmailDetailed(
   to: string,
   subject: string,
   html: string,
-  options?: {
-    cc?: string;
-    bcc?: string;
-    attachments?: any;
-    // If the acting user has connected their own webmail account (see
-    // user_email_accounts / Profile > "My Email Account"), send through it
-    // instead of the shared company SMTP account.
-    asUser?: { id: string; type: string };
-  }
-): Promise<boolean> {
+  options?: SendEmailOptions
+): Promise<{ success: boolean; error?: string }> {
   try {
     const s = await resolveSmtpConfig(options?.asUser);
     if (!s) {
-      console.error('[email] No SMTP settings configured');
-      return false;
+      return { success: false, error: 'No SMTP settings configured.' };
     }
 
     if (!s.smtp_host || !s.sender_email || !s.app_password) {
-      console.error('[email] Incomplete SMTP configuration (missing host/sender/password)');
-      return false;
+      return { success: false, error: 'Incomplete SMTP configuration (missing host/sender/password).' };
     }
 
     const transporter = buildTransporter(s);
@@ -142,9 +146,19 @@ export async function sendEmail(
     }
 
     await transporter.sendMail(mailOptions);
-    return true;
+    return { success: true };
   } catch (e: any) {
     console.error('[email] Send failed:', e?.message || e);
-    return false;
+    return { success: false, error: e?.message || 'Send failed.' };
   }
+}
+
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  options?: SendEmailOptions
+): Promise<boolean> {
+  const result = await sendEmailDetailed(to, subject, html, options);
+  return result.success;
 }

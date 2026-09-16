@@ -4,7 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/util
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { generatePDF } from '@/lib/payslip-pdf';
-import { sendEmail } from '@/lib/email';
+import { sendEmailDetailed } from '@/lib/email';
 
 const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       <p>Best regards,<br/>HR & Finance Team<br/>A Plus Digital Solutions</p>
     `;
 
-    const success = await sendEmail(
+    const { success, error } = await sendEmailDetailed(
       payslip.email_id,
       subject,
       html,
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await execute('UPDATE payslips SET email_sent_at = NOW() WHERE id = ?', [id]);
       return jsonSuccess({ message: `Payslip email sent successfully to ${payslip.email_id}.` });
     } else {
-      return jsonError('Failed to send payslip email via SMTP. Please check server logs.', 500);
+      return jsonError(`Failed to send payslip email: ${error || 'unknown error'}`, 500);
     }
   } catch (e: any) { 
     return jsonError(e, 500); 

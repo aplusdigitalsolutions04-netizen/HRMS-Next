@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { sendEmail } from '@/lib/email';
+import { sendEmailDetailed } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,10 +41,10 @@ export async function POST(req: NextRequest) {
     `;
 
     // We can also CC the employee so they have a copy
-    const success = await sendEmail(hrEmail, emailSubject, emailBody, { cc: user.email, asUser: { id: user.id, type: user.type } });
+    const { success, error } = await sendEmailDetailed(hrEmail, emailSubject, emailBody, { cc: user.email, asUser: { id: user.id, type: user.type } });
 
     if (!success) {
-      return jsonError('Failed to send email. Verify SMTP settings.', 500);
+      return jsonError(`Failed to send email: ${error || 'unknown error'}`, 500);
     }
 
     return jsonSuccess({ message: 'Email sent successfully to HR' });

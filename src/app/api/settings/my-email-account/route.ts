@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { sender_email, app_password, sender_name, smtp_host, smtp_port, encryption } = body;
     if (!sender_email || !app_password) return jsonError('Email and app password are required', 422);
+    if (!smtp_host) return jsonError('SMTP host is required', 422);
 
     const existing = await query<RowDataPacket[]>(
       'SELECT id FROM user_email_accounts WHERE user_id=? AND user_type=?',
@@ -37,12 +38,12 @@ export async function POST(req: NextRequest) {
     if (existing.length > 0) {
       await execute(
         'UPDATE user_email_accounts SET sender_email=?, app_password=?, sender_name=?, smtp_host=?, smtp_port=?, encryption=?, updated_at=NOW() WHERE id=?',
-        [sender_email, app_password, sender_name || '', smtp_host || 'smtp.gmail.com', smtp_port || 587, encryption || 'TLS', existing[0].id]
+        [sender_email, app_password, sender_name || '', smtp_host, smtp_port || 587, encryption || 'TLS', existing[0].id]
       );
     } else {
       await execute(
         'INSERT INTO user_email_accounts (id, user_id, user_type, sender_email, app_password, sender_name, smtp_host, smtp_port, encryption) VALUES (?,?,?,?,?,?,?,?,?)',
-        [uuidv4(), user.id, user.type, sender_email, app_password, sender_name || '', smtp_host || 'smtp.gmail.com', smtp_port || 587, encryption || 'TLS']
+        [uuidv4(), user.id, user.type, sender_email, app_password, sender_name || '', smtp_host, smtp_port || 587, encryption || 'TLS']
       );
     }
     return jsonSuccess({ message: 'Email account saved' });

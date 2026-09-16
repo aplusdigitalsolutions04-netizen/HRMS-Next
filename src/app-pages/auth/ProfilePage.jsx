@@ -12,7 +12,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({});
 
   const [emailAccount, setEmailAccount] = useState(null);
-  const [emailForm, setEmailForm] = useState({ sender_email: '', app_password: '', sender_name: '', smtp_host: 'smtp.gmail.com', smtp_port: 587, encryption: 'TLS' });
+  const [emailForm, setEmailForm] = useState({ sender_email: '', app_password: '', sender_name: '', smtp_host: '', smtp_port: 587, encryption: 'TLS' });
   const [editingEmail, setEditingEmail] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
@@ -28,7 +28,7 @@ export default function ProfilePage() {
           sender_email: d.sender_email || '',
           app_password: '',
           sender_name: d.sender_name || '',
-          smtp_host: d.smtp_host || 'smtp.gmail.com',
+          smtp_host: d.smtp_host || '',
           smtp_port: d.smtp_port || 587,
           encryption: d.encryption || 'TLS',
         });
@@ -361,7 +361,7 @@ export default function ProfilePage() {
               <div className="profile-details">
                 <div className="profile-field"><label>Sender Email</label><span>{emailAccount.sender_email}</span></div>
                 <div className="profile-field"><label>Sender Name</label><span>{emailAccount.sender_name || '—'}</span></div>
-                <div className="profile-field"><label>SMTP Host</label><span>{emailAccount.smtp_host || 'smtp.gmail.com'}:{emailAccount.smtp_port || 587} ({emailAccount.encryption || 'TLS'})</span></div>
+                <div className="profile-field"><label>SMTP Host</label><span>{emailAccount.smtp_host || '—'}:{emailAccount.smtp_port || 587} ({emailAccount.encryption || 'TLS'})</span></div>
               </div>
               <div className="profile-actions">
                 <button className="btn-premium" onClick={() => setEditingEmail(true)}>Update</button>
@@ -409,11 +409,11 @@ export default function ProfilePage() {
               </div>
             </div>
             <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
-              Most providers reject your regular login password for sending mail — use an <strong>App Password</strong> instead (for Gmail: Google Account → Security → App Passwords). If your email isn't Gmail, set the correct SMTP Host/Port for your provider (e.g. your company's mail server) — it defaults to Gmail's otherwise.
+              Most providers reject your regular login password for sending mail — use an <strong>App Password</strong> instead (for Gmail: Google Account → Security → App Passwords). Set the SMTP Host for your actual provider — for Gmail that's <code>smtp.gmail.com</code>, for a company/custom domain address it's your own mail server. Nothing is assumed automatically.
             </p>
             <div className="profile-actions">
-              <button className="btn-premium" onClick={handleSaveEmailAccount} disabled={savingEmail || !emailForm.sender_email || !emailForm.app_password}>{savingEmail ? 'Saving...' : 'Save'}</button>
-              <button className="btn-premium-outline" onClick={() => { setEditingEmail(false); if (emailAccount) setEmailForm({ sender_email: emailAccount.sender_email, app_password: '', sender_name: emailAccount.sender_name || '', smtp_host: emailAccount.smtp_host || 'smtp.gmail.com', smtp_port: emailAccount.smtp_port || 587, encryption: emailAccount.encryption || 'TLS' }); }}>Cancel</button>
+              <button className="btn-premium" onClick={handleSaveEmailAccount} disabled={savingEmail || !emailForm.sender_email || !emailForm.app_password || !emailForm.smtp_host}>{savingEmail ? 'Saving...' : 'Save'}</button>
+              <button className="btn-premium-outline" onClick={() => { setEditingEmail(false); if (emailAccount) setEmailForm({ sender_email: emailAccount.sender_email, app_password: '', sender_name: emailAccount.sender_name || '', smtp_host: emailAccount.smtp_host || '', smtp_port: emailAccount.smtp_port || 587, encryption: emailAccount.encryption || 'TLS' }); }}>Cancel</button>
             </div>
           </>
         )}

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { sendEmail } from '@/lib/email';
+import { sendEmailDetailed } from '@/lib/email';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     
     const logId = uuidv4(); const t = now();
     
-    const success = await sendEmail(
+    const { success, error } = await sendEmailDetailed(
       draft.to_email,
       draft.subject,
       draft.body,
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     if (!success) {
-      return jsonError('SMTP email sending failed. Verify your SMTP settings.', 500);
+      return jsonError(`Email sending failed: ${error || 'unknown error'}`, 500);
     }
 
     await execute('UPDATE email_drafts SET status=?, updated_at=? WHERE id=?', ['sent', t, id]);

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { sendEmail } from '@/lib/email';
+import { sendEmailDetailed } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const finalSubject = body.subject || '';
     const finalBody = body.body || '';
     
-    const success = await sendEmail(
+    const { success, error } = await sendEmailDetailed(
       body.to_email,
       finalSubject,
       finalBody,
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (!success) {
-      return jsonError('SMTP email sending failed. Verify your SMTP settings.', 500);
+      return jsonError(`Email sending failed: ${error || 'unknown error'}`, 500);
     }
 
     return jsonSuccess({ id: logId, message: 'Template email sent' });
