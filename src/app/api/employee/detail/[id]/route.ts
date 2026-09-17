@@ -10,7 +10,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!user) return jsonError('Not authenticated', 401);
     if (!checkPermission(user, 'view_employee_details')) return jsonError('Insufficient permissions', 403);
     const { id } = await params;
-    const rows = await query<RowDataPacket[]>('SELECT * FROM employees WHERE id = ?', [id]);
+    const rows = await query<RowDataPacket[]>(
+      `SELECT e.*, dp.name AS department
+       FROM employees e
+       LEFT JOIN designations de ON e.designation = de.name
+       LEFT JOIN departments dp ON de.department_id = dp.id
+       WHERE e.id = ?`,
+      [id]
+    );
     if (rows.length === 0) return jsonError('Employee not found', 404);
     // This route also backs the edit form (which needs bank/PAN fields), but
     // the password hash is never legitimate to send to any client.

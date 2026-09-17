@@ -254,6 +254,15 @@ export default function EditEmployee() {
                                 </select>
                             </div>
                             <div style={s.field}>
+                                <label style={s.label}>Department</label>
+                                <input
+                                    style={{ ...s.input, background: '#f1f5f9', color: '#64748b' }}
+                                    value={designationOptions.find(d => d.name === employee.designation)?.department_name || '—'}
+                                    readOnly
+                                    disabled
+                                />
+                            </div>
+                            <div style={s.field}>
                                 <label style={s.label}>Reporting Manager</label>
                                 <select style={s.select} name="manager_id" value={employee.manager_id || ''} onChange={handleChange}>
                                     <option value="">— None —</option>
