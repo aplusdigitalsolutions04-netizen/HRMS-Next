@@ -60,38 +60,13 @@ const PendingEmployees = () => {
 
   useEffect(() => { setPage(1); }, [search]);
 
-  const approveEmployee = (id) => {
-    let optionsHtml = '<option value="">-- No Email Draft (Only Approve) --</option>';
-    templates.forEach(t => {
-      optionsHtml += `<option value="${t.id}">${t.name}</option>`;
-    });
-
-    Swal.fire({
-      title: 'Approve Employee',
-      html: `
-        <p style="margin-bottom:16px;color:#475569">Select an email template to draft for this employee:</p>
-        <select id="swal-template-select" class="swal2-input" style="width:100%;box-sizing:border-box">
-          ${optionsHtml}
-        </select>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Approve',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#4338ca',
-      preConfirm: () => {
-        return document.getElementById('swal-template-select').value;
-      }
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      const templateId = result.value;
-
-      setApprovingId(id);
-      fetch(`${API}/employee/approve/${id}`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', ...auth() },
-        body: JSON.stringify({ template_id: templateId || null })
-      })
+  const doApprove = (id, templateId) => {
+    setApprovingId(id);
+    fetch(`${API}/employee/approve/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...auth() },
+      body: JSON.stringify({ template_id: templateId || null })
+    })
       .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
       .then(data => {
         if (data.message) {
@@ -100,13 +75,61 @@ const PendingEmployees = () => {
           if (templateId) {
             msg += ' A welcome email draft has been created. Check Draft Emails to review and send.';
           } else {
-            msg += ` No email draft created.`;
+            msg += ' No email was sent - the employee is now active.';
           }
           Swal.fire({ icon: 'success', title: 'Approved!', text: msg, timer: 5000, showConfirmButton: true });
         }
         setApprovingId(null);
       })
       .catch(() => { Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to approve employee' }); setApprovingId(null); });
+  };
+
+  const approveEmployee = (id) => {
+    Swal.fire({
+      title: 'Approve Employee',
+      text: 'Do you want to send an activation email, or just activate them directly?',
+      icon: 'question',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Send Email',
+      denyButtonText: 'Activate Directly',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#4338ca',
+      denyButtonColor: '#64748b',
+    }).then(choice => {
+      if (choice.isDenied) {
+        doApprove(id, null);
+        return;
+      }
+      if (!choice.isConfirmed) return;
+
+      let optionsHtml = '';
+      templates.forEach(t => {
+        optionsHtml += `<option value="${t.id}">${t.name}</option>`;
+      });
+
+      Swal.fire({
+        title: 'Choose Email Template',
+        html: `
+          <p style="margin-bottom:16px;color:#475569">Select which template to send:</p>
+          <select id="swal-template-select" class="swal2-input" style="width:100%;box-sizing:border-box">
+            ${optionsHtml}
+          </select>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Approve & Send',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#4338ca',
+        preConfirm: () => {
+          const val = document.getElementById('swal-template-select').value;
+          if (!val) { Swal.showValidationMessage('Please select a template'); return false; }
+          return val;
+        }
+      }).then(result => {
+        if (!result.isConfirmed) return;
+        doApprove(id, result.value);
+      });
     });
   };
 
