@@ -57,15 +57,17 @@ export async function POST(req: NextRequest) {
       : '';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
-    const subject = (tmplRows[0].subject || '').replace('{{company_name}}', companyName);
-    const htmlBody = fillEmployeeTemplate(tmplRows[0].body || '', {
+    const templateVars = {
       fullName,
       email: emailId,
       password: tempPassword,
       empCode,
       loginUrl: `${appUrl}/login`,
       companyLogo: companyLogoHtml,
-    });
+      companyName,
+    };
+    const subject = fillEmployeeTemplate(tmplRows[0].subject || '', templateVars);
+    const htmlBody = fillEmployeeTemplate(tmplRows[0].body || '', templateVars);
 
     const draftId = uuidv4();
     await execute(

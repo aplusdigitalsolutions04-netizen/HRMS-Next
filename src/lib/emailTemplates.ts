@@ -13,19 +13,25 @@ export interface EmployeeTemplateVars {
   officialNo?: string;
   loginUrl?: string;
   companyLogo?: string;
+  companyName?: string;
   officialDetailsHtml?: string;
 }
 
+// Applied to both subject and body so a variable works the same everywhere,
+// and accepts {var}, {{var}}, or {VAR} (any brace count/case) since the
+// "Available Variables" panel in Template Management shows the candidate
+// template convention (single brace, uppercase) right next to these.
 export function fillEmployeeTemplate(rawBody: string, vars: EmployeeTemplateVars): string {
   let body = rawBody || '';
   body = body.replace(/\{{1,2}(candidate_name|name)\}{1,2}/gi, vars.fullName || 'Employee');
   body = body.replace(/\{{1,2}email\}{1,2}/gi, vars.email || '');
   body = body.replace(/\{{1,2}password\}{1,2}/gi, vars.password ?? '********');
-  body = body.replace(/{{emp_code}}/gi, vars.empCode || '');
-  body = body.replace(/{{login_url}}/gi, vars.loginUrl || '');
-  body = body.replace(/{{official_email}}/gi, vars.officialEmail || '');
-  body = body.replace(/{{official_no}}/gi, vars.officialNo || '');
-  body = body.replace(/{{official_details_section}}/gi, vars.officialDetailsHtml || '');
-  body = body.replace(/{{company_logo}}/gi, vars.companyLogo || '');
+  body = body.replace(/\{{1,2}emp_code\}{1,2}/gi, vars.empCode || '');
+  body = body.replace(/\{{1,2}login_url\}{1,2}/gi, vars.loginUrl || '');
+  body = body.replace(/\{{1,2}official_email\}{1,2}/gi, vars.officialEmail || '');
+  body = body.replace(/\{{1,2}official_no\}{1,2}/gi, vars.officialNo || '');
+  body = body.replace(/\{{1,2}official_details_section\}{1,2}/gi, vars.officialDetailsHtml || '');
+  body = body.replace(/\{{1,2}company_logo\}{1,2}/gi, vars.companyLogo || '');
+  body = body.replace(/\{{1,2}company_name\}{1,2}/gi, vars.companyName || '');
   return body;
 }

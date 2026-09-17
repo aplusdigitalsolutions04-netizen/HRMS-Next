@@ -23,6 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // fallback password on approval.
     const alreadyHasOwnPassword = !emp.must_change_password;
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');
+    const companyName = companyRows[0]?.company_name || '';
     const companyLogo = companyRows[0]?.company_logo || '';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
@@ -52,9 +53,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const tmplRows = await query<RowDataPacket[]>('SELECT name, subject, body FROM email_templates WHERE id = ?', [templateId]);
       if (tmplRows.length > 0) {
         const tmpl = tmplRows[0];
-        emailSubject = tmpl.subject || '';
         templateName = tmpl.name || '';
-        htmlBody = fillEmployeeTemplate(tmpl.body, {
+        const templateVars = {
           fullName: emp.full_name,
           email: emp.email_id,
           password: tempPassword,
@@ -63,7 +63,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           officialNo: emp.official_no,
           officialDetailsHtml,
           companyLogo,
-        });
+          companyName,
+        };
+        emailSubject = fillEmployeeTemplate(tmpl.subject || '', templateVars);
+        htmlBody = fillEmployeeTemplate(tmpl.body, templateVars);
         createDraft = true;
       }
     }
