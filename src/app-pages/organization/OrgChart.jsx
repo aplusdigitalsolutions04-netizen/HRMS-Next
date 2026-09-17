@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const OrgNode = ({ node, childrenMap, searchQuery }) => {
   const [expanded, setExpanded] = useState(true);

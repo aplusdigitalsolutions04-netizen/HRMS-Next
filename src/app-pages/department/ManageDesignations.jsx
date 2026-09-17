@@ -17,10 +17,10 @@ export default function ManageDesignations() {
   useEffect(() => {
     Promise.all([
       fetch('/api/departments/', {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
       }).then(res => res.json()),
       fetch('/api/designations/', {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
       }).then(res => res.json())
     ])
       .then(([deps, desigs]) => {
@@ -42,7 +42,7 @@ export default function ManageDesignations() {
       fetch(`/api/designations/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': 'Bearer ' + localStorage.getItem('token')
+          'Authorization': 'Bearer ' + sessionStorage.getItem('token')
         }
       })
         .then(res => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);

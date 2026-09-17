@@ -4,7 +4,7 @@ import Pagination, { paginate } from '../shared/Pagination';
 
 const API = '/api';
 const PAGE_SIZE = 10;
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const formatDT = (d) => {
   if (!d) return '\u2014';

@@ -59,7 +59,7 @@ export default function DailyAttendance() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await fetch(`${API}/attendance/daily?month=${month}&year=${year}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const GROUPS = [
   {
@@ -40,8 +40,8 @@ const GROUPS = [
 
 export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
   const location = useLocation();
-  const role = localStorage.getItem('role');
-  const rawPerms = JSON.parse(localStorage.getItem('permissions') || '{}');
+  const role = sessionStorage.getItem('role');
+  const rawPerms = JSON.parse(sessionStorage.getItem('permissions') || '{}');
   const isAdminOrHr = role === 'ADMIN' || role === 'HR';
   const hasPerm = (p) => p === null || isAdminOrHr || (p && rawPerms[p] === true);
 

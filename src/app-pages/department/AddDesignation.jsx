@@ -16,7 +16,7 @@ const AddDesignation = () => {
   useEffect(() => {
     // Fetch departments for dropdown
     fetch('/api/departments/', {
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
     })
       .then(res => res.json())
       .then(data => setDepartments(data || []))
@@ -25,7 +25,7 @@ const AddDesignation = () => {
     // If edit, fetch designation details
     if (isEdit) {
       fetch(`/api/designations/${id}`, {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
       })
         .then(res => res.json())
         .then(data => {
@@ -53,7 +53,7 @@ const AddDesignation = () => {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
+        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
       },
       body: JSON.stringify({
         department_id: departmentId,

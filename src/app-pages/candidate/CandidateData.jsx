@@ -12,7 +12,7 @@ import EmailComposeModal from './candidate-data/EmailComposeModal';
 import CandidateEmailActionModal from './candidate-data/CandidateEmailActionModal';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const CandidateData = () => {
     const navigate = useNavigate();
@@ -114,7 +114,7 @@ const CandidateData = () => {
         setFetchError('');
         fetch(`${API}/candidate/data`, { headers: auth() })
             .then(res => {
-                if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+                if (res.status === 401) { sessionStorage.removeItem('token'); window.location.href = '/login'; return; }
                 if (!res.ok) throw new Error(`Server error: ${res.status}`);
                 return res.json();
             })

@@ -18,7 +18,7 @@ const VARS = [
 ];
 
 const API = '/api';
-const authHeaders = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const authHeaders = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function AvailableVariables({ onInsert }) {
     const [customVars, setCustomVars] = React.useState([]);

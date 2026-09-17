@@ -22,7 +22,7 @@ export default function EditEmployee() {
     useEffect(() => {
         if (id) {
             fetch(`/api/employee/detail/${id}`, {
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
             })
                 .then(res => res.json())
                 .then(data => {
@@ -37,14 +37,14 @@ export default function EditEmployee() {
         }
 
         fetch('/api/employee/management', {
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
         })
             .then(res => res.json())
             .then(data => setEmployeeOptions(Array.isArray(data) ? data : []))
             .catch(() => {});
 
         fetch('/api/designations', {
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
         })
             .then(res => res.json())
             .then(data => setDesignationOptions(Array.isArray(data) ? data : []))
@@ -84,7 +84,7 @@ export default function EditEmployee() {
 
         fetch(`/api/employee/edit/${employee.id || id}`, {
             method: 'PUT',
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') },
             body: formData
         })
         .then(async res => {

@@ -9,7 +9,7 @@ const AvailableVariables = lazy(() => import('./template-management/AvailableVar
 const SavedTemplatesTable = lazy(() => import('./template-management/SavedTemplatesTable'));
 
 const API = '/api';
-const authHeaders = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const authHeaders = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function TemplateManagement() {
     /* ── upload state ── */
@@ -40,7 +40,7 @@ export default function TemplateManagement() {
         setLoadingList(true);
         try {
             const res = await fetch(`${API}/templates/`, { headers: authHeaders() });
-            if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+            if (res.status === 401) { sessionStorage.removeItem('token'); window.location.href = '/login'; return; }
             const data = await res.json();
             setTemplates(Array.isArray(data) ? data : []);
         } catch (e) {

@@ -10,7 +10,7 @@ const PAGE_SIZE = 10;
 const DetailView = lazy(() => import('./email-log/DetailView'));
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const StatCard = ({ icon, value, label, color }) => (
     <div className="el-card">
@@ -48,7 +48,7 @@ const EmailLog = () => {
         setLoading(true);
         fetch(`${API}/email/logs`, { headers: auth() })
             .then(r => {
-                if (r.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+                if (r.status === 401) { sessionStorage.removeItem('token'); window.location.href = '/login'; }
                 return r.json();
             })
             .then(d => { setLogs(Array.isArray(d) ? d : []); setLoading(false); })

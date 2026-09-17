@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function ProfileDropdown() {
   const [open, setOpen] = useState(false);
@@ -14,7 +14,7 @@ export default function ProfileDropdown() {
   const navigate = useNavigate();
 
   const fetchProfile = () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return;
     fetch(`${API}/profile`, { headers: auth() })
       .then(r => r.json()).then(d => setProfile(d)).catch(() => {});
@@ -56,9 +56,9 @@ export default function ProfileDropdown() {
 
   const doLogout = () => {
     fetch(`${API}/logout`, { method: 'POST' }).catch(() => {});
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('permissions');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('role');
+    sessionStorage.removeItem('permissions');
     navigate('/login');
   };
 

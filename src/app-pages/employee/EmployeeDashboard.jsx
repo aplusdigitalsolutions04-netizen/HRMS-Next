@@ -15,7 +15,7 @@ const ProfileTab = lazy(() => import('./employee-dashboard/ProfileTab'));
 const ContactHRTab = lazy(() => import('./employee-dashboard/ContactHRTab'));
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const menuItems = [
   { key: 'dashboard', label: 'Dashboard', icon: 'home' },
@@ -32,7 +32,7 @@ const TabFallback = () => <div className="p-4 text-center">Loading...</div>;
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
-  const role = localStorage.getItem('role');
+  const role = sessionStorage.getItem('role');
   const pathname = window.location.pathname;
   const initialMenu = pathname === '/profile' ? 'profile' : pathname === '/change-password' ? 'changePassword' : pathname === '/my-payslips' ? 'payslips' : pathname === '/my-attendance' ? 'attendance' : pathname === '/notifications' ? 'notifications' : pathname.startsWith('/employee-leave') ? 'leave' : pathname.startsWith('/wfh') ? 'wfh' : 'dashboard';
   const [activeMenu, setActiveMenu] = useState(initialMenu);
@@ -109,11 +109,11 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
-    const mcp = localStorage.getItem('must_change_password');
+    const mcp = sessionStorage.getItem('must_change_password');
     if (mcp === 'true') { navigate('/force-change-password', { replace: true }); return; }
-    const role = localStorage.getItem('role');
+    const role = sessionStorage.getItem('role');
     if (role !== 'USER') { navigate('/'); return; }
 
     const h = auth();
@@ -155,10 +155,10 @@ export default function EmployeeDashboard() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('must_change_password');
-    localStorage.removeItem('permissions');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('role');
+    sessionStorage.removeItem('must_change_password');
+    sessionStorage.removeItem('permissions');
     navigate('/login');
   };
 

@@ -1,5 +1,5 @@
 export const API = '/api';
-export const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+export const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export function SettingsCard({ title, desc, children }) {
   return (

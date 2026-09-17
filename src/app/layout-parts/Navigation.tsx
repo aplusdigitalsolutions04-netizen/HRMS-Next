@@ -8,11 +8,11 @@ import dynamic from 'next/dynamic';
 const SettingsSidebar = dynamic(() => import('@/app-pages/settings/SettingsSidebar'), { ssr: false });
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
-  const isAdminOrHr = ['ADMIN', 'HR'].includes(localStorage.getItem('role'));
-  const rawPerms = (() => { try { return JSON.parse(localStorage.getItem('permissions') || '{}'); } catch { return {}; } })();
+  const isAdminOrHr = ['ADMIN', 'HR'].includes(sessionStorage.getItem('role'));
+  const rawPerms = (() => { try { return JSON.parse(sessionStorage.getItem('permissions') || '{}'); } catch { return {}; } })();
   const hasPerm = (p) => isAdminOrHr || rawPerms[p] === true;
   const isSettingsPage = pathname.startsWith('/settings') || pathname.includes('/permissions');
 

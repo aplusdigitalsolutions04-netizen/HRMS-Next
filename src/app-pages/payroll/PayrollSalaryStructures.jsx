@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Pagination, { paginate } from '../shared/Pagination';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const PAGE_SIZE = 10;
 
 export default function PayrollSalaryStructures() {

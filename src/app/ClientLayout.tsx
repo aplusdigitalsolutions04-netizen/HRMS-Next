@@ -61,13 +61,13 @@ const OrgChart = dynamic(() => import('@/app-pages/organization/OrgChart'), { ss
 const ReportingStructure = dynamic(() => import('@/app-pages/organization/ReportingStructure'), { ssr: false });
 function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [employeeStatus, setEmployeeStatus] = useState(() => localStorage.getItem('employee_status') || '');
+  const [employeeStatus, setEmployeeStatus] = useState(() => sessionStorage.getItem('employee_status') || '');
   const location = useLocation();
   const pathname = location.pathname;
 
   const isAuthPage = ['/login', '/register', '/privacy-policy', '/terms-conditions'].includes(pathname);
   const isUserPortal = (() => {
-    const role = localStorage.getItem('role');
+    const role = sessionStorage.getItem('role');
     const userPaths = ['/', '/my-attendance', '/my-payslips', '/profile', '/change-password', '/notifications', '/settings/view-notifications', '/force-change-password'];
     return role === 'USER' && (userPaths.includes(pathname) || pathname.startsWith('/employee-leave') || pathname.startsWith('/wfh'));
   })();
@@ -94,8 +94,8 @@ function MainLayout() {
             <OnboardingGate
               status={employeeStatus}
               onSubmitted={() => {
-                localStorage.setItem('employee_status', 'pending');
-                localStorage.removeItem('hr_remarks');
+                sessionStorage.setItem('employee_status', 'pending');
+                sessionStorage.removeItem('hr_remarks');
                 setEmployeeStatus('pending');
               }}
             />

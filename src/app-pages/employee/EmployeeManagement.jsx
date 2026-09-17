@@ -7,7 +7,7 @@ import { AnimatedValue, initials, statusBadge, canDeleteEmployee, formatDT } fro
 const EmployeeDrawer = lazy(() => import('./employee-management/EmployeeDrawer'));
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const EmployeeManagement = () => {
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, dropped: 0, new_this_month: 0, growth_pct: 0 });
@@ -105,7 +105,7 @@ const EmployeeManagement = () => {
     if (d) params.set('department', d);
     fetch(`${API}/employee/manage?${params}`, { headers: auth() })
       .then(r => {
-        if (r.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+        if (r.status === 401) { sessionStorage.removeItem('token'); window.location.href = '/login'; }
         return r.json();
       })
       .then(data => {

@@ -15,7 +15,7 @@ export default function ManageDepartments() {
 
   useEffect(() => {
     fetch('/api/departments/', {
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
     })
       .then(res => res.json())
       .then(deps => setDepartments(deps || []))
@@ -35,7 +35,7 @@ export default function ManageDepartments() {
       fetch(`/api/departments/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': 'Bearer ' + localStorage.getItem('token')
+          'Authorization': 'Bearer ' + sessionStorage.getItem('token')
         }
       })
         .then(res => {

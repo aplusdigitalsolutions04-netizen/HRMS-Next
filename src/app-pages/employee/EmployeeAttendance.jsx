@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -67,7 +67,7 @@ export default function EmployeeAttendance() {
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
 
   useEffect(() => {
-    const role = localStorage.getItem('role');
+    const role = sessionStorage.getItem('role');
     if (role !== 'USER') navigate('/');
   }, []);
 

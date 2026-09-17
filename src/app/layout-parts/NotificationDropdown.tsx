@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
@@ -15,7 +15,7 @@ export default function NotificationDropdown() {
   const navigate = useNavigate();
 
   const fetchData = () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) return;
     fetch(`${API}/notifications?page=1&per_page=6`, { headers: auth() })
       .then(r => r.json()).then(d => setNotifications(d.notifications || [])).catch(() => {});

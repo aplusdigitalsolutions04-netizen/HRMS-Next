@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 export async function openEmployeeDocument(employeeId, field) {
   try {
     const res = await fetch(`/api/employee/document/${employeeId}?field=${field}`, {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') },
+      headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') },
     });
     if (!res.ok) {
       Swal.fire('Error', 'Could not open document', 'error');

@@ -11,7 +11,7 @@ const EditDepartment = () => {
   useEffect(() => {
     if (id) {
       fetch(`/api/departments/${id}`, {
-        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+        headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
       })
         .then(res => res.json())
         .then(data => {
@@ -29,7 +29,7 @@ const EditDepartment = () => {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
+        'Authorization': 'Bearer ' + sessionStorage.getItem('token')
       },
       body: JSON.stringify({
         name: departmentName.trim(),

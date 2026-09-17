@@ -5,11 +5,11 @@ export default function PendingReview() {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('permissions');
-        localStorage.removeItem('employee_status');
-        localStorage.removeItem('hr_remarks');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('permissions');
+        sessionStorage.removeItem('employee_status');
+        sessionStorage.removeItem('hr_remarks');
         navigate('/login', { replace: true });
     };
 

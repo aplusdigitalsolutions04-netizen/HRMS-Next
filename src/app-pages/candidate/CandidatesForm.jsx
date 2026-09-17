@@ -35,7 +35,7 @@ const CandidatesForm = () => {
 
         const timer = setTimeout(() => {
             fetch(`/api/candidate/check?mobile=${encodeURIComponent(val)}`, {
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
             })
                 .then(r => r.json())
                 .then(res => {
@@ -85,7 +85,7 @@ const CandidatesForm = () => {
 
         fetch('/api/resume/parse', {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') },
             body: fd
         })
         .then(res => res.json())
@@ -135,7 +135,7 @@ const CandidatesForm = () => {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
+                'Authorization': 'Bearer ' + sessionStorage.getItem('token')
             },
             body: JSON.stringify(payload)
         })

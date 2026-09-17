@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const TYPE_COLORS = {
   INTERVIEW: '#4338ca',
@@ -26,7 +26,7 @@ const TYPE_ICONS = {
 };
 
 export default function NotificationsPage() {
-  const role = localStorage.getItem('role');
+  const role = sessionStorage.getItem('role');
   const notifBase = role === 'USER' ? '/my-notifications' : '/notifications';
   const [notifications, setNotifications] = useState([]);
   const [total, setTotal] = useState(0);

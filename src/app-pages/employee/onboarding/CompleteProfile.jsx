@@ -29,11 +29,11 @@ export default function CompleteProfile({ onSubmitted }) {
     const [profile, setProfile] = useState(null);
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('permissions');
-        localStorage.removeItem('employee_status');
-        localStorage.removeItem('hr_remarks');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('role');
+        sessionStorage.removeItem('permissions');
+        sessionStorage.removeItem('employee_status');
+        sessionStorage.removeItem('hr_remarks');
         navigate('/login', { replace: true });
     };
     const [form, setForm] = useState({
@@ -45,7 +45,7 @@ export default function CompleteProfile({ onSubmitted }) {
     const [files, setFiles] = useState({});
 
     useEffect(() => {
-        fetch('/api/profile', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+        fetch('/api/profile', { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } })
             .then(r => r.json())
             .then(data => {
                 setProfile(data);
@@ -83,7 +83,7 @@ export default function CompleteProfile({ onSubmitted }) {
         try {
             const res = await fetch('/api/employee/complete-profile', {
                 method: 'PUT',
-                headers: { Authorization: 'Bearer ' + localStorage.getItem('token') },
+                headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') },
                 body: data,
             });
             const result = await res.json();

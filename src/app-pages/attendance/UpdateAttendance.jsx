@@ -26,7 +26,7 @@ const UpdateAttendance = () => {
     const fetchAttendance = (code) => {
         setIsFetching(true);
         fetch(`/api/attendance/daywise?emp_code=${code}`, {
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
         })
             .then(res => res.json())
             .then(data => {
@@ -141,7 +141,7 @@ const UpdateAttendance = () => {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
+                'Authorization': 'Bearer ' + sessionStorage.getItem('token')
             },
             body: formData.toString()
         })

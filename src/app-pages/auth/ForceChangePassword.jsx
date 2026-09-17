@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import aplusLogo from '../../assets/aplus.png';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 export default function ForceChangePassword() {
   const navigate = useNavigate();
@@ -15,11 +15,11 @@ export default function ForceChangePassword() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
+    const token = sessionStorage.getItem('token');
+    const role = sessionStorage.getItem('role');
     if (!token) { navigate('/login', { replace: true }); return; }
     if (role !== 'USER') { navigate('/', { replace: true }); return; }
-    const mcp = localStorage.getItem('must_change_password');
+    const mcp = sessionStorage.getItem('must_change_password');
     if (mcp !== 'true') { navigate('/', { replace: true }); return; }
   }, [navigate]);
 
@@ -55,7 +55,7 @@ export default function ForceChangePassword() {
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem('must_change_password', 'false');
+        sessionStorage.setItem('must_change_password', 'false');
         setSuccess(true);
         setTimeout(() => navigate('/', { replace: true }), 2000);
       } else {

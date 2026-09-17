@@ -103,7 +103,7 @@ export default function EmployeeRegister() {
             }
         });
         try {
-            const token = localStorage.getItem('token');
+            const token = sessionStorage.getItem('token');
             const res = await fetch('/api/employee/register', {
                 method: 'POST',
                 headers: token ? { 'Authorization': 'Bearer ' + token } : {},

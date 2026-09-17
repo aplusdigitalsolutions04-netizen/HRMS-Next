@@ -34,9 +34,9 @@ export const statusBadge = (status) => {
 };
 
 export const canDeleteEmployee = () => {
-  const role = localStorage.getItem('role');
+  const role = sessionStorage.getItem('role');
   if (role === 'ADMIN' || role === 'HR') return true;
-  try { return JSON.parse(localStorage.getItem('permissions') || '{}').delete_employee === true; } catch { return false; }
+  try { return JSON.parse(sessionStorage.getItem('permissions') || '{}').delete_employee === true; } catch { return false; }
 };
 
 export const formatDT = (dt) => {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const initials = (name) => {
   if (!name) return '?';
@@ -30,7 +30,7 @@ const PendingEmployees = () => {
   useEffect(() => {
     fetch(`${API}/employee/pending`, { headers: auth() })
       .then(r => {
-        if (r.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; }
+        if (r.status === 401) { sessionStorage.removeItem('token'); window.location.href = '/login'; }
         return r.json();
       })
       .then(data => { setEmployees(Array.isArray(data) ? data : []); setLoading(false); })

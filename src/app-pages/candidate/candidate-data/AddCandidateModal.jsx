@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 
 /* ── self-contained "Add Candidate" wizard: mobile check → resume parse → save ── */

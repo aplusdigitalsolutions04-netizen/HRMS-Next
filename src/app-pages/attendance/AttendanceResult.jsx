@@ -60,7 +60,7 @@ const AttendanceResult = () => {
     const qs = params.toString();
     const url = "/api/attendance/result" + (qs ? "?" + qs : "");
 
-    fetch(url, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+    fetch(url, { headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') } })
       .then(res => res.json())
       .then(data => {
         if (data.summary) setSummary(data.summary);
@@ -76,7 +76,7 @@ const AttendanceResult = () => {
 
   const verifyAttendance = (id) => {
     Swal.fire({ title: 'Verify Attendance?', text: 'Once verified, data will be locked.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes, Verify' })
-      .then(r => { if (!r.isConfirmed) return; fetch('/api/attendance/verify/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(() => fetchAttendanceData()); });
+      .then(r => { if (!r.isConfirmed) return; fetch('/api/attendance/verify/' + id, { method: 'POST', headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') } }).then(() => fetchAttendanceData()); });
   };
 
   const verifyAll = () => {
@@ -84,7 +84,7 @@ const AttendanceResult = () => {
       .then(r => {
         if (!r.isConfirmed) return;
         Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        fetch('/api/attendance/verify_all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+        fetch('/api/attendance/verify_all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') } })
           .then(() => { Swal.close(); fetchAttendanceData(); });
       });
   };

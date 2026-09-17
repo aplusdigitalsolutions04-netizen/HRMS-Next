@@ -17,7 +17,7 @@ const EmployeeDetail = () => {
     useEffect(() => {
         if (id) {
             fetch(`/api/employee/detail/${id}`, {
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
             })
                 .then(res => res.json())
                 .then(data => {
@@ -37,7 +37,7 @@ const EmployeeDetail = () => {
         fetch(`/api/employee/approve/${employee?.id}`, {
             method: 'POST',
             headers: { 
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
+                'Authorization': 'Bearer ' + sessionStorage.getItem('token')
             },
         })
         .then(res => {
@@ -58,7 +58,7 @@ const EmployeeDetail = () => {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
+                'Authorization': 'Bearer ' + sessionStorage.getItem('token')
             },
             body: JSON.stringify({ status: 'dropped' })
         })

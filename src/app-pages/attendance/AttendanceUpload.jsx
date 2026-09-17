@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const AttendanceUpload = () => {
     const navigate = useNavigate();
@@ -100,7 +100,7 @@ const AttendanceUpload = () => {
 
         fetch(url, {
             method: "POST",
-            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') },
             body: formData
         })
         .then(async res => {
@@ -136,7 +136,7 @@ const AttendanceUpload = () => {
         setMsg('');
         fetch(`${API}/attendance/import-teamoffice`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionStorage.getItem('token') },
             body: JSON.stringify({ month: parseInt(toSyncMonth), year: parseInt(toSyncYear) })
         })
         .then(async res => {

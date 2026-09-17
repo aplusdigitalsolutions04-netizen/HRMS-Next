@@ -9,7 +9,7 @@ const CandidateView = () => {
     useEffect(() => {
         if (id) {
             fetch(`/api/candidate/details/${id}`, {
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('token') }
             })
                 .then(res => res.json())
                 .then(data => {

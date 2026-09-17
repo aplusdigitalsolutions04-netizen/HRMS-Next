@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 const API = '/api';
-const auth = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') });
+const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 function AnimatedValue({ value, suffix = '' }) {
   const [display, setDisplay] = useState(0);
@@ -58,7 +58,7 @@ function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const [deptRes, empRes, pendingRes, candRes, attRes, profileRes] = await Promise.all([
           fetch(`${API}/departments`, { headers }),
