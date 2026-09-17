@@ -140,6 +140,11 @@ export async function sendEmailDetailed(
           if (a.path) res.path = a.path;
           if (a.content) res.content = a.content;
           if (a.contentType) res.contentType = a.contentType;
+          // Referenced from the HTML body as <img src="cid:...">. Most email
+          // clients (Gmail included) block/strip data: URI images outright,
+          // but will render a cid-referenced inline attachment.
+          if (a.cid) res.cid = a.cid;
+          if (a.encoding) res.encoding = a.encoding;
           return res;
         });
       }

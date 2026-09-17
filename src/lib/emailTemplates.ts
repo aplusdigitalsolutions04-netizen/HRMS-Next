@@ -35,3 +35,42 @@ export function fillEmployeeTemplate(rawBody: string, vars: EmployeeTemplateVars
   body = body.replace(/\{{1,2}company_name\}{1,2}/gi, vars.companyName || '');
   return body;
 }
+
+// company_settings.company_logo is stored as a base64 data: URI (uploaded via
+// a plain <input type=file> + FileReader, never written to a public path).
+// That renders fine in the app itself, but most email clients - Gmail
+// included - strip or refuse to load data: URI images in HTML mail as a
+// spam/tracking precaution, which is why the logo shows as a broken image
+// in a sent email even though it looks fine everywhere in the UI. Emailing
+// it has to go through a cid-referenced inline attachment instead, which
+// every mainstream client renders.
+export function buildCompanyLogoEmail(rawLogo: string | undefined, altText: string): {
+  html: string;
+  attachment: { filename: string; content: string; encoding: string; contentType: string; cid: string } | null;
+} {
+  if (!rawLogo) return { html: '', attachment: null };
+
+  const dataUriMatch = rawLogo.match(/^data:([^;]+);base64,([\s\S]+)$/);
+  if (!dataUriMatch) {
+    // Already a real URL (e.g. hosted elsewhere) - use it directly, no
+    // attachment needed.
+    return {
+      html: `<img src="${rawLogo}" alt="${altText}" style="height:36px;margin-bottom:16px" />`,
+      attachment: null,
+    };
+  }
+
+  const [, mimeType, base64Data] = dataUriMatch;
+  const ext = mimeType.split('/')[1] || 'png';
+  const cid = 'company-logo';
+  return {
+    html: `<img src="cid:${cid}" alt="${altText}" style="height:36px;margin-bottom:16px" />`,
+    attachment: {
+      filename: `logo.${ext}`,
+      content: base64Data,
+      encoding: 'base64',
+      contentType: mimeType,
+      cid,
+    },
+  };
+}

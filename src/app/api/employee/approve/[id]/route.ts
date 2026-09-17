@@ -4,7 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } fro
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { hashPassword } from '@/lib/auth';
-import { fillEmployeeTemplate } from '@/lib/emailTemplates';
+import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const alreadyHasOwnPassword = !emp.must_change_password;
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');
     const companyName = companyRows[0]?.company_name || '';
-    const companyLogo = companyRows[0]?.company_logo || '';
+    const { html: companyLogo, attachment: logoAttachment } = buildCompanyLogoEmail(companyRows[0]?.company_logo, companyName);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
     const tempPassword = emp.mobile_no || '123456';
@@ -74,17 +74,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (createDraft) {
       const draftId = uuidv4();
       const t = now();
+      const attachmentsJson = JSON.stringify(logoAttachment ? [logoAttachment] : []);
       // Ensure we have template_name column in the query if it exists. If not, maybe just insert without it or update schema.
       // Usually it's better to try to insert template_name. But let's check if email_drafts has template_name.
       // In DraftManagement.jsx, it uses viewingDraft.template_name so we should insert it.
       await execute(
         `INSERT INTO email_drafts (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, created_by, created_at, updated_at, template_name, candidate_name) VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?,?,?)`,
-        [draftId, null, emp.email_id, emailSubject, htmlBody, '', '', '[]', user.email, t, t, templateName, emp.full_name]
+        [draftId, null, emp.email_id, emailSubject, htmlBody, '', '', attachmentsJson, user.email, t, t, templateName, emp.full_name]
       ).catch(async () => {
         // Fallback if template_name column doesn't exist
         await execute(
           `INSERT INTO email_drafts (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?)`,
-          [draftId, null, emp.email_id, emailSubject, htmlBody, '', '', '[]', user.email, t, t]
+          [draftId, null, emp.email_id, emailSubject, htmlBody, '', '', attachmentsJson, user.email, t, t]
         );
       });
 

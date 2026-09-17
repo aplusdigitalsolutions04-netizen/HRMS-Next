@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { fillEmployeeTemplate } from '@/lib/emailTemplates';
+import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');
     const companyName = companyRows[0]?.company_name || '';
-    const companyLogo = companyRows[0]?.company_logo || '';
+    const { html: companyLogo, attachment: logoAttachment } = buildCompanyLogoEmail(companyRows[0]?.company_logo, companyName);
 
     // For already active employees, the real password isn't accessible here,
     // so it's left masked - fillEmployeeTemplate defaults to '********' when
@@ -52,15 +52,16 @@ export async function POST(req: NextRequest) {
 
     const draftId = require('crypto').randomUUID();
     const t = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const attachmentsJson = JSON.stringify(logoAttachment ? [logoAttachment] : []);
 
     await require('@/lib/db').execute(
       `INSERT INTO email_drafts (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, created_by, created_at, updated_at, template_name, candidate_name) VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?,?,?)`,
-      [draftId, null, emp.email_id, rawSubject, rawBody, '', '', '[]', user.email, t, t, tmpl.name, emp.full_name]
+      [draftId, null, emp.email_id, rawSubject, rawBody, '', '', attachmentsJson, user.email, t, t, tmpl.name, emp.full_name]
     ).catch(async () => {
       // Fallback if template_name or candidate_name columns don't exist
       await require('@/lib/db').execute(
         `INSERT INTO email_drafts (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?)`,
-        [draftId, null, emp.email_id, rawSubject, rawBody, '', '', '[]', user.email, t, t]
+        [draftId, null, emp.email_id, rawSubject, rawBody, '', '', attachmentsJson, user.email, t, t]
       );
     });
 

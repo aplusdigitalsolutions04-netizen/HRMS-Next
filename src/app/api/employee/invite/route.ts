@@ -4,7 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } fro
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { hashPassword, generateTempPassword } from '@/lib/auth';
-import { fillEmployeeTemplate } from '@/lib/emailTemplates';
+import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
 
 // Editable from Settings -> Template Management (the row seeded with this
 // exact name via scratchpad/seed_invite_template.sql). No hardcoded fallback -
@@ -52,9 +52,7 @@ export async function POST(req: NextRequest) {
 
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');
     const companyName = companyRows[0]?.company_name || 'our company';
-    const companyLogoHtml = companyRows[0]?.company_logo
-      ? `<img src="${companyRows[0].company_logo}" alt="${companyName}" style="height:36px;margin-bottom:16px" />`
-      : '';
+    const { html: companyLogoHtml, attachment: logoAttachment } = buildCompanyLogoEmail(companyRows[0]?.company_logo, companyName);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
     const templateVars = {
@@ -68,15 +66,16 @@ export async function POST(req: NextRequest) {
     };
     const subject = fillEmployeeTemplate(tmplRows[0].subject || '', templateVars);
     const htmlBody = fillEmployeeTemplate(tmplRows[0].body || '', templateVars);
+    const attachmentsJson = JSON.stringify(logoAttachment ? [logoAttachment] : []);
 
     const draftId = uuidv4();
     await execute(
       `INSERT INTO email_drafts (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, created_by, created_at, updated_at, template_name, candidate_name) VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?,?,?)`,
-      [draftId, null, emailId, subject, htmlBody, '', '', '[]', user.email, t, t, 'Employee Invite', fullName]
+      [draftId, null, emailId, subject, htmlBody, '', '', attachmentsJson, user.email, t, t, 'Employee Invite', fullName]
     ).catch(async () => {
       await execute(
         `INSERT INTO email_drafts (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,'draft',?,?,?)`,
-        [draftId, null, emailId, subject, htmlBody, '', '', '[]', user.email, t, t]
+        [draftId, null, emailId, subject, htmlBody, '', '', attachmentsJson, user.email, t, t]
       );
     });
 
