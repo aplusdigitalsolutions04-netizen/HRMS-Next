@@ -420,8 +420,8 @@ const EmployeeManagement = () => {
                     </td>
                     <td className="col-contact" style={{color:'#64748b', fontSize:'.78rem'}}>{emp.email_id}</td>
                     <td className="col-dept">
-                      {emp.designation
-                        ? <span className="emp-badge emp-badge-dept">{emp.designation}</span>
+                      {emp.department
+                        ? <span className="emp-badge emp-badge-dept">{emp.department}</span>
                         : <span style={{color:'#cbd5e1'}}>—</span>
                       }
                     </td>

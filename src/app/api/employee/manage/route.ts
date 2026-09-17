@@ -17,19 +17,31 @@ export async function GET(req: NextRequest) {
 
     // 'deleted' is a pseudo-status: soft-deleted employees live in is_deleted,
     // not the status column, and are hidden from every other filter.
-    let where = status === 'deleted' ? 'WHERE is_deleted = 1' : 'WHERE is_deleted = 0';
+    let where = status === 'deleted' ? 'WHERE e.is_deleted = 1' : 'WHERE e.is_deleted = 0';
     const params: any[] = [];
-    if (s.trim()) { where += ' AND (full_name LIKE ? OR emp_code LIKE ? OR email_id LIKE ? OR mobile_no LIKE ?)'; const q = `%${s.trim()}%`; params.push(q, q, q, q); }
-    if (status && status !== 'deleted') { where += ' AND status = ?'; params.push(status); }
-    if (department) {
-      where += ' AND designation IN (SELECT de.name FROM designations de JOIN departments d ON de.department_id = d.id WHERE d.name = ?)';
-      params.push(department);
-    }
+    if (s.trim()) { where += ' AND (e.full_name LIKE ? OR e.emp_code LIKE ? OR e.email_id LIKE ? OR e.mobile_no LIKE ?)'; const q = `%${s.trim()}%`; params.push(q, q, q, q); }
+    if (status && status !== 'deleted') { where += ' AND e.status = ?'; params.push(status); }
+    if (department) { where += ' AND dp.name = ?'; params.push(department); }
 
-    const countRows = await query<RowDataPacket[]>(`SELECT COUNT(*) as cnt FROM employees ${where}`, params);
+    const countRows = await query<RowDataPacket[]>(
+      `SELECT COUNT(*) as cnt
+       FROM employees e
+       LEFT JOIN designations de ON e.designation = de.name
+       LEFT JOIN departments dp ON de.department_id = dp.id
+       ${where}`,
+      params
+    );
     const total = countRows[0].cnt;
 
-    const rows = await query<RowDataPacket[]>(`SELECT * FROM employees ${where} ORDER BY created_on DESC LIMIT ${perPage} OFFSET ${offset}`, params);
+    const rows = await query<RowDataPacket[]>(
+      `SELECT e.*, dp.name AS department
+       FROM employees e
+       LEFT JOIN designations de ON e.designation = de.name
+       LEFT JOIN departments dp ON de.department_id = dp.id
+       ${where}
+       ORDER BY e.created_on DESC LIMIT ${perPage} OFFSET ${offset}`,
+      params
+    );
     return jsonSuccess({ data: rows, total, page, per_page: perPage });
   } catch (e: any) {
     return jsonError(e, 500);
