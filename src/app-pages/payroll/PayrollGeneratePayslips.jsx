@@ -61,7 +61,7 @@ export default function PayrollGeneratePayslips() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Generation failed');
-      setMessage(`${data.count} payslip(s) generated successfully`);
+      setMessage(data.message || 'Payslips generated');
     } catch (e) {
       setError(e.message);
     } finally {

@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     const rows = await query<RowDataPacket[]>('SELECT setting_key, setting_value FROM system_settings');
     const settings: Record<string, string> = {};
-    for (const r of rows) settings[r.setting_key] = r.setting_value;
+    // Never expose credentials to every logged-in user.
+    for (const r of rows) if (!/password|secret|token/i.test(r.setting_key)) settings[r.setting_key] = r.setting_value;
     return jsonSuccess(settings);
   } catch (e: any) { return jsonError(e, 500); }
 }

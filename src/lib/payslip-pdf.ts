@@ -41,13 +41,13 @@ export interface PayslipData {
   basic_pay: number; hra: number; conveyance_allowance: number; food_vouchers: number;
   medical_insurance: number; other_deductions: number; incentives: number; el_encashment: number;
   gross_salary: number; total_deductions: number; total_adjustments: number; net_salary: number;
-  paid_days: number; leave_availed: number; casual_leave: number; earned_leave: number;
+  paid_days: number; extra_work_days?: number; extra_work_pay?: number; variable_pay?: number; leave_availed: number; casual_leave: number; earned_leave: number;
   // employee fields
   full_name?: string; designation?: string; pay_mode?: string; date_of_joining?: string;
   account_number?: string; bank_name?: string; location?: string; pan?: string; uan?: string;
   // company fields
   company_name?: string; company_address?: string; company_logo?: string;
-  prepared_by?: string; authorised_by?: string; authorised_signature?: string;
+  prepared_by?: string; authorised_by?: string; prepared_signature?: string; authorised_signature?: string;
 }
 
 export async function generatePDF(p: PayslipData): Promise<Buffer> {
@@ -55,7 +55,11 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
   const net = Number(p.net_salary || 0);
   const netWords = net > 0 ? numberToWords(net) + ' Rupees Only' : '---';
 
-  const row = (label: string, value: any) => `<div class="ip-cell"><span class="ip-label">${label} :</span><span class="ip-value">${value ?? '---'}</span></div>`;
+  const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // Signatures are stored as image data URLs; only those are allowed into the HTML.
+  const signImg = (v?: string) => v && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(v) ? `<img class="sign-img" src="${v}" />` : '<div class="sign-name"></div>';
+  const bracket = (v?: string) => v && v.trim() ? `(${esc(v.trim())})` : '';
+  const row = (label: string, value: any) => `<div class="ip-cell"><span class="ip-label">${label} :</span><span class="ip-value">${value === undefined || value === null || value === '' ? '---' : esc(value)}</span></div>`;
   const amt = (v: any) => (v === undefined || v === null || v === '') ? '---' : fmt(v);
 
   const html = `
@@ -64,41 +68,62 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
     <head>
       <meta charset="utf-8" />
       <style>
-        * { box-sizing: border-box; }
-        body { font-family: Calibri, Arial, 'Helvetica Neue', sans-serif; color: #000; margin: 0; padding: 30px 36px; font-size: 12.5px; }
-        .border-line { border-top: 3px solid #000; margin-bottom: 14px; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .company-name { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-        .company-address { font-size: 12px; font-weight: 600; margin: 0; }
-        .logo { max-height: 42px; }
-        .info-grid { margin-top: 14px; border-top: 2px solid #000; }
-        .ip-row { display: flex; border-bottom: 1px solid #000; }
-        .ip-cell { flex: 1; display: flex; padding: 6px 4px; }
-        .ip-cell:first-child { border-right: 1px solid #000; }
-        .ip-label { font-weight: 700; min-width: 130px; }
-        .ip-value { }
-        .payslip-title { text-align: center; font-weight: 700; padding: 8px 0; border-bottom: 1px solid #000; text-transform: uppercase; }
-        table.main { width: 100%; border-collapse: collapse; margin-top: 0; }
-        table.main th { text-align: left; font-weight: 700; padding: 6px 4px; border-bottom: 1px solid #000; }
-        table.main td { padding: 6px 4px; border-bottom: 1px solid #f1f1f1; }
-        .col-amt { text-align: right; white-space: nowrap; }
+        :root { --accent: #15803d; --accent-soft: #f1f8f3; --tint: #ffffff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page { size: A4; }
+        html, body { background: #fff; color-scheme: light; }
+        body { font-family: 'Segoe UI', Calibri, Arial, 'Helvetica Neue', sans-serif; color: var(--ink); margin: 0; padding: 8px 22px; font-size: 12.5px; line-height: 1.45; }
+        .slip { position: relative; background: var(--tint); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; page-break-inside: avoid; }
+
+        .border-line { display: none; }
+        .header { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 22px 26px 18px; border-bottom: 1px solid var(--line); border-top: 5px solid var(--accent); }
+        .company-name { font-size: 22px; font-weight: 800; letter-spacing: .2px; margin: 0 0 5px; color: var(--ink); }
+        .company-address { font-size: 11.5px; font-weight: 500; margin: 0; color: var(--muted); max-width: 440px; white-space: pre-line; line-height: 1.5; }
+        .logo { max-height: 50px; max-width: 180px; object-fit: contain; }
+
+        .payslip-title { text-align: center; font-weight: 700; font-size: 12.5px; letter-spacing: 2px; padding: 11px 0; background: var(--accent-soft); border-bottom: 1px solid var(--line); text-transform: uppercase; color: var(--accent); }
+
+        .info-grid { margin: 0; border: 0; }
+        .ip-row { display: flex; border-bottom: 1px solid #eef1f5; }
+        .ip-row:last-child { border-bottom: 0; }
+        .ip-cell { flex: 1; display: flex; align-items: baseline; gap: 10px; padding: 9px 26px; min-width: 0; }
+        .ip-cell:first-child { border-right: 1px solid #eef1f5; }
+        .ip-label { font-weight: 600; font-size: 10.5px; letter-spacing: .7px; text-transform: uppercase; color: var(--muted); min-width: 118px; flex-shrink: 0; }
+        .ip-value { font-weight: 600; color: var(--ink); word-break: break-word; }
+
+        .attendance { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #f8fafc; }
+        .attendance .ip-row { border-bottom-color: #e8ecf1; }
+
+        table.main { width: 100%; border-collapse: collapse; margin: 0; }
+        table.main th { text-align: left; font-weight: 700; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); padding: 11px 14px; background: var(--accent-soft); border-bottom: 1px solid #cfe5d6; }
+        table.main th:nth-child(2), table.main th:nth-child(3) { border-left: 1px solid #e5e7eb; }
+        table.main td { padding: 9px 14px; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
+        table.main td:nth-child(2), table.main td:nth-child(4) { border-right: 1px solid #eef1f5; }
+        .col-amt { width: 88px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
         .section-head-row td { font-weight: 700; border-bottom: 1px solid #000; padding-top: 10px; }
-        .total-row td { font-weight: 700; border-top: 1.5px solid #000; border-bottom: none; }
-        .net-row { display: flex; border-top: 2px solid #000; padding: 8px 4px; font-weight: 700; }
-        .words-row { display: flex; padding: 4px 4px 10px; }
-        .sign-area { display: flex; justify-content: space-between; margin-top: 46px; padding-top: 4px; border-top: 2px solid #000; }
-        .sign-box { text-align: center; width: 45%; }
-        .sign-name { font-size: 16px; font-family: 'Brush Script MT', cursive; margin-bottom: 4px; min-height: 24px; }
-        .sign-img { max-height: 46px; margin-bottom: 4px; }
-        .sign-label { font-weight: 700; border-top: 1px solid #000; padding-top: 4px; }
+        table.main tr.total-row td { font-weight: 700; background: #f8fafc; border-top: 1.5px solid #cbd5e1; border-bottom: 0; padding-top: 11px; padding-bottom: 11px; }
+
+        .net-row { display: flex; justify-content: space-between; align-items: center; padding: 13px 26px; margin: 0; background: var(--accent-soft); color: var(--ink); border-top: 2px solid var(--accent); font-size: 14px; font-weight: 700; letter-spacing: .4px; }
+        .net-row span:last-child { font-size: 19px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+        .words-row { display: flex; padding: 10px 26px 12px; font-style: italic; color: #475569; border-bottom: 1px solid var(--line); background: transparent; }
+
+        .sign-area { display: flex; justify-content: space-between; gap: 48px; margin: 0; padding: 46px 40px 26px; border-top: 0; }
+        .sign-box { text-align: center; width: 44%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sign-name { font-size: 16px; font-family: 'Brush Script MT', cursive; margin-bottom: 4px; min-height: 46px; }
+        .sign-img { max-height: 48px; max-width: 100%; object-fit: contain; margin: 0 auto 4px; }
+        .watermark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; overflow: hidden; }
+        .watermark img { width: 66%; max-height: 40%; object-fit: contain; opacity: .07; transform: rotate(-30deg); }
+        .watermark span { font-size: 64px; font-weight: 800; letter-spacing: 4px; color: #15803d; opacity: .06; transform: rotate(-28deg); text-align: center; text-transform: uppercase; white-space: nowrap; }
+        .sign-label { font-weight: 700; color: #1e293b; border-top: 1.5px solid #94a3b8; padding-top: 7px; line-height: 1.5; }
       </style>
     </head>
     <body>
-      <div class="border-line"></div>
+      <div class="slip">
+      <div class="watermark">${p.company_logo && /^(data:image\/|https?:\/\/)/.test(p.company_logo) ? `<img src="${p.company_logo}" />` : `<span>${esc(p.company_name || 'A PLUS DIGITAL SOLUTIONS')}</span>`}</div>
       <div class="header">
         <div>
-          <div class="company-name">${p.company_name || 'A PLUS DIGITAL SOLUTIONS'}</div>
-          <div class="company-address">${p.company_address || ''}</div>
+          <div class="company-name">${esc(p.company_name || 'A PLUS DIGITAL SOLUTIONS')}</div>
+          <div class="company-address">${esc(p.company_address)}</div>
         </div>
         ${p.company_logo ? `<img class="logo" src="${p.company_logo}" />` : ''}
       </div>
@@ -113,8 +138,10 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
 
       <div class="payslip-title">PAYSLIP FOR THE MONTH OF ${monthLabel}</div>
 
-      <div class="ip-row">${row('No of Paid Days', p.paid_days ?? 30)}${row('Leave Availed', p.leave_availed ?? 0)}</div>
-      <div class="ip-row" style="border-bottom:2px solid #000;">${row('Casual Leave', p.casual_leave ?? 0)}${row('Earned Leave', p.earned_leave ?? 0)}</div>
+      <div class="attendance">
+        <div class="ip-row">${row('No of Paid Days', p.paid_days ?? 30)}${row('Leave Availed', p.leave_availed ?? 0)}</div>
+        <div class="ip-row">${row('Casual Leave', p.casual_leave ?? 0)}${row('Earned Leave', p.earned_leave ?? 0)}</div>
+      </div>
 
       <table class="main">
         <thead>
@@ -137,11 +164,15 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
           </tr>
           <tr>
             <td>Conveyance Allowance</td><td class="col-amt">${amt(p.conveyance_allowance)}</td>
-            <td></td><td></td><td></td><td></td>
+            <td></td><td></td>
+            <td>${Number(p.extra_work_pay) > 0 ? `Extra Work (${Number(p.extra_work_days) || 0} d)` : ''}</td>
+            <td class="col-amt">${Number(p.extra_work_pay) > 0 ? fmt(p.extra_work_pay) : ''}</td>
           </tr>
           <tr>
             <td>Food Vouchers</td><td class="col-amt">${amt(p.food_vouchers)}</td>
-            <td></td><td></td><td></td><td></td>
+            <td></td><td></td>
+            <td>${Number(p.variable_pay) > 0 ? 'Variable Pay' : ''}</td>
+            <td class="col-amt">${Number(p.variable_pay) > 0 ? fmt(p.variable_pay) : ''}</td>
           </tr>
           <tr class="total-row">
             <td>Gross Total</td><td class="col-amt">${fmt(p.gross_salary)}</td>
@@ -156,23 +187,27 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
 
       <div class="sign-area">
         <div class="sign-box">
-          <div class="sign-name"></div>
-          <div class="sign-label">${p.prepared_by || ''}<br/>Prepared By</div>
+          ${signImg(p.prepared_signature)}
+          <div class="sign-label">${bracket(p.prepared_by)}<br/>Prepared By</div>
         </div>
         <div class="sign-box">
-          ${p.authorised_signature ? `<img class="sign-img" src="${p.authorised_signature}" />` : '<div class="sign-name"></div>'}
-          <div class="sign-label">${p.authorised_by || ''}<br/>Authorised By</div>
+          ${signImg(p.authorised_signature)}
+          <div class="sign-label">${bracket(p.authorised_by)}<br/>Authorised By</div>
         </div>
+      </div>
       </div>
     </body>
     </html>
   `;
 
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'domcontentloaded' });
-  const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '5mm', right: '5mm' } });
-  await browser.close();
-
-  return Buffer.from(pdfBuffer);
+  try {
+    const page = await browser.newPage();
+    // Wait for the logo/signature images so they aren't missing from the PDF.
+    await page.setContent(html, { waitUntil: 'load' });
+    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '5mm', right: '5mm' } });
+    return Buffer.from(pdfBuffer);
+  } finally {
+    await browser.close();
+  }
 }

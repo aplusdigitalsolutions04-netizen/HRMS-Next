@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError } from '@/lib/utils';
+import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { getPayslipSignatories } from '@/lib/payroll-calc';
 import { generatePDF } from '@/lib/payslip-pdf';
 
 export async function GET(req, { params }) {
@@ -16,11 +17,13 @@ export async function GET(req, { params }) {
       [id]
     );
     if (rows.length === 0) return jsonError('Payslip not found', 404);
-    if (user.type === 'employee' && rows[0].emp_code !== user.emp_code) {
-      return jsonError('Not authorized to access this payslip', 403);
+    if (user.type === 'employee') {
+      if (rows[0].emp_code !== user.emp_code) return jsonError('Not authorized to access this payslip', 403);
+    } else if (!checkPermission(user, 'view_payroll')) {
+      return jsonError('Insufficient permissions', 403);
     }
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_address, company_logo FROM company_settings LIMIT 1');
-    const buf = await generatePDF({ ...rows[0], ...(companyRows[0] || {}) });
+    const buf = await generatePDF({ ...rows[0], ...(companyRows[0] || {}), ...(await getPayslipSignatories()) });
     return new Response(new Uint8Array(buf), {
       headers: {
         'Content-Type': 'application/pdf',

@@ -16,6 +16,7 @@ const GROUPS = [
     items: [
       { key: 'company', label: 'Company Settings', icon: svgBuilding(), perm: 'settings_company' },
       { key: 'smtp', label: 'SMTP Settings', icon: svgMail(), perm: 'settings_smtp' },
+      { key: 'payslip', label: 'Payslip Settings', icon: svgBuilding(), perm: 'manage_salary_structures' },
     ],
   },
   {
@@ -31,6 +32,7 @@ const GROUPS = [
       { key: 'users', label: 'User Management', icon: svgUsers(), perm: null },
       { key: 'roles', label: 'Roles & Permissions', icon: svgUsers(), perm: 'manage_departments' },
       { key: 'attendance', label: 'Attendance Settings', icon: svgChart(), perm: null },
+      { key: 'holidays', label: 'Holiday Calendar', icon: svgClock(), perm: null },
       { key: 'notifications', label: 'Notification Settings', icon: svgBell(), perm: null },
       { key: 'communication', label: 'Communication Settings', icon: svgMessage(), perm: null },
       { key: 'google-drive', label: 'Google Drive', icon: svgDrive(), perm: null },

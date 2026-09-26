@@ -13,7 +13,6 @@ export default function MyPayslips() {
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState(0);
   const [year, setYear] = useState(0);
-  const [viewPayslip, setViewPayslip] = useState(null);
 
   const fetchPayslips = () => {
     setLoading(true);
@@ -50,23 +49,21 @@ export default function MyPayslips() {
     }
   };
 
+  // Open the PDF in a new browser tab. The tab is opened synchronously on the
+  // click (so popup blockers allow it) and pointed at the PDF once loaded.
   const viewDetails = async (id) => {
+    const tab = window.open('', '_blank');
     try {
       const res = await fetch(`${API}/payroll/payslips/${id}/download`, { headers: auth() });
       if (!res.ok) throw new Error('Failed to load');
       const blob = await res.blob();
       const pdfUrl = window.URL.createObjectURL(blob);
-      setViewPayslip({ id, pdfUrl });
+      if (tab) tab.location.href = pdfUrl; else window.location.href = pdfUrl;
+      setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 5 * 60 * 1000);
     } catch (e) {
+      if (tab) tab.close();
       alert(e.message);
     }
-  };
-
-  const closeView = () => {
-    if (viewPayslip?.pdfUrl) {
-      window.URL.revokeObjectURL(viewPayslip.pdfUrl);
-    }
-    setViewPayslip(null);
   };
 
   return (
@@ -128,23 +125,6 @@ export default function MyPayslips() {
         )}
       </div>
 
-      {viewPayslip && (
-        <div className="mp-modal-overlay" onClick={closeView}>
-          <div className="mp-modal mp-modal-pdf" onClick={e => e.stopPropagation()}>
-            <div className="mp-modal-header">
-              <h3>Payslip Preview</h3>
-              <button className="mp-modal-close" onClick={closeView}>✕</button>
-            </div>
-            <div className="mp-modal-body" style={{ padding: 0 }}>
-              <iframe src={viewPayslip.pdfUrl} style={{ width: '100%', height: '70vh', border: 'none' }} title="Payslip PDF" />
-            </div>
-            <div className="mp-modal-footer">
-              <button className="mp-btn-secondary" onClick={closeView}>Close</button>
-              <button className="mp-btn-primary" onClick={() => downloadPayslip(viewPayslip.id)}>Download PDF</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

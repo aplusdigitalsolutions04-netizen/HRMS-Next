@@ -6,6 +6,7 @@ import { RowDataPacket } from 'mysql2';
 import { sendEmail } from '@/lib/email';
 import { getStep, getMaxStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { logAudit } from '@/lib/audit';
+import { markWfhDays } from '@/lib/wfh-attendance';
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -90,6 +91,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Final step - the request is fully approved.
     await execute("UPDATE wfh_requests SET status='Approved', reviewed_by=?, reviewed_on=NOW() WHERE id=?", [user.email || user.id, id]);
+
+    // Approved WFH days become paid WFH attendance days (used by the Salary Sheet).
+    await markWfhDays(lr.employee_id, lr.start_date, lr.end_date, user.email || String(user.id)).catch(e => console.error('[wfh] could not mark attendance:', e?.message));
 
     await createNotification(
       `WFH Approved`,

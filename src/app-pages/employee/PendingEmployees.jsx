@@ -71,13 +71,17 @@ const PendingEmployees = () => {
       .then(data => {
         if (data.message) {
           setEmployees(prev => prev.filter(e => e.id !== id));
-          let msg = 'Employee approved successfully.';
-          if (templateId) {
-            msg += ' A welcome email draft has been created. Check Draft Emails to review and send.';
+          if (!templateId) {
+            Swal.fire({ icon: 'success', title: 'Approved!', text: 'No email was sent - the employee is now active.', timer: 5000, showConfirmButton: true });
+          } else if (data.email_sent) {
+            Swal.fire({ icon: 'success', title: 'Approved & Email Sent', text: 'The employee is now active and the email has been sent.', timer: 5000, showConfirmButton: true });
           } else {
-            msg += ' No email was sent - the employee is now active.';
+            Swal.fire({
+              icon: 'warning',
+              title: 'Approved, but email NOT sent',
+              html: 'The employee is now active, but the email could not be sent' + (data.email_error ? ':<br/><em>' + data.email_error + '</em>' : '.') + '<br/>Fix the issue, then press <strong>Send</strong> on the Employee Credentials page.',
+            });
           }
-          Swal.fire({ icon: 'success', title: 'Approved!', text: msg, timer: 5000, showConfirmButton: true });
         }
         setApprovingId(null);
       })
@@ -136,14 +140,22 @@ const PendingEmployees = () => {
   const sendBackEmployee = (id) => {
     Swal.fire({
       title: 'Send Back for Correction',
-      input: 'textarea',
-      inputLabel: 'Tell the employee what needs to be fixed - they\'ll see this when they log back in.',
-      inputPlaceholder: 'e.g. Please re-upload a clearer photo of your PAN card.',
+      width: 520,
+      html: `
+        <p style="margin:0 0 14px;color:#64748b;font-size:14px;line-height:1.5">Tell the employee what needs to be fixed. They'll see this when they log back in.</p>
+        <textarea id="swal-sendback-remarks" rows="4" placeholder="e.g. Please re-upload a clearer photo of your PAN card."
+          style="display:block;width:100%;box-sizing:border-box;margin:0;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font:inherit;font-size:14px;color:#1e293b;resize:vertical;outline:none;text-align:left"></textarea>
+      `,
+      focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: 'Send Back',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#dc2626',
-      inputValidator: (value) => !value.trim() && 'Please describe what needs to be corrected',
+      preConfirm: () => {
+        const value = (document.getElementById('swal-sendback-remarks').value || '').trim();
+        if (!value) { Swal.showValidationMessage('Please describe what needs to be corrected'); return false; }
+        return value;
+      },
     }).then(result => {
       if (!result.isConfirmed) return;
       fetch(`${API}/employee/send-back/${id}`, {
@@ -152,9 +164,17 @@ const PendingEmployees = () => {
         body: JSON.stringify({ remarks: result.value }),
       })
         .then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); })
-        .then(() => {
+        .then((data) => {
           setEmployees(prev => prev.filter(e => e.id !== id));
-          Swal.fire({ icon: 'success', title: 'Sent back', text: 'The employee can log in and see your remarks.', timer: 3000, showConfirmButton: false });
+          if (data.email_sent) {
+            Swal.fire({ icon: 'success', title: 'Sent back', text: 'The reason and new login details were emailed to the employee. They will also see the reason when they log in.', timer: 4000, showConfirmButton: false });
+          } else {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Sent back, but email NOT sent',
+              html: 'The employee will see your reason when they log in, but the email could not be sent' + (data.email_error ? ':<br/><em>' + data.email_error + '</em>' : '.') + '<br/>Their password was reset, so press <strong>Send</strong> on the Employee Credentials page to email the new login details.',
+            });
+          }
         })
         .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to send back' }));
     });

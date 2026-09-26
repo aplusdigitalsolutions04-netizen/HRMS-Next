@@ -5,6 +5,7 @@ import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { hashPassword, generateTempPassword } from '@/lib/auth';
 import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
+import { sendDraftById } from '@/lib/draft-send';
 
 // Editable from Settings -> Template Management (the row seeded with this
 // exact name via scratchpad/seed_invite_template.sql). No hardcoded fallback -
@@ -84,7 +85,25 @@ export async function POST(req: NextRequest) {
       [uuidv4(), id, fullName, empCode, emailId, tempPassword, draftId, user.email, t]
     );
 
-    return jsonSuccess({ id, emp_code: empCode, message: 'Employee invited. Send the credentials from the Employee Credentials page.' }, 201);
+    // Send the login details right away instead of leaving them as a draft for
+    // HR to send by hand. If sending fails the draft stays in place, so the
+    // invite still exists and can be re-sent from Employee Credentials.
+    let emailSent = false;
+    let emailError: string | undefined;
+    try {
+      const result = await sendDraftById(draftId, user);
+      emailSent = result.success;
+      emailError = result.error;
+    } catch (e: any) {
+      emailError = e?.message || 'Could not send the email';
+    }
+
+    return jsonSuccess({
+      id, emp_code: empCode, email_sent: emailSent, email_error: emailError,
+      message: emailSent
+        ? `Invite sent to ${emailId}.`
+        : `Employee created, but the email was NOT sent${emailError ? `: ${emailError}` : ''}. You can send it from Employee Credentials.`,
+    }, 201);
   } catch (e: any) {
     return jsonError(e, 500);
   }

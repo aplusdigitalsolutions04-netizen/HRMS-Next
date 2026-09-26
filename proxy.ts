@@ -9,6 +9,7 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     if (pathname === '/api/token' ||
         pathname === '/api/logout' ||
+        pathname === '/api/company-logo' ||
         pathname.startsWith('/api/resume/parse') ||
         pathname === '/api/employee/register') {
       return NextResponse.next();

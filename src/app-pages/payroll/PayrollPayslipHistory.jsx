@@ -20,7 +20,6 @@ export default function PayrollPayslipHistory() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const perPage = 15;
-  const [viewPayslip, setViewPayslip] = useState(null);
 
   // Debounce searchInput into search (300ms)
   useEffect(() => {
@@ -112,23 +111,21 @@ export default function PayrollPayslipHistory() {
     }
   };
 
-  const viewDetails = async (id, name) => {
+  // Open the PDF in a new browser tab. The tab is opened synchronously on the
+  // click (so popup blockers allow it) and pointed at the PDF once loaded.
+  const viewDetails = async (id) => {
+    const tab = window.open('', '_blank');
     try {
       const res = await fetch(`${API}/payroll/payslips/${id}/download`, { headers: auth() });
       if (!res.ok) throw new Error('Failed to load');
       const blob = await res.blob();
       const pdfUrl = window.URL.createObjectURL(blob);
-      setViewPayslip({ id, pdfUrl, name });
+      if (tab) tab.location.href = pdfUrl; else window.location.href = pdfUrl;
+      setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 5 * 60 * 1000);
     } catch (e) {
+      if (tab) tab.close();
       alert(e.message);
     }
-  };
-
-  const closeView = () => {
-    if (viewPayslip?.pdfUrl) {
-      window.URL.revokeObjectURL(viewPayslip.pdfUrl);
-    }
-    setViewPayslip(null);
   };
 
   const totalPages = Math.ceil(total / perPage);
@@ -219,24 +216,6 @@ export default function PayrollPayslipHistory() {
           </div>
         )}
       </div>
-
-      {viewPayslip && (
-        <div className="pr-modal-overlay" onClick={closeView}>
-          <div className="pr-modal pr-modal-pdf" onClick={e => e.stopPropagation()}>
-            <div className="pr-modal-header">
-              <h3>Payslip - {viewPayslip.name}</h3>
-              <button className="pr-modal-close" onClick={closeView}>✕</button>
-            </div>
-            <div className="pr-modal-body" style={{ padding: 0 }}>
-              <iframe src={viewPayslip.pdfUrl} style={{ width: '100%', height: '70vh', border: 'none' }} title="Payslip PDF" />
-            </div>
-            <div className="pr-modal-footer">
-              <button className="pr-btn pr-btn-secondary" onClick={closeView}>Close</button>
-              <button className="pr-btn pr-btn-primary" onClick={() => downloadPayslip(viewPayslip.id)}>Download PDF</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {emailPreview && (
         <div className="pr-modal-overlay" onClick={() => setEmailPreview(null)}>

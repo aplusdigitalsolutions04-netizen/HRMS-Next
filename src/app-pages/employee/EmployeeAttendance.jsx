@@ -37,9 +37,9 @@ export default function EmployeeAttendance() {
   const [recordsOrder, setRecordsOrder] = useState('desc');
 
 
-  const fetchAll = useCallback(() => {
+  const fetchAll = useCallback((silent = false) => {
     const h = auth();
-    setLoading(true);
+    if (!silent) setLoading(true);
     Promise.all([
       fetch(`${API}/my-attendance/summary`, { headers: h }).then(r => r.json()).catch(() => null),
       fetch(`${API}/my-attendance/monthly`, { headers: h }).then(r => r.json()).catch(() => ({ months: [] })),
@@ -49,7 +49,7 @@ export default function EmployeeAttendance() {
       const months = m?.months || [];
       setMonthly(months);
       setInsights(i);
-      if (months.length > 0) {
+      if (!silent && months.length > 0) {
         const last = months[0];
         setMonth(last.month);
         setYear(last.year);
@@ -65,6 +65,24 @@ export default function EmployeeAttendance() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
+
+  // Auto-update: pull today's punch from TeamOffice every 30s (and when the
+  // tab becomes visible again), then quietly refresh the numbers and table.
+  const refreshRef = useRef(null);
+  refreshRef.current = () => { fetchAll(true); fetchRecords(); };
+  useEffect(() => {
+    const tick = () => {
+      if (document.hidden) return;
+      fetch(`${API}/my-attendance/live`, { method: 'POST', headers: auth() })
+        .then(r => r.json())
+        .then(d => { if (d && d.synced) refreshRef.current(); })
+        .catch(() => {});
+    };
+    tick();
+    const id = setInterval(tick, 30000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, []);
 
   useEffect(() => {
     const role = sessionStorage.getItem('role');
@@ -382,7 +400,7 @@ export default function EmployeeAttendance() {
                   </thead>
                   <tbody>
                     {(records?.records || []).length > 0 ? records.records.map((r, idx) => {
-                      const stMap = { 'P': 'Present', 'A': 'Absent', 'WO': 'Week Off', 'PL': 'Planned Leave', 'CL': 'Casual Leave', 'SL': 'Sick Leave', 'NH': 'National Holiday', 'WFH': 'Work From Home' };
+                      const stMap = { 'P': 'Present', 'HD': 'Half Day', 'EW': 'Extra Work', 'HOL': 'Holiday', 'A': 'Absent', 'WO': 'Week Off', 'PL': 'Planned Leave', 'CL': 'Casual Leave', 'SL': 'Sick Leave', 'NH': 'National Holiday', 'WFH': 'Work From Home' };
                       const stLabel = stMap[r.status] || r.status;
                       const stColor = r.status === 'P' ? '#10b981' : r.status === 'A' ? '#ef4444' : r.status === 'WO' ? '#94a3b8' : '#f59e0b';
                       const stBg = r.status === 'P' ? '#ecfdf5' : r.status === 'A' ? '#fef2f2' : r.status === 'WO' ? '#f8fafc' : '#fffbeb';

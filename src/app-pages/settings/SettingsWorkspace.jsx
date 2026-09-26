@@ -12,6 +12,8 @@ const CommunicationSettings = lazy(() => import('./CommunicationSettings'));
 const TemplateManagement = lazy(() => import('./TemplateManagement'));
 const RoleManagement = lazy(() => import('./RoleManagement'));
 const GoogleDriveSettings = lazy(() => import('./GoogleDriveSettings'));
+const PayslipSettings = lazy(() => import('./PayslipSettings'));
+const HolidaySettings = lazy(() => import('./HolidaySettings'));
 
 export default function SettingsWorkspace() {
   const { section } = useParams();
@@ -51,6 +53,10 @@ function renderSection(key, saving, setSaving) {
       return <CommunicationSettings saving={saving} setSaving={setSaving} />;
     case 'templates':
       return <TemplateManagement />;
+    case 'holidays':
+      return <HolidaySettings />;
+    case 'payslip':
+      return <PayslipSettings saving={saving} setSaving={setSaving} />;
     case 'google-drive':
       return <GoogleDriveSettings />;
     default:

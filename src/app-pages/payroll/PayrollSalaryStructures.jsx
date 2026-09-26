@@ -5,6 +5,8 @@ const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const PAGE_SIZE = 10;
 
+const DEFAULT_PERCENTS = { default_basic_percent: '50', default_hra_percent: '30', default_conveyance_percent: '15', default_food_percent: '5' };
+
 export default function PayrollSalaryStructures() {
   const [structures, setStructures] = useState([]);
   const [page, setPage] = useState(1);
@@ -16,14 +18,14 @@ export default function PayrollSalaryStructures() {
   const [employees, setEmployees] = useState([]);
   const [empSearch, setEmpSearch] = useState('');
   const [form, setForm] = useState({ basic_pay: 0, hra: 0, conveyance_allowance: 0, food_vouchers: 0, medical_insurance: 0, other_deductions: 0, incentives: 0, el_encashment: 0, ctc: '', ctc_period: 'monthly' });
-  const [defaultPercents, setDefaultPercents] = useState({ default_basic_percent: '50', default_hra_percent: '20' });
+  const [defaultPercents, setDefaultPercents] = useState(DEFAULT_PERCENTS);
   const [showPercentModal, setShowPercentModal] = useState(false);
-  const [percentForm, setPercentForm] = useState({ default_basic_percent: '50', default_hra_percent: '20' });
+  const [percentForm, setPercentForm] = useState(DEFAULT_PERCENTS);
 
   const fetchDefaultPercents = () => {
     fetch(`${API}/settings/payroll`, { headers: auth() })
       .then(r => r.json())
-      .then(d => { setDefaultPercents(d); setPercentForm(d); })
+      .then(d => { const p = { ...DEFAULT_PERCENTS, ...d }; setDefaultPercents(p); setPercentForm(p); })
       .catch(() => {});
   };
 
@@ -42,18 +44,20 @@ export default function PayrollSalaryStructures() {
     } catch (e) { alert(e.message); }
   };
 
-  // Split the entered CTC into Basic Pay / HRA using the configured default
-  // percentages - Conveyance/Food Vouchers stay manual (not CTC-derived).
-  // Fields remain editable afterward, so this is just a starting point.
+  // Split the entered salary into Basic Pay / HRA / Conveyance / Food Vouchers using
+  // the configured percentages. Medical insurance, other deductions, incentives and
+  // EL encashment are always filled in manually. Fields stay editable afterward, so
+  // this is only a starting point.
   const applySplit = () => {
-    const ctcValue = parseFloat(form.ctc) || 0;
-    const monthlyCtc = form.ctc_period === 'annual' ? ctcValue / 12 : ctcValue;
-    const basicPct = parseFloat(defaultPercents.default_basic_percent) || 0;
-    const hraPct = parseFloat(defaultPercents.default_hra_percent) || 0;
+    const salary = parseFloat(form.ctc) || 0;
+    const monthly = form.ctc_period === 'annual' ? salary / 12 : salary;
+    const part = (pct) => Math.round(monthly * (parseFloat(pct) || 0) / 100 * 100) / 100;
     setForm(f => ({
       ...f,
-      basic_pay: Math.round(monthlyCtc * basicPct / 100 * 100) / 100,
-      hra: Math.round(monthlyCtc * hraPct / 100 * 100) / 100,
+      basic_pay: part(defaultPercents.default_basic_percent),
+      hra: part(defaultPercents.default_hra_percent),
+      conveyance_allowance: part(defaultPercents.default_conveyance_percent),
+      food_vouchers: part(defaultPercents.default_food_percent),
     }));
   };
 
@@ -224,22 +228,22 @@ export default function PayrollSalaryStructures() {
               <div className="pr-ctc-box">
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <div className="pr-field" style={{ flex: '1 1 160px', marginBottom: 0 }}>
-                    <label className="pr-label">CTC</label>
+                    <label className="pr-label">Salary</label>
                     <input className="pr-input" type="number" step="0.01" placeholder="e.g. 30000" value={form.ctc} onChange={e => setForm({ ...form, ctc: e.target.value })} />
                   </div>
                   <div className="pr-field" style={{ flex: '0 0 140px', marginBottom: 0 }}>
-                    <label className="pr-label">CTC Period</label>
+                    <label className="pr-label">Salary Period</label>
                     <select className="pr-input" value={form.ctc_period} onChange={e => setForm({ ...form, ctc_period: e.target.value })}>
                       <option value="monthly">Monthly</option>
                       <option value="annual">Annual</option>
                     </select>
                   </div>
                   <button type="button" className="pr-btn pr-btn-secondary" onClick={applySplit} disabled={!form.ctc}>
-                    Apply {defaultPercents.default_basic_percent}% / {defaultPercents.default_hra_percent}% Split
+                    Apply {defaultPercents.default_basic_percent}% / {defaultPercents.default_hra_percent}% / {defaultPercents.default_conveyance_percent}% / {defaultPercents.default_food_percent}% Split
                   </button>
                 </div>
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                  Fills Basic Pay ({defaultPercents.default_basic_percent}% of monthly CTC) and HRA ({defaultPercents.default_hra_percent}% of monthly CTC) below — you can still edit them manually after.
+                  Fills Basic Pay ({defaultPercents.default_basic_percent}%), House Rent Allowance ({defaultPercents.default_hra_percent}%), Conveyance Allowance ({defaultPercents.default_conveyance_percent}%) and Food Vouchers ({defaultPercents.default_food_percent}%) of the monthly salary. Medical Insurance, Other Deductions, Incentives and EL Encashment are entered manually.
                 </p>
               </div>
               <div className="pr-form-grid">
@@ -272,12 +276,12 @@ export default function PayrollSalaryStructures() {
         <div className="pr-modal-overlay" onClick={() => setShowPercentModal(false)}>
           <div className="pr-modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div className="pr-modal-header">
-              <h3>Configure CTC Split %</h3>
+              <h3>Configure Salary Split %</h3>
               <button className="pr-modal-close" onClick={() => setShowPercentModal(false)}>✕</button>
             </div>
             <div className="pr-modal-body">
               <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
-                Default percentage of monthly CTC that goes into Basic Pay and HRA when applying the split — same for every employee unless manually overridden afterward.
+                Default percentage of the monthly salary that goes into each component when applying the split. The four must total at most 100%. Everything can still be edited per employee afterward.
               </p>
               <div className="pr-form-grid">
                 <div className="pr-field">
@@ -285,8 +289,16 @@ export default function PayrollSalaryStructures() {
                   <input className="pr-input" type="number" step="0.01" min="0" max="100" value={percentForm.default_basic_percent} onChange={e => setPercentForm({ ...percentForm, default_basic_percent: e.target.value })} />
                 </div>
                 <div className="pr-field">
-                  <label className="pr-label">HRA %</label>
+                  <label className="pr-label">House Rent Allowance %</label>
                   <input className="pr-input" type="number" step="0.01" min="0" max="100" value={percentForm.default_hra_percent} onChange={e => setPercentForm({ ...percentForm, default_hra_percent: e.target.value })} />
+                </div>
+                <div className="pr-field">
+                  <label className="pr-label">Conveyance Allowance %</label>
+                  <input className="pr-input" type="number" step="0.01" min="0" max="100" value={percentForm.default_conveyance_percent} onChange={e => setPercentForm({ ...percentForm, default_conveyance_percent: e.target.value })} />
+                </div>
+                <div className="pr-field">
+                  <label className="pr-label">Food Vouchers %</label>
+                  <input className="pr-input" type="number" step="0.01" min="0" max="100" value={percentForm.default_food_percent} onChange={e => setPercentForm({ ...percentForm, default_food_percent: e.target.value })} />
                 </div>
               </div>
             </div>

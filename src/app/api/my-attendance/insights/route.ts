@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     
     const row = await query<RowDataPacket[]>(
       `      SELECT ROUND(
-        (COALESCE(SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END),0) * 100.0 /
+        (COALESCE(SUM(CASE WHEN a.status='P' THEN 1 WHEN a.status='HD' THEN 0.5 WHEN a.status='WFH' THEN 1 ELSE 0 END),0) * 100.0 /
         NULLIF(COUNT(*),0)), 1) as consistency_score
       FROM attendance a WHERE a.emp_code=? AND YEAR(a.attendance_date)=YEAR(CURDATE())`,
       [emp[0].emp_code]

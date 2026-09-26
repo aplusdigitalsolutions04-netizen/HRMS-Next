@@ -11,10 +11,9 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
     const pageItems = paginate(templates, page, pageSize);
 
     return (
-        <div style={{ marginTop: '40px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <div style={{ marginTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <div className="section-title">
-                    <span className="step-num" style={{ background: 'linear-gradient(135deg,#0284c7,#6366f1)' }}>3</span>
                     Saved Templates
                     {!loadingList && (
                         <span style={{
@@ -26,20 +25,6 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                         </span>
                     )}
                 </div>
-                <button
-                    onClick={fetchTemplates}
-                    style={{
-                        background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: '10px',
-                        padding: '7px 16px', fontSize: '.82rem', cursor: 'pointer', fontWeight: 600,
-                        color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px',
-                        fontFamily: "'Outfit', sans-serif", transition: 'all .2s',
-                        boxShadow: 'none'
-                    }}
-                    onMouseOver={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.color = '#4338ca'; }}
-                    onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}
-                >
-                    🔄 Refresh
-                </button>
             </div>
 
             <div className="tpl-table-wrapper">
@@ -78,13 +63,13 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                             pageItems.map((t, i) => (
                                 <React.Fragment key={t.id}>
                                     <tr>
-                                        <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(page - 1) * pageSize + i + 1}</td>
+                                        <td style={{ color: '#94a3b8', fontWeight: 600, width: 40 }}>{(page - 1) * pageSize + i + 1}</td>
                                         <td>
-                                            <div style={{ fontWeight: 700, color: '#1e293b' }}>{t.name}</div>
+                                            <div style={{ fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>{t.name}</div>
                                         </td>
                                         <td>
                                             <span style={{
-                                                display: 'inline-block', padding: '3px 10px', borderRadius: '50px',
+                                                display: 'inline-block', padding: '3px 10px', borderRadius: '50px', whiteSpace: 'nowrap',
                                                 fontSize: '.72rem', fontWeight: 700,
                                                 background: t.template_type === 'Interview' ? '#dbeafe' : '#f1f5f9',
                                                 color: t.template_type === 'Interview' ? '#1d4ed8' : '#475569',
@@ -92,7 +77,7 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                                                 {t.template_type || 'General'}
                                             </span>
                                         </td>
-                                        <td style={{ color: '#475569', maxWidth: '260px' }}>
+                                        <td style={{ color: '#475569', maxWidth: '320px' }}>
                                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {t.subject}
                                             </div>
@@ -115,11 +100,11 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                                                 {parseVars(t.variables).length === 0 && <span style={{ color: '#cbd5e1', fontSize: '.8rem' }}>—</span>}
                                             </div>
                                         </td>
-                                        <td style={{ color: '#64748b', fontSize: '.85rem' }}>
+                                        <td style={{ color: '#64748b', fontSize: '.85rem', whiteSpace: 'nowrap' }}>
                                             {fmt(t.created_on)}
                                         </td>
                                         <td>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
                                                 <button
                                                     className="tbl-action tbl-view"
                                                     onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}

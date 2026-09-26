@@ -5,6 +5,7 @@ import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { hashPassword } from '@/lib/auth';
 import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
+import { sendDraftById } from '@/lib/draft-send';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -48,8 +49,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let htmlBody = '';
     let templateName = '';
     let createDraft = false;
+    let draftId = '';
 
-    if (templateId && !alreadyHasOwnPassword) {
+    // Also for employees who already chose their own password (invite flow): they still
+    // get the email HR asked for, just without a temporary password in it.
+    if (templateId) {
       const tmplRows = await query<RowDataPacket[]>('SELECT name, subject, body FROM email_templates WHERE id = ?', [templateId]);
       if (tmplRows.length > 0) {
         const tmpl = tmplRows[0];
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const templateVars = {
           fullName: emp.full_name,
           email: emp.email_id,
-          password: tempPassword,
+          password: alreadyHasOwnPassword ? 'the password you already set' : tempPassword,
           loginUrl: `<a href="${appUrl}/login">${appUrl}/login</a>`,
           officialEmail: emp.official_email,
           officialNo: emp.official_no,
@@ -72,7 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (createDraft) {
-      const draftId = uuidv4();
+      draftId = uuidv4();
       const t = now();
       const attachmentsJson = JSON.stringify(logoAttachment ? [logoAttachment] : []);
       // Ensure we have template_name column in the query if it exists. If not, maybe just insert without it or update schema.
@@ -94,7 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // them without digging through Draft Management.
       await execute(
         `INSERT INTO employee_credentials (id, employee_id, employee_name, emp_code, email, password, status, draft_id, created_by, created_at) VALUES (?,?,?,?,?,?,'draft',?,?,?)`,
-        [uuidv4(), id, emp.full_name || '', emp.emp_code || '', emp.email_id, tempPassword, draftId, user.email, t]
+        [uuidv4(), id, emp.full_name || '', emp.emp_code || '', emp.email_id, alreadyHasOwnPassword ? '(own password)' : tempPassword, draftId, user.email, t]
       );
     }
 
@@ -104,14 +108,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await execute('UPDATE employees SET status = ?, password = ?, must_change_password = 1 WHERE id = ?', ['active', hashed, id]);
     }
 
+    // "Send Email" means send: mail the draft now instead of leaving it for HR to
+    // find in Draft Emails. On failure the draft stays and the employee is
+    // still approved, and the caller is told exactly why the email did not go.
+    let emailSent = false;
+    let emailError;
+    if (createDraft) {
+      try {
+        const r = await sendDraftById(draftId, user);
+        emailSent = r.success;
+        emailError = r.error;
+      } catch (e) {
+        emailError = e?.message || 'Could not send the email';
+      }
+    }
+
     return jsonSuccess({
       message: alreadyHasOwnPassword
         ? 'Employee approved. They can log in with their existing password.'
-        : 'Employee approved and activation email draft created for HR review.',
+        : 'Employee approved.',
       draft_created: createDraft,
+      email_sent: emailSent,
+      email_error: emailError,
     });
-  } catch (e: any) {
+  } catch (e) {
     return jsonError(e, 500);
   }
 }
-

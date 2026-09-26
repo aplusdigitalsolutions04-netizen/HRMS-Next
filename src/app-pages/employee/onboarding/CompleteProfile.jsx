@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 
 const s = {
@@ -70,7 +71,7 @@ export default function CompleteProfile({ onSubmitted }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!form.full_name.trim() || !form.father_spouse_name.trim() || !form.dob || !form.present_address.trim() || !form.mobile_no.trim()) {
-            alert('Please fill in all required fields.');
+            Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Please fill in all the required fields (marked with *).' });
             return;
         }
         setSubmitting(true);
@@ -88,13 +89,19 @@ export default function CompleteProfile({ onSubmitted }) {
             });
             const result = await res.json();
             if (res.ok) {
-                alert('Profile submitted! HR will review and activate your account.');
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Details Saved',
+                    text: 'Your details have been submitted to HR. You can use the portal once HR reviews and activates your account.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#4338ca',
+                });
                 onSubmitted && onSubmitted();
             } else {
-                alert(result.detail || 'Failed to submit profile.');
+                Swal.fire({ icon: 'error', title: 'Could not save', text: result.detail || 'Failed to submit profile.' });
             }
         } catch (err) {
-            alert('Failed to connect to the server: ' + err.message);
+            Swal.fire({ icon: 'error', title: 'Connection error', text: 'Failed to connect to the server: ' + err.message });
         } finally {
             setSubmitting(false);
         }

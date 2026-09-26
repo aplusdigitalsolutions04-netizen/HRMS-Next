@@ -54,6 +54,7 @@ const AdminLeaveManagement = dynamic(() => import('@/app-pages/leave/AdminLeaveM
 const AdminWFHManagement = dynamic(() => import('@/app-pages/leave/AdminWFHManagement'), { ssr: false });
 const UserPermissionEditor = dynamic(() => import('@/app-pages/settings/UserPermissionEditor'), { ssr: false });
 const PayrollSalaryStructures = dynamic(() => import('@/app-pages/payroll/PayrollSalaryStructures'), { ssr: false });
+const PayrollSalarySheet = dynamic(() => import('@/app-pages/payroll/PayrollSalarySheet'), { ssr: false });
 const PayrollGeneratePayslips = dynamic(() => import('@/app-pages/payroll/PayrollGeneratePayslips'), { ssr: false });
 const PayrollPayslipHistory = dynamic(() => import('@/app-pages/payroll/PayrollPayslipHistory'), { ssr: false });
 const DocumentApprovals = dynamic(() => import('@/app-pages/employee/DocumentApprovals'), { ssr: false });
@@ -157,6 +158,7 @@ function MainLayout() {
                   <Route path="/org-chart" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><OrgChart /></PrivateRoute>} />
                   <Route path="/reporting-structure" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><ReportingStructure /></PrivateRoute>} />
                   <Route path="/payroll/salary-structures" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><PayrollSalaryStructures /></PrivateRoute>} />
+                  <Route path="/payroll/salary-sheet" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><PayrollSalarySheet /></PrivateRoute>} />
                   <Route path="/payroll/generate" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><PayrollGeneratePayslips /></PrivateRoute>} />
                   <Route path="/payroll/history" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><PayrollPayslipHistory /></PrivateRoute>} />
                   <Route path="/settings" element={<Navigate to="/settings/company" replace />} />

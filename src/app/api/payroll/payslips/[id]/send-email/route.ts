@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { getPayslipSignatories } from '@/lib/payroll-calc';
 import { generatePDF } from '@/lib/payslip-pdf';
 import { sendEmailDetailed } from '@/lib/email';
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_address, company_logo FROM company_settings LIMIT 1');
-    const pdfBuffer = await generatePDF({ ...payslip, ...(companyRows[0] || {}) });
+    const pdfBuffer = await generatePDF({ ...payslip, ...(companyRows[0] || {}), ...(await getPayslipSignatories()) });
     
     const monthLabel = monthNames[payslip.month - 1] || payslip.month;
     const subject = `Payslip for ${monthLabel} ${payslip.year}`;

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     if (emp.length === 0) return jsonError('Employee not found', 404);
     
     const rows = await query<RowDataPacket[]>(
-      `SELECT COALESCE(SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END),0) as present,
+      `SELECT COALESCE(SUM(CASE WHEN a.status='P' THEN 1 WHEN a.status='HD' THEN 0.5 WHEN a.status='WFH' THEN 1 ELSE 0 END),0) as present,
         COALESCE(SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END),0) as absent,
         COALESCE(SUM(CASE WHEN a.status='WO' THEN 1 ELSE 0 END),0) as late,
         COALESCE(SUM(CASE WHEN a.in_time IS NOT NULL AND a.in_time!='--:--' AND a.out_time IS NOT NULL AND a.out_time!='--:--' THEN ROUND(TIME_TO_SEC(TIMEDIFF(a.out_time,a.in_time))/3600,1) ELSE 0 END),0) as total_hours

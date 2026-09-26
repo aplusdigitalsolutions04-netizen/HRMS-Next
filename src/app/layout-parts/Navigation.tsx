@@ -147,6 +147,7 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
               '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
               <>
                 {navLink('/payroll/salary-structures', null, 'Salary Structures', 'manage_salary_structures', true)}
+                {navLink('/payroll/salary-sheet', null, 'Salary Sheet', 'view_payroll', true)}
                 {navLink('/payroll/generate', null, 'Generate Payslips', 'generate_payslips', true)}
                 {navLink('/payroll/history', null, 'Payslip History', 'view_payroll', true)}
               </>,

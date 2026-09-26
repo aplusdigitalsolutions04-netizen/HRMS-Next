@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const sql = `
       SELECT
         e.emp_code, e.full_name AS name, e.designation AS department,
-        a.id, a.attendance_date, a.day, a.in_time, a.out_time, a.working_hours, a.status, a.remark
+        a.id, DATE_FORMAT(a.attendance_date, '%Y-%m-%d') AS attendance_date, a.day, a.in_time, a.out_time, a.working_hours, a.status, a.remark
       FROM employees e
       LEFT JOIN attendance a
         ON a.emp_code = e.emp_code
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
       SELECT
         a.emp_code, a.name, a.department,
-        a.id, a.attendance_date, a.day, a.in_time, a.out_time, a.working_hours, a.status, a.remark
+        a.id, DATE_FORMAT(a.attendance_date, '%Y-%m-%d') AS attendance_date, a.day, a.in_time, a.out_time, a.working_hours, a.status, a.remark
       FROM attendance a
       LEFT JOIN employees e ON e.emp_code = a.emp_code
       WHERE e.emp_code IS NULL

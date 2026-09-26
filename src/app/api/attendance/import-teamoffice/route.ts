@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, checkPermission, calcHours } from '@/lib/utils';
-import { getTeamOfficeApiUrl, getTeamOfficeApiKey } from '@/lib/teamoffice';
+import { getTeamOfficeApiUrl, getTeamOfficeApiKey, getHalfDayThreshold, presentOrHalfDay } from '@/lib/teamoffice';
 import { query, execute } from '@/lib/db';
+import { getHolidayDates } from '@/lib/holidays';
 import { RowDataPacket } from 'mysql2';
 
 function lastDayOf(year: number, month: number): number {
@@ -61,7 +62,15 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
     let importCount = 0;
     const affectedSummaries = new Set<string>();
-    const KNOWN_STATUS_CODES = new Set(['P', 'PRESENT', 'A', 'ABSENT', 'WO', 'WEEKEND', 'WEEK OFF']);
+    // NH = National Holiday (TeamOffice sends it on holidays). It must never be read as an
+    // absence, or the employee would lose a day's pay.
+    const HOLIDAY_CODES = new Set(['NH', 'PH', 'FH', 'HOL', 'HOLIDAY']);
+    const KNOWN_STATUS_CODES = new Set(['P', 'PRESENT', 'A', 'ABSENT', 'WO', 'WEEKEND', 'WEEK OFF', ...HOLIDAY_CODES]);
+
+    const nowD = new Date();
+    const todayStr = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}-${String(nowD.getDate()).padStart(2, '0')}`;
+    const halfDayThreshold = await getHalfDayThreshold();
+    const holidays = await getHolidayDates(`${year}-${String(month).padStart(2, '0')}-01`, `${year}-${String(month).padStart(2, '0')}-${String(lastDayOf(year, month)).padStart(2, '0')}`);
 
     for (const rec of rawRecords) {
       const empCode = rec.Empcode || '';
@@ -74,11 +83,14 @@ export async function POST(req: NextRequest) {
       if (parts.length !== 3) { errors.push(`Skipped record for ${empCode}: invalid date format "${attendanceDate}"`); continue; }
 
       const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
-      const dateObj = new Date(dateStr);
+      // TeamOffice returns the whole month, with future days as absent. Skip them so they
+      // don't count against anyone's salary before they have happened.
+      if (dateStr > todayStr) continue;
+      const dateObj = new Date(`${dateStr}T00:00:00Z`);
       if (isNaN(dateObj.getTime())) { errors.push(`Skipped record for ${empCode}: invalid date "${attendanceDate}"`); continue; }
 
       const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const day = daysOfWeek[dateObj.getDay()];
+      const day = daysOfWeek[dateObj.getUTCDay()];
       const name = rec.Name || '';
       const inTime = parseTime(rec.INTime);
       const outTime = parseTime(rec.OUTTime);
@@ -88,6 +100,9 @@ export async function POST(req: NextRequest) {
       let recognized = true;
       if (!rawStatus) {
         status = inTime && outTime ? 'P' : 'A';
+      } else if (HOLIDAY_CODES.has(rawStatus)) {
+        // Holiday: paid whether or not the employee came in (EW if they did).
+        status = inTime ? 'EW' : 'HOL';
       } else if (rawStatus.startsWith('P') || rawStatus === 'PRESENT') {
         status = rawStatus.includes('/2') ? 'HD' : 'P';
       } else if (rawStatus.startsWith('A') || rawStatus === 'ABSENT') {
@@ -106,14 +121,21 @@ export async function POST(req: NextRequest) {
         : `Imported from TeamOffice (raw status: ${rawStatus})`;
 
       const workingHours = parseFloat(calcHours(inTime, outTime)) || 0;
+      // Short present days (below the Attendance Settings threshold) are half days.
+      // Punches on a weekly off / holiday are Extra Work.
+      if ((status === 'WO' || holidays.has(dateStr)) && inTime) status = 'EW';
+      else if (holidays.has(dateStr) && status === 'A') status = 'HOL'; // holiday, nobody punched: not an absence
+      else if (status === 'P') status = presentOrHalfDay(workingHours, !!(inTime && outTime), halfDayThreshold);
 
       try {
         const existing = await query<RowDataPacket[]>(
-          'SELECT id FROM attendance WHERE emp_code = ? AND attendance_date = ?',
+          'SELECT id, remark FROM attendance WHERE emp_code = ? AND attendance_date = ?',
           [empCode, dateStr]
         );
 
-        if (existing.length > 0) {
+        if (existing.length > 0 && String(existing[0].remark || '').startsWith('Manual entry')) {
+          // HR's manual entry (e.g. Work From Home) wins over the sync.
+        } else if (existing.length > 0) {
           // Department is not provided by this API - leave the existing
           // value untouched rather than blanking it out on every re-sync.
           await execute(
@@ -145,7 +167,7 @@ export async function POST(req: NextRequest) {
 
       const metrics = await query<RowDataPacket[]>(
         `SELECT
-          COALESCE(SUM(CASE WHEN status='P' THEN 1 ELSE 0 END), 0) as present,
+          COALESCE(SUM(CASE WHEN status='P' THEN 1 WHEN status='HD' THEN 0.5 WHEN status='WFH' THEN 1 ELSE 0 END), 0) as present,
           COALESCE(SUM(CASE WHEN status='A' THEN 1 ELSE 0 END), 0) as absent,
           COALESCE(SUM(working_hours), 0) as total_hours
          FROM attendance

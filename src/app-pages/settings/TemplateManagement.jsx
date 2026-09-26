@@ -226,16 +226,30 @@ export default function TemplateManagement() {
                 <SettingsCard
                     title="Template Management"
                     desc="Upload email templates (PDF, DOCX, HTML) and let AI extract the structure for SMTP use."
+                    actions={
+                        <>
+                            <button
+                                onClick={fetchTemplates}
+                                style={{
+                                    background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                                    padding: '9px 16px', fontSize: '.85rem', cursor: 'pointer', fontWeight: 600,
+                                    color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px',
+                                    fontFamily: "'Outfit', sans-serif", boxShadow: 'none'
+                                }}
+                            >
+                                🔄 Refresh
+                            </button>
+                            {!showAddPanel && (
+                                <button className="extract-btn" style={{ marginTop: 0, padding: '9px 20px', fontSize: '.9rem' }} onClick={() => setShowAddPanel(true)}>
+                                    + Add Template
+                                </button>
+                            )}
+                        </>
+                    }
                 >
 
                 <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>
-                    {!showAddPanel ? (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-                            <button className="extract-btn" onClick={() => setShowAddPanel(true)}>
-                                + Add Template
-                            </button>
-                        </div>
-                    ) : (
+                    {showAddPanel && (
                         <>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
                                 <button className="reset-btn" onClick={resetUpload}>✕ Close</button>

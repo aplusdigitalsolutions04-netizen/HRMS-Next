@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     
     const rows = await query<RowDataPacket[]>(
       `      SELECT MONTH(a.attendance_date) as month, YEAR(a.attendance_date) as year,
-        COALESCE(SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END),0) as present,
+        COALESCE(SUM(CASE WHEN a.status='P' THEN 1 WHEN a.status='HD' THEN 0.5 WHEN a.status='WFH' THEN 1 ELSE 0 END),0) as present,
         COALESCE(SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END),0) as absent,
         COALESCE(SUM(CASE WHEN a.status='WO' THEN 1 ELSE 0 END),0) as \`leave\`,
         COALESCE(SUM(CASE WHEN a.in_time IS NOT NULL AND a.in_time!='--:--' AND a.out_time IS NOT NULL AND a.out_time!='--:--' THEN ROUND(TIME_TO_SEC(TIMEDIFF(a.out_time,a.in_time))/3600,1) ELSE 0 END),0) as working_hours

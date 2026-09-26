@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import aplusLogo from '../../assets/aplus.png';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -93,7 +92,7 @@ export default function ForceChangePassword() {
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
         <div className="fcp-card" style={{ width:'100%', maxWidth:440, background:'#fff', borderRadius:20, padding:'40px 36px', boxShadow:'0 8px 32px rgba(99,102,241,0.1)', border:'1px solid #f1f0ff' }}>
           <div style={{ textAlign:'center', marginBottom:28 }}>
-            <img src={aplusLogo} alt="A Plus" style={{ height:36, marginBottom:12 }} />
+            <img src="/api/company-logo" alt="A Plus" style={{ height:36, marginBottom:12 }} />
             <h2 style={{ fontFamily:'Outfit,sans-serif', fontWeight:800, fontSize:'1.25rem', color:'#0f172a', margin:0, letterSpacing:'-0.3px' }}>Create New Password</h2>
             <p style={{ margin:'6px 0 0', fontSize:13, color:'#64748b' }}>This is your first login. Please set a new password.</p>
           </div>

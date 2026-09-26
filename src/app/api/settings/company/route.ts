@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, now } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (!checkPermission(user, 'settings_company')) return jsonError('Insufficient permissions', 403);
     const body = await req.json();
     const existing = await query<RowDataPacket[]>('SELECT id FROM company_settings LIMIT 1');
     const t = now();

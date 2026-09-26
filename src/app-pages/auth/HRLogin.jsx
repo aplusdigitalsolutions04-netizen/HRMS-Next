@@ -172,7 +172,7 @@ export default function HRLogin() {
                         <div className="lr-card">
                             <div className="lr-card-top">
                                 <div className="lr-brand">
-                                    <img src="/aplus.png" alt="A Plus Digital Solutions" className="lr-brand-logo-img" />
+                                    <img src="/api/company-logo" alt="A Plus Digital Solutions" className="lr-brand-logo-img" />
                                 </div>
                                 <div className="lr-login-label">LOG IN</div>
                             </div>

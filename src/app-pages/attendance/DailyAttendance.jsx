@@ -25,6 +25,9 @@ const s = {
     else if (status === 'A') { bg = '#fee2e2'; color = '#991b1b'; }
     else if (status === 'HD') { bg = '#fef3c7'; color = '#92400e'; }
     else if (status === 'WO') { bg = '#e0e7ff'; color = '#3730a3'; }
+    else if (status === 'WFH') { bg = '#cffafe'; color = '#155e75'; }
+    else if (status === 'HOL') { bg = '#ffedd5'; color = '#9a3412'; }
+    else if (status === 'EW') { bg = '#f3e8ff'; color = '#6b21a8'; }
 
     return {
       padding: '4px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600,
@@ -56,8 +59,50 @@ export default function DailyAttendance() {
     fetchData();
   }, [month, year]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+
+  const syncTeamOffice = async () => {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const res = await fetch(`${API}/attendance/import-teamoffice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },
+        body: JSON.stringify({ month, year })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.detail || 'Sync failed');
+      setSyncMsg(json.message || 'Synced');
+      await fetchData();
+    } catch (e) {
+      setSyncMsg(e.message || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Auto-update: while viewing the current month, pull today's punches from
+  // TeamOffice every 30s (and when the tab is shown again) and refresh quietly.
+  const fetchRef = React.useRef(null);
+  useEffect(() => {
+    const now = new Date();
+    if (month !== now.getMonth() + 1 || year !== now.getFullYear()) return;
+    const tick = () => {
+      if (document.hidden) return;
+      fetch(`${API}/attendance/live-sync`, { method: 'POST', headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` } })
+        .then(r => r.json())
+        .then(d => { if (d && d.synced) fetchRef.current(true); })
+        .catch(() => {});
+    };
+    tick();
+    const id = setInterval(tick, 30000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, [month, year]);
+
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const token = sessionStorage.getItem('token');
       const res = await fetch(`${API}/attendance/daily?month=${month}&year=${year}`, {
@@ -76,14 +121,41 @@ export default function DailyAttendance() {
     }
   };
 
+  fetchRef.current = fetchData;
+
+  // Manual add/edit of one day (Work From Home, Extra Work on a holiday, corrections).
+  const [editing, setEditing] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const startEdit = (r) => setEditing({
+    date: String(r.attendance_date).slice(0, 10),
+    status: r.missing ? 'WFH' : (r.status || 'P'),
+    in_time: r.in_time || '', out_time: r.out_time || '', remark: '',
+  });
+  const saveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`${API}/attendance/manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },
+        body: JSON.stringify({ emp_code: selectedEmpCode, ...editing }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.detail || 'Save failed');
+      setEditing(null);
+      await fetchData(true);
+    } catch (e) {
+      setSyncMsg(e.message || 'Save failed');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const fmtDate = (dstr) => {
     if (!dstr) return '';
-    try {
-      const d = new Date(dstr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dstr;
-    }
+    // API sends plain YYYY-MM-DD; build a local date so the day never shifts with timezone.
+    const [y, m, dd] = String(dstr).slice(0, 10).split('-').map(Number);
+    if (!y || !m || !dd) return dstr;
+    return new Date(y, m - 1, dd).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   const fmtHours = (hrs) => {
@@ -98,12 +170,15 @@ export default function DailyAttendance() {
     const map = new Map();
     for (const r of records) {
       if (!map.has(r.emp_code)) {
-        map.set(r.emp_code, { emp_code: r.emp_code, name: r.name, department: r.department, present: 0, absent: 0, days: [] });
+        map.set(r.emp_code, { emp_code: r.emp_code, name: r.name, department: r.department, present: 0, half: 0, wfh: 0, ew: 0, absent: 0, days: [] });
       }
       const entry = map.get(r.emp_code);
       if (!r.id) continue; // no attendance record for this employee this month
       entry.days.push(r);
-      if (r.status === 'P' || r.status === 'HD') entry.present++;
+      if (r.status === 'P') entry.present++;
+      else if (r.status === 'HD') { entry.present += 0.5; entry.half++; }
+      else if (r.status === 'WFH') { entry.present++; entry.wfh++; }
+      else if (r.status === 'EW') entry.ew++;
       else if (r.status === 'A') entry.absent++;
     }
     return Array.from(map.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -113,6 +188,23 @@ export default function DailyAttendance() {
     () => employees.find(e => e.emp_code === selectedEmpCode) || null,
     [employees, selectedEmpCode]
   );
+
+  // One row per calendar day of the selected month (up to today), so every
+  // date lines up with TeamOffice even when no punch record exists for it.
+  const calendarDays = useMemo(() => {
+    if (!selectedEmployee) return [];
+    const byDate = new Map(selectedEmployee.days.map(r => [String(r.attendance_date).slice(0, 10), r]));
+    const today = new Date();
+    const last = new Date(year, month, 0).getDate();
+    const rows = [];
+    for (let day = last; day >= 1; day--) {
+      const dt = new Date(year, month - 1, day);
+      if (dt > today) continue;
+      const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      rows.push(byDate.get(key) || { id: key, attendance_date: key, day: dt.toLocaleDateString('en-US', { weekday: 'long' }), missing: true });
+    }
+    return rows;
+  }, [selectedEmployee, month, year]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
@@ -136,6 +228,9 @@ export default function DailyAttendance() {
               &larr; Back to employees
             </button>
           )}
+          <button style={{ ...s.backBtn, opacity: syncing ? 0.6 : 1 }} disabled={syncing} onClick={syncTeamOffice}>
+            {syncing ? 'Syncing...' : 'Sync from TeamOffice'}
+          </button>
           <select style={s.sel} value={month} onChange={e => setMonth(Number(e.target.value))}>
             {monthNames.map((m, i) => (
               <option key={m} value={i + 1}>{m}</option>
@@ -148,6 +243,8 @@ export default function DailyAttendance() {
           </select>
         </div>
       </div>
+
+      {syncMsg && <div style={{ marginBottom: 12, fontSize: 13, color: '#334155' }}>{syncMsg}</div>}
 
       <div style={s.card}>
         {selectedEmployee ? (
@@ -169,24 +266,53 @@ export default function DailyAttendance() {
                     <th style={s.th}>Work Hrs</th>
                     <th style={s.th}>Status</th>
                     <th style={s.th}>Remarks</th>
+                    <th style={s.th}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedEmployee.days
-                    .slice()
-                    .sort((a, b) => new Date(b.attendance_date) - new Date(a.attendance_date))
-                    .map((r) => (
+                  {calendarDays.map((r) => {
+                    const isEditing = editing && editing.date === String(r.attendance_date).slice(0, 10);
+                    const inp = { ...s.sel, padding: '4px 6px', fontSize: 13 };
+                    return (
                       <tr key={r.id} style={{ ...s.tr, cursor: 'default' }}>
                         <td style={{ ...s.td, fontWeight: 500 }}>{fmtDate(r.attendance_date)}<div style={{ fontSize: 12, color: '#94a3b8' }}>{r.day}</div></td>
-                        <td style={s.td}>{r.in_time || '--:--'}</td>
-                        <td style={s.td}>{r.out_time || '--:--'}</td>
-                        <td style={s.td}>{fmtHours(r.working_hours)} hrs</td>
-                        <td style={s.td}>
-                          <span style={s.statusBadge(r.status)}>{r.status}</span>
-                        </td>
-                        <td style={{ ...s.td, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.remark}>{r.remark || '-'}</td>
+                        {isEditing ? (
+                          <>
+                            <td style={s.td}><input type="time" style={inp} value={editing.in_time} onChange={e => setEditing({ ...editing, in_time: e.target.value })} /></td>
+                            <td style={s.td}><input type="time" style={inp} value={editing.out_time} onChange={e => setEditing({ ...editing, out_time: e.target.value })} /></td>
+                            <td style={s.td}>-</td>
+                            <td style={s.td}>
+                              <select style={inp} value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value })}>
+                                <option value="P">P - Present</option>
+                                <option value="A">A - Absent</option>
+                                <option value="HD">HD - Half Day</option>
+                                <option value="WO">WO - Week Off</option>
+                                <option value="WFH">WFH - Work From Home</option>
+                                <option value="EW">EW - Extra Work</option>
+                                <option value="HOL">HOL - Holiday</option>
+                              </select>
+                            </td>
+                            <td style={s.td}><input style={{ ...inp, width: 160 }} placeholder="Remark (optional)" value={editing.remark} onChange={e => setEditing({ ...editing, remark: e.target.value })} /></td>
+                            <td style={s.td}>
+                              <button style={s.backBtn} disabled={savingEdit} onClick={saveEdit}>{savingEdit ? 'Saving...' : 'Save'}</button>{' '}
+                              <button style={s.backBtn} onClick={() => setEditing(null)}>Cancel</button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td style={s.td}>{r.in_time || '--:--'}</td>
+                            <td style={s.td}>{r.out_time || '--:--'}</td>
+                            <td style={s.td}>{fmtHours(r.working_hours)} hrs</td>
+                            <td style={s.td}>
+                              {r.missing ? <span style={{ color: '#94a3b8' }}>No record</span> : <span style={s.statusBadge(r.status)}>{r.status}</span>}
+                            </td>
+                            <td style={{ ...s.td, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.remark}>{r.remark || '-'}</td>
+                            <td style={s.td}><button style={s.backBtn} onClick={() => startEdit(r)}>{r.missing ? 'Add' : 'Edit'}</button></td>
+                          </>
+                        )}
                       </tr>
-                    ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -201,14 +327,17 @@ export default function DailyAttendance() {
                   <th style={s.th}>Emp Code</th>
                   <th style={s.th}>Department</th>
                   <th style={s.th}>Present</th>
+                  <th style={s.th}>Half Day</th>
+                  <th style={s.th}>WFH</th>
+                  <th style={s.th}>Extra Work</th>
                   <th style={s.th}>Absent</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="6" style={{ ...s.td, textAlign: 'center', padding: '40px 0' }}>Loading records...</td></tr>
+                  <tr><td colSpan="9" style={{ ...s.td, textAlign: 'center', padding: '40px 0' }}>Loading records...</td></tr>
                 ) : employees.length === 0 ? (
-                  <tr><td colSpan="6" style={{ ...s.td, textAlign: 'center', padding: '40px 0' }}>No attendance records found for this month.</td></tr>
+                  <tr><td colSpan="9" style={{ ...s.td, textAlign: 'center', padding: '40px 0' }}>No attendance records found for this month.</td></tr>
                 ) : (
                   pageEmployees.map((emp, idx) => (
                     <tr
@@ -226,6 +355,9 @@ export default function DailyAttendance() {
                       <td style={s.td}>{emp.emp_code}</td>
                       <td style={s.td}>{emp.department || '-'}</td>
                       <td style={s.td}><span style={s.countPill('#166534', '#dcfce7')}>{emp.present}</span></td>
+                      <td style={s.td}><span style={s.countPill('#92400e', '#fef3c7')}>{emp.half}</span></td>
+                      <td style={s.td}><span style={s.countPill('#155e75', '#cffafe')}>{emp.wfh}</span></td>
+                      <td style={s.td}><span style={s.countPill('#6b21a8', '#f3e8ff')}>{emp.ew}</span></td>
                       <td style={s.td}><span style={s.countPill('#991b1b', '#fee2e2')}>{emp.absent}</span></td>
                     </tr>
                   ))

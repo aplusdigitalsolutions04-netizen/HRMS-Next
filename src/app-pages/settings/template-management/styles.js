@@ -137,17 +137,17 @@ export const templateManagementStyles = `
     .tpl-table-wrapper {
         background: #fff; border-radius: 18px;
         border: 1px solid #e2e8f0; overflow: hidden;
-        margin-top: 32px;
+        margin-top: 0;
     }
     .tpl-table { width: 100%; border-collapse: collapse; }
     .tpl-table th {
         background: #f8fafc; color: #64748b;
         font-family: 'Outfit', sans-serif; font-weight: 700;
         font-size: .75rem; text-transform: uppercase; letter-spacing: 1px;
-        padding: 16px 18px; text-align: left; border-bottom: 1.5px solid #e2e8f0;
+        padding: 12px 14px; text-align: left; border-bottom: 1.5px solid #e2e8f0; white-space: nowrap;
     }
     .tpl-table td {
-        padding: 16px 18px; font-size: .9rem; color: #1e293b;
+        padding: 12px 14px; font-size: .9rem; color: #1e293b;
         border-bottom: 1px solid #f1f5f9; vertical-align: middle;
     }
     .tpl-table tbody tr:last-child td { border-bottom: none; }
@@ -155,7 +155,7 @@ export const templateManagementStyles = `
     .tpl-table tbody tr:hover { background: #fafaff; }
     .tbl-action {
         display: inline-flex; align-items: center; gap: 5px;
-        padding: 6px 14px; border-radius: 8px;
+        padding: 5px 10px; border-radius: 8px; white-space: nowrap;
         font-size: .8rem; font-weight: 600; cursor: pointer;
         border: none; transition: all .2s; font-family: 'Outfit', sans-serif;
     }

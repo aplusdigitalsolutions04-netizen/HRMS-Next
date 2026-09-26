@@ -23,11 +23,19 @@ export default function InviteEmployee() {
             });
             const data = await res.json();
             if (res.ok) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Invite Created',
-                    html: `Employee ID <strong>${data.emp_code}</strong> was generated.<br/>Go to <strong>Employee Credentials</strong> to view/send the login details.`,
-                });
+                if (data.email_sent) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Invite Sent',
+                        html: `Login details were emailed to <strong>${form.email_id}</strong>.<br/>Employee ID: <strong>${data.emp_code}</strong>`,
+                    });
+                } else {
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Invite created, email NOT sent',
+                        html: `Employee ID <strong>${data.emp_code}</strong> was created, but the email could not be sent${data.email_error ? `:<br/><em>${data.email_error}</em>` : '.'}<br/>Fix the issue and press <strong>Send</strong> on the Employee Credentials page.`,
+                    });
+                }
                 navigate('/employee-credentials');
             } else {
                 Swal.fire({ icon: 'error', title: 'Error', text: data.detail || 'Failed to invite employee' });
