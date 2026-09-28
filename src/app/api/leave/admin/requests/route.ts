@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'view_leave')) return jsonError('Insufficient permissions', 403);
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || '';

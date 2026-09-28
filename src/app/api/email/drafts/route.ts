@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const rows = await query<RowDataPacket[]>('SELECT * FROM email_drafts WHERE status=? ORDER BY updated_at DESC', ['draft']);
     return jsonSuccess(rows);
   } catch (e: any) { return jsonError(e, 500); }
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
 
     const bodyReq = await req.json().catch(() => ({}));
     const { employee_id, template_id } = bodyReq;

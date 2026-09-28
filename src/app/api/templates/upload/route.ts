@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const fd = await req.formData();
     const file = fd.get('file');
     if (!file || !(file instanceof File)) return jsonError('No file uploaded', 422);

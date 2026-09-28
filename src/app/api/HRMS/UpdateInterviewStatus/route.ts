@@ -7,6 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const body = await req.json();
     if (!body.candidate_id || !body.status) return jsonError('Candidate ID and status required', 422);
     await execute('UPDATE interview_details SET status=?, updated_on=? WHERE candidate_id=? AND id=(SELECT MAX(id) FROM interview_details WHERE candidate_id=?)',

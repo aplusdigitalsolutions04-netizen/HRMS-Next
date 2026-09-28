@@ -7,6 +7,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'delete_candidate')) return jsonError('Insufficient permissions', 403);
     const { id } = await params;
     await execute('DELETE FROM interview_details WHERE candidate_id=?', [id]);

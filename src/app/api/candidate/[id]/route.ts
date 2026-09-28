@@ -8,6 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { id } = await params;
     const rows = await query<RowDataPacket[]>('SELECT * FROM interview_candidates WHERE id = ?', [id]);
     if (rows.length === 0) return jsonError('Candidate not found', 404);
@@ -20,6 +21,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'delete_candidate')) return jsonError('Insufficient permissions', 403);
     const { id } = await params;
     await execute('DELETE FROM interview_details WHERE candidate_id = ?', [id]);

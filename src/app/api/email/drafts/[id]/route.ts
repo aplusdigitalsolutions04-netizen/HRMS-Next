@@ -8,6 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { id } = await params;
     const rows = await query<RowDataPacket[]>('SELECT * FROM email_drafts WHERE id=?', [id]);
     if (rows.length === 0) return jsonError('Draft not found', 404);
@@ -19,6 +20,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { id } = await params;
     const body = await req.json();
     const t = now();
@@ -34,6 +36,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { id } = await params;
     await execute('DELETE FROM email_drafts WHERE id=?', [id]);
     return jsonSuccess({ message: 'Draft deleted' });

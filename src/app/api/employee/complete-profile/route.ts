@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest) {
       return jsonError('Mobile number is required', 422);
     }
     const mobileConflict = await query<RowDataPacket[]>(
-      'SELECT id FROM employees WHERE mobile_no = ? AND id != ?', [body.mobile_no.trim(), user.id]
+      'SELECT id FROM employees WHERE mobile_no = ? AND id != ? AND COALESCE(is_deleted, 0) = 0', [body.mobile_no.trim(), user.id]
     );
     if (mobileConflict.length > 0) {
       return jsonError('This mobile number is already registered with another employee', 409);
@@ -76,11 +76,21 @@ export async function PUT(req: NextRequest) {
     const empCode = existing[0].emp_code;
     const fullName = body.full_name || existing[0].full_name;
 
+    // A failed upload (Drive / disk) must say which file and why, not just "500".
+    const saveDoc = async (label: string, file: File) => {
+      try {
+        return await saveEmployeeDocument(empCode, fullName, file);
+      } catch (err: any) {
+        console.error(`[complete-profile] could not save ${label} for ${empCode}:`, err?.message || err);
+        throw new Error(`Could not upload "${file.name}" (${label}): ${err?.message || 'storage error'}. Please try again, or contact HR if it keeps failing.`);
+      }
+    };
+
     const docPaths: Record<string, string> = {};
     for (const [formKey, colName] of Object.entries(DOC_COLUMNS)) {
       const file = fileMap[formKey];
       if (file instanceof File) {
-        docPaths[colName] = await saveEmployeeDocument(empCode, fullName, file);
+        docPaths[colName] = await saveDoc(formKey, file);
       }
     }
     for (const [col, path] of Object.entries(docPaths)) {
@@ -90,7 +100,7 @@ export async function PUT(req: NextRequest) {
     if (addDocsFiles.length > 0) {
       const newPaths: string[] = [];
       for (const file of addDocsFiles) {
-        newPaths.push(await saveEmployeeDocument(empCode, fullName, file));
+        newPaths.push(await saveDoc('AdditionalDocuments', file));
       }
       sets.push('`additional_documents` = ?'); vals.push(JSON.stringify(newPaths));
     }
@@ -103,6 +113,7 @@ export async function PUT(req: NextRequest) {
 
     return jsonSuccess({ message: 'Profile submitted. HR will review and activate your account.' });
   } catch (e: any) {
+    console.error('[complete-profile] failed:', e?.message || e);
     return jsonError(e, 500);
   }
 }

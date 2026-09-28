@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const rows = await query<RowDataPacket[]>('SELECT * FROM smtp_settings LIMIT 1');
     if (rows.length > 0) {
       const r = rows[0];
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const body = await req.json();
     const existing = await query<RowDataPacket[]>('SELECT id, app_password FROM smtp_settings LIMIT 1');
     const t = now();

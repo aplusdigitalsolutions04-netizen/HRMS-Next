@@ -46,7 +46,7 @@ export function fillEmployeeTemplate(rawBody: string, vars: EmployeeTemplateVars
 // every mainstream client renders.
 export function buildCompanyLogoEmail(rawLogo: string | undefined, altText: string): {
   html: string;
-  attachment: { filename: string; content: string; encoding: string; contentType: string; cid: string } | null;
+  attachment: { filename: string; contentType: string; cid: string; source: 'company_logo' } | null;
 } {
   if (!rawLogo) return { html: '', attachment: null };
 
@@ -60,17 +60,20 @@ export function buildCompanyLogoEmail(rawLogo: string | undefined, altText: stri
     };
   }
 
-  const [, mimeType, base64Data] = dataUriMatch;
+  const [, mimeType] = dataUriMatch;
   const ext = mimeType.split('/')[1] || 'png';
   const cid = 'company-logo';
   return {
     html: `<img src="cid:${cid}" alt="${altText}" style="height:36px;margin-bottom:16px" />`,
+    // Only a marker is stored with the draft / email log. The image itself is read
+    // from Company Settings when the email is actually sent (see sendEmailDetailed).
+    // Copying the whole base64 logo into every draft can overflow the attachments
+    // column, and a cut-off value silently loses the logo.
     attachment: {
       filename: `logo.${ext}`,
-      content: base64Data,
-      encoding: 'base64',
       contentType: mimeType,
       cid,
+      source: 'company_logo',
     },
   };
 }

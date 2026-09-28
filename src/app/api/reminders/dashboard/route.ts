@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const rows = await query<RowDataPacket[]>(
       `SELECT r.*, c.candidate_name, c.email_id as candidate_email FROM email_reminders r LEFT JOIN interview_candidates c ON r.candidate_id=c.id WHERE r.status='ACTIVE' ORDER BY r.reminder_time ASC LIMIT 10`
     );

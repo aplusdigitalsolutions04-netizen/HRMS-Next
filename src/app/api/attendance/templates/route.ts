@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const rows = await query<RowDataPacket[]>('SELECT * FROM attendance_templates ORDER BY created_at DESC');
     return jsonSuccess(rows.map(r => ({ ...r, columns: typeof r.columns === 'string' ? JSON.parse(r.columns) : r.columns })));
   } catch (e: any) { return jsonError(e, 500); }
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'upload_attendance')) return jsonError('Insufficient permissions', 403);
     const body = await req.json();
     if (!body.name) return jsonError('Template name required', 422);

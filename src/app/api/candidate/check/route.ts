@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { searchParams } = new URL(req.url);
     const mobile = searchParams.get('mobile') || '';
     if (!mobile) return jsonError('Mobile number required', 422);

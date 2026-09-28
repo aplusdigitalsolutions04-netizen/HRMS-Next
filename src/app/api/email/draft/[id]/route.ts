@@ -8,6 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { id } = await params;
     const rows = await query<RowDataPacket[]>('SELECT * FROM email_drafts WHERE candidate_id=? ORDER BY updated_at DESC LIMIT 1', [id]);
     if (rows.length === 0) return jsonError('No draft found for this candidate', 404);
@@ -19,6 +20,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { id } = await params;
     await execute('DELETE FROM email_drafts WHERE candidate_id=?', [id]);
     return jsonSuccess({ message: 'Draft deleted' });

@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     return jsonSuccess({ ...(await getPayslipSignatories()), ew_pay_multiplier: String(await getEwMultiplier()), el_payout_interval_months: String(await getElPayoutInterval()), salary_month_days_mode: await getMonthDaysMode() });
   } catch (e: any) { return jsonError(e, 500); }
 }
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'manage_salary_structures')) return jsonError('Insufficient permissions', 403);
 
     const body = await req.json();

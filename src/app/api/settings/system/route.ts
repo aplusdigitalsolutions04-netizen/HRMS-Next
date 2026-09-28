@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const rows = await query<RowDataPacket[]>('SELECT setting_key, setting_value FROM system_settings');
     const settings: Record<string, string> = {};
     // Never expose credentials to every logged-in user.
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'settings_communication')) return jsonError('Insufficient permissions', 403);
     const body = await req.json();
     const items = Array.isArray(body) ? body : [body];

@@ -182,11 +182,14 @@ const EmployeeManagement = () => {
         headers: { ...auth(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ free_identity: freeIdentity }),
       })
-        .then(r => {
-          if (!r.ok) throw new Error('Delete failed');
+        .then(async r => {
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            throw new Error(d.detail || 'Delete failed');
+          }
           fetchPage(page, search, statusFilter, deptFilter);
         })
-        .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete employee.' }));
+        .catch((err) => Swal.fire({ icon: 'error', title: 'Could not delete employee', text: err.message || 'Failed to delete employee.' }));
     });
   };
 

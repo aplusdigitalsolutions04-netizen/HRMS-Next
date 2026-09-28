@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const body = await req.json();
     if (!body.candidate_id && !body.to_email) return jsonError('Candidate ID or recipient email required', 422);
     
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const { searchParams } = new URL(req.url);
     const candidateId = searchParams.get('candidate_id') || '';
     let where = 'WHERE 1=1'; const params = [];

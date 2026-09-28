@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
 
     const rows = await query<RowDataPacket[]>(
       `SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN (${KEYS.map(() => '?').join(',')})`,
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     if (!checkPermission(user, 'manage_salary_structures')) return jsonError('Insufficient permissions', 403);
 
     const body = await req.json();

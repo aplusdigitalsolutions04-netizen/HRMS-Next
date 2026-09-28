@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const rows = await query<RowDataPacket[]>(
       `SELECT e.id, e.emp_code, e.full_name, e.designation, ss.id as salary_structure_id FROM employees e LEFT JOIN salary_structures ss ON e.emp_code=ss.emp_code WHERE e.is_deleted = 0 ORDER BY e.full_name`
     );

@@ -15,6 +15,11 @@ export async function GET(req: NextRequest) {
       `SELECT lr.*, e.full_name as emp_full_name, e.profile_photo FROM leave_requests lr LEFT JOIN employees e ON lr.employee_id=e.id WHERE MONTH(lr.start_date)=? AND YEAR(lr.start_date)=? AND lr.status IN ('Approved','Pending') ORDER BY lr.start_date`,
       [parseInt(month), parseInt(year)]
     );
+    // Employees see who is away and when - not the private reason, supporting
+    // document or rejection note of somebody else's request.
+    if (user.type === 'employee') {
+      return jsonSuccess(rows.map(({ reason, supporting_doc, rejection_reason, reviewed_by, ...rest }) => rest));
+    }
     return jsonSuccess(rows);
   } catch (e: any) {
     return jsonError(e, 500);

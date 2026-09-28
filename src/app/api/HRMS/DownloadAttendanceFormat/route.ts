@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
+    if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     const csv = 'Employee Code,Date,In Time,Out Time,Status\nEMP0001,2024-01-01,09:00,18:00,Present\n';
     return new NextResponse(csv, {
       headers: {

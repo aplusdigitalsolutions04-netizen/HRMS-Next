@@ -134,6 +134,17 @@ export async function sendEmailDetailed(
         try { atts = JSON.parse(atts); } catch { atts = []; }
       }
       if (Array.isArray(atts)) {
+        // Attachments marked source: 'company_logo' carry no image data; load the
+        // current logo from Company Settings now.
+        if (atts.some(a => a && a.source === 'company_logo' && !a.content)) {
+          const rows = await query<RowDataPacket[]>('SELECT company_logo FROM company_settings LIMIT 1');
+          const m = String(rows[0]?.company_logo || '').match(/^data:([^;]+);base64,([\s\S]+)$/);
+          atts = atts
+            .map(a => (a && a.source === 'company_logo' && !a.content
+              ? (m ? { ...a, content: m[2], encoding: 'base64', contentType: m[1] } : null)
+              : a))
+            .filter(Boolean);
+        }
         mailOptions.attachments = atts.map(a => {
           const res: any = {};
           if (a.filename) res.filename = a.filename;
