@@ -70,7 +70,7 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                     <span style={{
                         background: '#ede9fe', color: '#7c3aed',
                         borderRadius: '50px', padding: '2px 10px',
-                        fontSize: '.75rem', fontWeight: 800, marginLeft: '8px'
+                        fontSize: '.75rem', fontWeight: 700, marginLeft: '8px'
                     }}>
                         {preview.variables.length}
                     </span>

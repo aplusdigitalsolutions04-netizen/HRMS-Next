@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { findCached, pillStyle } from '../../shared/useStatusMaster';
 
 export function AnimatedValue({ value, suffix = '' }) {
   const [display, setDisplay] = useState(0);
@@ -27,10 +28,11 @@ export const initials = (name) => {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 };
 
+// Label and colour come from Settings > Status Master, so every status (including ones
+// added later) shows as itself - nothing falls back to "Dropped".
 export const statusBadge = (status) => {
-  if (status === 'active') return <span className="emp-badge emp-badge-active">Active</span>;
-  if (status === 'pending') return <span className="emp-badge emp-badge-pending">Pending</span>;
-  return <span className="emp-badge emp-badge-dropped">Dropped</span>;
+  const row = findCached('employee', status);
+  return <span className="emp-badge" style={pillStyle(row.color)} title={row.description || ''}>{row.label}</span>;
 };
 
 export const canDeleteEmployee = () => {

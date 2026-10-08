@@ -53,7 +53,7 @@ export default function ManageDepartments() {
     <div className="animate-in">
       <div className="glass-card p-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4 className="page-title m-0" style={{ fontSize: '1.75rem' }}>🏢 Departments <span style={{fontSize: '0.85rem', fontWeight: 500, color: '#64748b'}}>({departments.length})</span></h4>
+          <h4 className="page-title m-0" style={{ fontSize: '1.35rem' }}>🏢 Departments <span style={{fontSize: '0.85rem', fontWeight: 500, color: '#64748b'}}>({departments.length})</span></h4>
           <button className="btn-premium" style={{ padding: '6px 14px', fontSize: '0.85rem' }} onClick={() => navigate('/masters/departments/add')}>
             ➕ Add Department
           </button>

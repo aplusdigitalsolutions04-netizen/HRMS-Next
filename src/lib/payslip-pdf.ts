@@ -41,7 +41,7 @@ export interface PayslipData {
   basic_pay: number; hra: number; conveyance_allowance: number; food_vouchers: number;
   medical_insurance: number; other_deductions: number; incentives: number; el_encashment: number;
   gross_salary: number; total_deductions: number; total_adjustments: number; net_salary: number;
-  paid_days: number; extra_work_days?: number; extra_work_pay?: number; variable_pay?: number; leave_availed: number; casual_leave: number; earned_leave: number;
+  paid_days: number; extra_work_days?: number; extra_work_pay?: number; variable_pay?: number; extra_components?: string | { label: string; amount: number; type?: string }[] | null; leave_availed: number; casual_leave: number; earned_leave: number;
   // employee fields
   full_name?: string; designation?: string; pay_mode?: string; date_of_joining?: string;
   account_number?: string; bank_name?: string; location?: string; pan?: string; uan?: string;
@@ -61,6 +61,32 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
   const bracket = (v?: string) => v && v.trim() ? `(${esc(v.trim())})` : '';
   const row = (label: string, value: any) => `<div class="ip-cell"><span class="ip-label">${label} :</span><span class="ip-value">${value === undefined || value === null || value === '' ? '---' : esc(value)}</span></div>`;
   const amt = (v: any) => (v === undefined || v === null || v === '') ? '---' : fmt(v);
+
+  // Earnings: the four standard lines, then any custom split columns HR added.
+  // Deductions: medical insurance, others. Adjustments: incentive, EL encash, then extra work /
+  // variable pay when they are above zero. The table has as many rows as the longest column.
+  let customCols: { label: string; amount: number; type: string }[] = [];
+  try {
+    const parsed = typeof p.extra_components === 'string' ? JSON.parse(p.extra_components) : p.extra_components;
+    if (Array.isArray(parsed)) customCols = parsed.map((x: any) => ({ label: String(x?.label || '').trim(), amount: Number(x?.amount) || 0, type: x?.type === 'deduction' ? 'deduction' : 'earning' })).filter(x => x.label);
+  } catch { customCols = []; }
+  type Cell = [string, string];
+  const earnings: Cell[] = [
+    ['Basic Pay', amt(p.basic_pay)], ['House Rent Allowance', amt(p.hra)],
+    ['Conveyance Allowance', amt(p.conveyance_allowance)], ['Food Vouchers', amt(p.food_vouchers)],
+    ...customCols.filter(c => c.type === 'earning').map((c): Cell => [esc(c.label), fmt(c.amount)]),
+  ];
+  const deductions: Cell[] = [
+    ['Medical Insurance', amt(p.medical_insurance)], ['Others', amt(p.other_deductions)],
+    ...customCols.filter(c => c.type === 'deduction').map((c): Cell => [esc(c.label), fmt(c.amount)]),
+  ];
+  const adjustments: Cell[] = [['Incentive', amt(p.incentives)], ['EL Encash', amt(p.el_encashment)]];
+  if (Number(p.extra_work_pay) > 0) adjustments.push([`Extra Work (${Number(p.extra_work_days) || 0} d)`, fmt(p.extra_work_pay)]);
+  if (Number(p.variable_pay) > 0) adjustments.push(['Variable Pay', fmt(p.variable_pay)]);
+  const rowCount = Math.max(earnings.length, deductions.length, adjustments.length, 4);
+  const cell = (c?: Cell) => (c ? `<td>${c[0]}</td><td class="col-amt">${c[1]}</td>` : '<td></td><td></td>');
+  let bodyRows = '';
+  for (let i = 0; i < rowCount; i++) bodyRows += `<tr>${cell(earnings[i])}${cell(deductions[i])}${cell(adjustments[i])}</tr>`;
 
   const html = `
     <!DOCTYPE html>
@@ -152,28 +178,7 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Basic Pay</td><td class="col-amt">${amt(p.basic_pay)}</td>
-            <td>Medical Insurance</td><td class="col-amt">${amt(p.medical_insurance)}</td>
-            <td>Incentive</td><td class="col-amt">${amt(p.incentives)}</td>
-          </tr>
-          <tr>
-            <td>House Rent Allowance</td><td class="col-amt">${amt(p.hra)}</td>
-            <td>Others</td><td class="col-amt">${amt(p.other_deductions)}</td>
-            <td>EL Encash</td><td class="col-amt">${amt(p.el_encashment)}</td>
-          </tr>
-          <tr>
-            <td>Conveyance Allowance</td><td class="col-amt">${amt(p.conveyance_allowance)}</td>
-            <td></td><td></td>
-            <td>${Number(p.extra_work_pay) > 0 ? `Extra Work (${Number(p.extra_work_days) || 0} d)` : ''}</td>
-            <td class="col-amt">${Number(p.extra_work_pay) > 0 ? fmt(p.extra_work_pay) : ''}</td>
-          </tr>
-          <tr>
-            <td>Food Vouchers</td><td class="col-amt">${amt(p.food_vouchers)}</td>
-            <td></td><td></td>
-            <td>${Number(p.variable_pay) > 0 ? 'Variable Pay' : ''}</td>
-            <td class="col-amt">${Number(p.variable_pay) > 0 ? fmt(p.variable_pay) : ''}</td>
-          </tr>
+          ${bodyRows}
           <tr class="total-row">
             <td>Gross Total</td><td class="col-amt">${fmt(p.gross_salary)}</td>
             <td>Total</td><td class="col-amt">${fmt(p.total_deductions)}</td>

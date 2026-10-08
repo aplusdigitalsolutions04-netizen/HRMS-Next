@@ -19,7 +19,7 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                         <span style={{
                             background: '#dbeafe', color: '#1d4ed8',
                             borderRadius: '50px', padding: '3px 12px',
-                            fontSize: '.78rem', fontWeight: 800
+                            fontSize: '.78rem', fontWeight: 700
                         }}>
                             {templates.length} total
                         </span>

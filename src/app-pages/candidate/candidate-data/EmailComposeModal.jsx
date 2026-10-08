@@ -45,7 +45,7 @@ const EmailComposeModal = ({
 
                 <div className="email-modal-header">
                     <div className="email-modal-title">
-                        <span style={{ fontSize: '1.4rem' }}>📧</span>
+                        <span style={{ fontSize: '1.2rem' }}>📧</span>
                         Email — {candidateName}
                     </div>
                     <button className="email-modal-close" onClick={onClose} disabled={emailSending === 'sending'} style={{ opacity: emailSending === 'sending' ? 0.5 : 1, cursor: emailSending === 'sending' ? 'not-allowed' : 'pointer' }}>✕</button>
@@ -185,7 +185,7 @@ const EmailComposeModal = ({
                         ) : (
                             <>
                                 <div className="gmail-preview-container" style={{ border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#fff', padding: '24px', fontFamily: "'Inter', sans-serif" }}>
-                                    <h2 style={{ fontSize: '1.4rem', color: '#1e293b', fontWeight: 600, marginTop: 0, marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', fontFamily: "'Outfit', sans-serif" }}>
+                                    <h2 style={{ fontSize: '1.2rem', color: '#1e293b', fontWeight: 600, marginTop: 0, marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', fontFamily: "'Outfit', sans-serif" }}>
                                         {emailSubject}
                                     </h2>
                                     <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>

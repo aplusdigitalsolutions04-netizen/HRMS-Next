@@ -5,7 +5,7 @@ export const employeeManagementStyles = `
     @keyframes empSlideOut { from{transform:translateX(0)} to{transform:translateX(100%)} }
 
     .emp-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:14px; }
-    .emp-hdr-l h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:800; font-size:1.6rem; color:#0f172a; letter-spacing:-0.3px; }
+    .emp-hdr-l h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.3rem; color:#0f172a; letter-spacing:-0.3px; }
     .emp-hdr-g { font-size:.9rem; color:#475569; font-weight:500; }
     .emp-breadcrumb { display:flex; align-items:center; gap:6px; font-size:.8rem; color:#94a3b8; margin-bottom:2px; }
     .emp-breadcrumb a { color:#6366f1; text-decoration:none; font-weight:600; }
@@ -18,11 +18,11 @@ export const employeeManagementStyles = `
     .emp-card { background:#fff; border-radius:18px; padding:22px 24px; border:1px solid #f1f5f9; transition:all .2s; }
     .emp-card:hover { border-color:#e2e8f0; box-shadow:0 4px 12px rgba(0,0,0,.04); }
     .emp-card-lbl { font-size:.8rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
-    .emp-card-val { font-family:'Outfit',sans-serif; font-weight:700; font-size:2rem; color:#0f172a; line-height:1.1; }
+    .emp-card-val { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.6rem; color:#0f172a; line-height:1.1; }
     .emp-card-sub { font-size:.8rem; color:#64748b; margin-top:3px; }
     .emp-card-sub.green { color:#10b981; }
     .emp-card-sub.red { color:#ef4444; }
-    .emp-card-icon { float:right; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; }
+    .emp-card-icon { float:right; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
 
     .emp-toolbar { display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
     .emp-search { flex:1; min-width:200px; position:relative; }
@@ -80,12 +80,12 @@ export const employeeManagementStyles = `
     .emp-drawer { position:fixed; top:3%; left:3%; right:3%; bottom:3%; background:#fff; z-index:1001; animation:empFade .25s ease; display:flex; flex-direction:column; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
     .emp-drawer-hdr { display:flex; align-items:center; justify-content:space-between; padding:20px 28px; border-bottom:1px solid #f1f5f9; }
     .emp-drawer-hdr h2 { margin:0; font-size:1.25rem; font-weight:700; color:#0f172a; }
-    .emp-drawer-close { width:38px; height:38px; border-radius:9px; border:none; background:#f1f5f9; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.3rem; transition:all .15s; }
+    .emp-drawer-close { width:38px; height:38px; border-radius:9px; border:none; background:#f1f5f9; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.15rem; transition:all .15s; }
     .emp-drawer-close:hover { background:#e2e8f0; color:#0f172a; }
     .emp-drawer-body { flex:1; overflow-y:auto; padding:28px; }
     .emp-drawer-profile { text-align:center; margin-bottom:28px; }
-    .emp-drawer-avatar { width:90px; height:90px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:1.8rem; color:#fff; background:linear-gradient(135deg,#6366f1,#8b5cf6); margin-bottom:12px; }
-    .emp-drawer-name { font-weight:700; font-size:1.5rem; color:#0f172a; }
+    .emp-drawer-avatar { width:90px; height:90px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:1.4rem; color:#fff; background:linear-gradient(135deg,#6366f1,#8b5cf6); margin-bottom:12px; }
+    .emp-drawer-name { font-weight:700; font-size:1.25rem; color:#0f172a; }
     .emp-drawer-role { font-size:.95rem; color:#64748b; }
     .emp-drawer-groups { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:18px; margin-top:6px; }
     .emp-drawer-group { background:#f8fafc; border-radius:14px; padding:18px; }

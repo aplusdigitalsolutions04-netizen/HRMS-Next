@@ -57,6 +57,19 @@ export default function PayrollSalarySheet() {
   }, [month, year]);
   useEffect(() => { load(); setPage(1); }, [load]);
 
+  // The month is pulled from TeamOffice by itself when the page opens or the month changes
+  // (and by the server in the background), so nobody has to press a Sync button. The sheet is
+  // re-read only when something was actually imported.
+  const [syncedAt, setSyncedAt] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API}/attendance/auto-sync`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ month, year }) })
+      .then(r => r.json())
+      .then(d => { if (!alive) return; if (d.at) setSyncedAt(d.at); if (d.ran) load(); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [month, year]);
+
   const save = async (empCode, patch) => {
     try {
       const res = await fetch(`${API}/payroll/salary-sheet`, {
@@ -114,7 +127,7 @@ export default function PayrollSalarySheet() {
       <div className="ss-header">
         <div>
           <h2 className="ss-title">Salary Sheet</h2>
-          <p className="ss-sub">Month days: {modeLabel || '-'}. Paid/Unpaid days come from TeamOffice attendance: press Sync first, then fix any day by hand. Edit a day in <Link to="/attendance/daily">Daily Attendance</Link> and this sheet updates.</p>
+          <p className="ss-sub">Month days: {modeLabel || '-'}. Paid/Unpaid days come from TeamOffice attendance, which is pulled automatically{syncedAt ? ` (last at ${new Date(syncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})` : ''}. Fix any day by hand if needed. Edit a day in <Link to="/attendance/daily">Daily Attendance</Link> and this sheet updates.</p>
         </div>
         <div className="ss-ctrls">
           <select className="ss-input" value={month} onChange={e => setMonth(Number(e.target.value))}>
@@ -123,7 +136,7 @@ export default function PayrollSalarySheet() {
           <select className="ss-input" value={year} onChange={e => setYear(Number(e.target.value))}>
             {[now.getFullYear() - 2, now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <button className="ss-btn ss-btn-alt" onClick={syncAttendance} disabled={syncing || loading}>{syncing ? 'Syncing...' : '⟳ Sync attendance from TeamOffice'}</button>
+          <button className="ss-btn ss-btn-alt" onClick={syncAttendance} disabled={syncing || loading}>{syncing ? 'Syncing...' : '⟳ Refresh now'}</button>
           <button className="ss-btn" onClick={exportExcel} disabled={exporting || loading}>{exporting ? 'Exporting...' : '⬇ Export Excel'}</button>
         </div>
       </div>
@@ -214,7 +227,7 @@ export default function PayrollSalarySheet() {
 const styles = `
 .ss-page { padding: 0; }
 .ss-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.ss-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+.ss-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .ss-sub { margin: 4px 0 0; font-size: .86rem; color: #64748b; max-width: 720px; }
 .ss-sub a { color: #4338ca; font-weight: 600; }
 .ss-ctrls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -234,7 +247,7 @@ const styles = `
 .ss-table .n { text-align: right; font-variant-numeric: tabular-nums; }
 .ss-table .nm { font-weight: 600; color: #0f172a; }
 .ss-table .cd { font-size: .75rem; color: #94a3b8; }
-.ss-table .final { font-weight: 800; color: #166534; background: #f0fdf4; }
+.ss-table .final { font-weight: 700; color: #166534; background: #f0fdf4; }
 .ss-table tfoot td { font-weight: 700; background: #f8fafc; border-top: 1.5px solid #cbd5e1; border-bottom: 0; }
 .ss-empty { text-align: center; color: #94a3b8; padding: 36px 0 !important; }
 .ss-foot { margin: 12px 2px 0; font-size: .78rem; color: #94a3b8; }

@@ -2,10 +2,11 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, checkPermission, calcHours } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { attendanceCodes } from '@/lib/status-master';
 
 // P present, A absent, HD half day, WO weekly off, WFH work from home,
 // EW extra work (came in on a weekly off / holiday).
-const STATUSES = ['P', 'A', 'HD', 'WO', 'WFH', 'EW', 'HOL'];
+// The statuses HR can pick come from Settings > Status Master (attendance).
 const MANUAL_REMARK = 'Manual entry';
 
 // HR adds or corrects one day of attendance (e.g. Work From Home, or Extra
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
     const date = String(body.date || '').slice(0, 10);
     const status = String(body.status || '').toUpperCase();
     if (!empCode || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return jsonError('emp_code and date (YYYY-MM-DD) are required', 422);
-    if (!STATUSES.includes(status)) return jsonError(`Status must be one of ${STATUSES.join(', ')}`, 422);
+    const STATUSES = await attendanceCodes();
+    if (!STATUSES.includes(status)) return jsonError(`Status must be one of ${STATUSES.join(', ')} (see Settings > Status Master)`, 422);
 
     const emps = await query<RowDataPacket[]>('SELECT full_name FROM employees WHERE emp_code = ?', [empCode]);
     if (emps.length === 0) return jsonError('Employee not found', 404);

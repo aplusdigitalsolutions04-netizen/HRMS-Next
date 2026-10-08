@@ -4,6 +4,29 @@ import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4 } from '@/
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { logAudit } from '@/lib/audit';
+import { parseExtraComponents } from '@/lib/payroll-calc';
+
+// Custom split columns: [{key,label,amount}] stored as JSON (null when there are none).
+const extraJson = (v: any) => {
+  const list = parseExtraComponents(v).filter(x => x.amount > 0); // keeps each column's type (earning / deduction)
+  return list.length ? JSON.stringify(list) : null;
+};
+
+// The Salary field is stored in ctc / ctc_period. A database set up from an older
+// schema may not have them, so add the columns once instead of failing every save.
+let ctcColumnsReady = false;
+async function ensureCtcColumns() {
+  if (ctcColumnsReady) return;
+  const cols = await query<RowDataPacket[]>(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'salary_structures' AND COLUMN_NAME IN ('ctc','ctc_period')"
+  );
+  const have = new Set(cols.map(c => c.COLUMN_NAME));
+  if (!have.has('ctc')) await execute('ALTER TABLE salary_structures ADD COLUMN ctc FLOAT NULL');
+  if (!have.has('ctc_period')) await execute("ALTER TABLE salary_structures ADD COLUMN ctc_period VARCHAR(10) NULL DEFAULT 'monthly'");
+  const ex = await query<RowDataPacket[]>("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'salary_structures' AND COLUMN_NAME = 'extra_components'");
+  if (ex.length === 0) await execute('ALTER TABLE salary_structures ADD COLUMN extra_components TEXT NULL');
+  ctcColumnsReady = true;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,10 +54,11 @@ export async function POST(req: NextRequest) {
     
     const existing = await query<RowDataPacket[]>('SELECT id FROM salary_structures WHERE emp_code=?', [body.emp_code]);
     if (existing.length > 0) return jsonError('Salary structure already exists for this employee', 409);
-    
+    await ensureCtcColumns();
+
     await execute(
-      `INSERT INTO salary_structures (id, emp_code, basic_pay, hra, conveyance_allowance, food_vouchers, medical_insurance, other_deductions, incentives, el_encashment, ctc, ctc_period, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())`,
-      [uuidv4(), body.emp_code, body.basic_pay||0, body.hra||0, body.conveyance_allowance||0, body.food_vouchers||0, body.medical_insurance||0, body.other_deductions||0, body.incentives||0, body.el_encashment||0, body.ctc || null, body.ctc_period || 'monthly']
+      `INSERT INTO salary_structures (id, emp_code, basic_pay, hra, conveyance_allowance, food_vouchers, medical_insurance, other_deductions, incentives, el_encashment, ctc, ctc_period, extra_components, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())`,
+      [uuidv4(), body.emp_code, body.basic_pay||0, body.hra||0, body.conveyance_allowance||0, body.food_vouchers||0, body.medical_insurance||0, body.other_deductions||0, body.incentives||0, body.el_encashment||0, body.ctc || null, body.ctc_period || 'monthly', extraJson(body.extra_components)]
     );
 
     await logAudit({
@@ -60,10 +84,11 @@ export async function PUT(req: NextRequest) {
 
     const existing = await query<RowDataPacket[]>('SELECT id FROM salary_structures WHERE emp_code=?', [body.emp_code]);
     if (existing.length === 0) return jsonError('Salary structure not found for this employee', 404);
+    await ensureCtcColumns();
 
     await execute(
-      `UPDATE salary_structures SET basic_pay=?, hra=?, conveyance_allowance=?, food_vouchers=?, medical_insurance=?, other_deductions=?, incentives=?, el_encashment=?, ctc=?, ctc_period=?, updated_at=NOW() WHERE emp_code=?`,
-      [body.basic_pay||0, body.hra||0, body.conveyance_allowance||0, body.food_vouchers||0, body.medical_insurance||0, body.other_deductions||0, body.incentives||0, body.el_encashment||0, body.ctc || null, body.ctc_period || 'monthly', body.emp_code]
+      `UPDATE salary_structures SET basic_pay=?, hra=?, conveyance_allowance=?, food_vouchers=?, medical_insurance=?, other_deductions=?, incentives=?, el_encashment=?, ctc=?, ctc_period=?, extra_components=?, updated_at=NOW() WHERE emp_code=?`,
+      [body.basic_pay||0, body.hra||0, body.conveyance_allowance||0, body.food_vouchers||0, body.medical_insurance||0, body.other_deductions||0, body.incentives||0, body.el_encashment||0, body.ctc || null, body.ctc_period || 'monthly', extraJson(body.extra_components), body.emp_code]
     );
 
     await logAudit({

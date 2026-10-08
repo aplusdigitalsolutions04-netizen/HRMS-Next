@@ -8,7 +8,7 @@ const Unauthorized = () => (
       .ua-card { text-align:center; background:#fff; border-radius:20px; padding:48px 56px; max-width:480px; width:100%; box-shadow:0 8px 32px rgba(99,102,241,0.1); border:1px solid #f1f0ff; animation:uaFade .4s ease; }
       @keyframes uaFade { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
       .ua-icon { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,#fef2f2,#fde8e8); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; color:#ef4444; }
-      .ua-card h1 { font-family:'Outfit',sans-serif; font-weight:800; font-size:1.5rem; color:#0f172a; margin:0 0 8px; letter-spacing:-0.3px; }
+      .ua-card h1 { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.25rem; color:#0f172a; margin:0 0 8px; letter-spacing:-0.3px; }
       .ua-card p { color:#6b7280; font-size:.9rem; margin:0 0 24px; line-height:1.5; }
       .ua-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 24px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:10px; font-weight:600; font-size:.85rem; text-decoration:none; transition:all .2s; }
       .ua-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(99,102,241,0.35); color:#fff; }

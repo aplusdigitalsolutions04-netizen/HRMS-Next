@@ -237,7 +237,7 @@ const CandidatesForm = () => {
             <div className="animate-in">
                 <div className="glass-card p-4">
                     <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h4 className="page-title m-0" style={{fontSize: '1.75rem'}}>Add New Candidate</h4>
+                        <h4 className="page-title m-0" style={{fontSize: '1.35rem'}}>Add New Candidate</h4>
                         <button className="btn-premium-outline px-4" onClick={() => navigate('/candidates/data')}>
                              Back to Candidate Pool
                         </button>

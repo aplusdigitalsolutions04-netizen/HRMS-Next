@@ -3,6 +3,63 @@ import { RowDataPacket } from 'mysql2';
 
 const n = (v: any) => Number(v) || 0;
 
+// ---------------------------------------------------------------------------
+// Salary split columns. The four built-in earnings (Basic, HRA, Conveyance, Food) always
+// exist; HR can add more columns of their own (label + %) under Salary Structures >
+// Configure Split. A custom column's amount is stored per employee in
+// salary_structures.extra_components as [{key, label, amount}] and copied to the payslip
+// (payslips.extra_components) as [{label, amount}] - so old payslips keep what they had
+// even if a column is later renamed or removed.
+// ---------------------------------------------------------------------------
+// kind: earning (part of the monthly salary - the 100% cap applies to these), deduction (taken off
+// the salary), adjustment (added on top: incentive, EL encashment).
+export type SplitKind = 'earning' | 'deduction' | 'adjustment';
+export interface SplitComponent { key: string; label: string; percent: number; builtin: boolean; kind: SplitKind }
+export const BUILTIN_SPLIT: { key: string; label: string; legacy?: string; def: number; kind: SplitKind }[] = [
+  { key: 'basic_pay', label: 'Basic Pay', legacy: 'default_basic_percent', def: 50, kind: 'earning' },
+  { key: 'hra', label: 'House Rent Allowance', legacy: 'default_hra_percent', def: 30, kind: 'earning' },
+  { key: 'conveyance_allowance', label: 'Conveyance Allowance', legacy: 'default_conveyance_percent', def: 15, kind: 'earning' },
+  { key: 'food_vouchers', label: 'Food Vouchers', legacy: 'default_food_percent', def: 5, kind: 'earning' },
+  { key: 'medical_insurance', label: 'Medical Insurance', def: 0, kind: 'deduction' },
+  { key: 'other_deductions', label: 'Other Deductions', def: 0, kind: 'deduction' },
+  { key: 'incentives', label: 'Incentives', def: 0, kind: 'adjustment' },
+  { key: 'el_encashment', label: 'EL Encashment', def: 0, kind: 'adjustment' },
+];
+export const CUSTOM_KEY = /^x_[a-z0-9]{3,24}$/;
+
+export async function getSplitComponents(): Promise<SplitComponent[]> {
+  const keys = ['salary_split_components', ...BUILTIN_SPLIT.filter(b => b.legacy).map(b => b.legacy as string)];
+  const rows = await query<RowDataPacket[]>(
+    `SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN (${keys.map(() => '?').join(',')})`, keys
+  );
+  const s: Record<string, string> = {};
+  for (const r of rows) s[r.setting_key] = r.setting_value;
+  let saved: any[] = [];
+  try { saved = JSON.parse(s.salary_split_components || '[]'); } catch { saved = []; }
+  const out: SplitComponent[] = BUILTIN_SPLIT.map(b => {
+    const fromJson = saved.find(x => x && x.key === b.key);
+    const pct = fromJson ? Number(fromJson.percent) : parseFloat(b.legacy ? (s[b.legacy] ?? '') : '');
+    return { key: b.key, label: b.label, percent: isNaN(pct) ? b.def : pct, builtin: true, kind: b.kind };
+  });
+  for (const c of saved) {
+    if (c && CUSTOM_KEY.test(String(c.key)) && String(c.label || '').trim()) {
+      out.push({ key: c.key, label: String(c.label).trim().slice(0, 40), percent: Number(c.percent) || 0, builtin: false, kind: c.kind === 'deduction' ? 'deduction' : 'earning' });
+    }
+  }
+  return out;
+}
+
+// [{key,label,amount,type}] from the stored JSON (or an array); bad / empty input gives [].
+// type is 'earning' (default - older data has none) or 'deduction'.
+export function parseExtraComponents(raw: any): { key: string; label: string; amount: number; type: 'earning' | 'deduction' }[] {
+  let arr: any = raw;
+  if (typeof raw === 'string') { try { arr = JSON.parse(raw); } catch { arr = []; } }
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x: any) => ({ key: String(x?.key || ''), label: String(x?.label || '').trim().slice(0, 40), amount: Number(x?.amount) || 0, type: (x?.type === 'deduction' ? 'deduction' : 'earning') as 'earning' | 'deduction' }))
+    .filter(x => x.label);
+}
+
 // Matches the PDF layout: Earnings (basic, HRA, conveyance, food), Deductions
 // (medical insurance, others) and Adjustments (incentive, EL encash).
 export function calcPayslipTotals(s: any, extraWorkPay = 0) {
@@ -17,47 +74,20 @@ let payslipColumnsReady = false;
 export async function ensurePayslipColumns() {
   if (payslipColumnsReady) return;
   const cols = await query<RowDataPacket[]>(
-    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payslips' AND COLUMN_NAME IN ('extra_work_days','extra_work_pay','variable_pay')"
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payslips' AND COLUMN_NAME IN ('extra_work_days','extra_work_pay','variable_pay','extra_components')"
   );
   const have = new Set(cols.map(c => c.COLUMN_NAME));
   if (!have.has('extra_work_days')) await execute('ALTER TABLE payslips ADD COLUMN extra_work_days FLOAT NOT NULL DEFAULT 0');
   if (!have.has('extra_work_pay')) await execute('ALTER TABLE payslips ADD COLUMN extra_work_pay FLOAT NOT NULL DEFAULT 0');
   if (!have.has('variable_pay')) await execute('ALTER TABLE payslips ADD COLUMN variable_pay FLOAT NOT NULL DEFAULT 0');
+  if (!have.has('extra_components')) await execute('ALTER TABLE payslips ADD COLUMN extra_components TEXT NULL');
   payslipColumnsReady = true;
-}
-
-// Extra Work (EW) days in the month are paid at one day's pay each
-// (monthly gross / days in month) times the multiplier from Payslip Settings.
-export async function getExtraWork(empCode: string, month: number, year: number, gross: number, multiplier: number) {
-  const rows = await query<RowDataPacket[]>(
-    "SELECT COUNT(*) AS days FROM attendance WHERE emp_code = ? AND status = 'EW' AND MONTH(attendance_date) = ? AND YEAR(attendance_date) = ?",
-    [empCode, month, year]
-  );
-  const days = Number(rows[0]?.days) || 0;
-  const perDay = gross / new Date(year, month, 0).getDate();
-  return { days, pay: Math.round(perDay * days * multiplier * 100) / 100 };
 }
 
 export async function getEwMultiplier(): Promise<number> {
   const rows = await query<RowDataPacket[]>("SELECT setting_value FROM system_settings WHERE setting_key = 'ew_pay_multiplier'");
   const v = parseFloat(rows[0]?.setting_value);
   return v >= 0 ? v : 1;
-}
-
-// Paid days from synced attendance: days in month minus absent days
-// (half-days count 0.5). Weekly offs are paid. With no attendance at all
-// for the month, falls back to the full month.
-export async function getPaidDays(empCode: string, month: number, year: number): Promise<number> {
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const rows = await query<RowDataPacket[]>(
-    `SELECT COUNT(*) AS total,
-            COALESCE(SUM(status='A'), 0) AS absent,
-            COALESCE(SUM(status='HD'), 0) AS half
-     FROM attendance WHERE emp_code = ? AND MONTH(attendance_date) = ? AND YEAR(attendance_date) = ?`,
-    [empCode, month, year]
-  );
-  if (!rows[0] || Number(rows[0].total) === 0) return daysInMonth;
-  return Math.max(0, daysInMonth - Number(rows[0].absent) - Number(rows[0].half) * 0.5);
 }
 
 // "Prepared By" / "Authorised By" names and signature images printed at the bottom

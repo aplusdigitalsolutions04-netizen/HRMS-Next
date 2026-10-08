@@ -66,7 +66,7 @@ export default function ChangePassword() {
           border-bottom: 1px solid var(--border);
         }
         .profile-header h2 {
-          font-size: 1.8rem;
+          font-size: 1.4rem;
           color: var(--text-main);
           font-family: 'Outfit', sans-serif;
         }

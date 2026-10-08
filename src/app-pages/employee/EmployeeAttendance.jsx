@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useStatusMaster from '../shared/useStatusMaster';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -22,6 +23,7 @@ function Donut({ pct, size = 120, sw = 16, color = '#6366f1', bg = '#f1f5f9' }) 
 
 export default function EmployeeAttendance() {
   const navigate = useNavigate();
+  const statusMaster = useStatusMaster(); // labels / colours / meanings come from Settings > Status Master
   const [activeTab, setActiveTab] = useState('overview');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -75,7 +77,7 @@ export default function EmployeeAttendance() {
       if (document.hidden) return;
       fetch(`${API}/my-attendance/live`, { method: 'POST', headers: auth() })
         .then(r => r.json())
-        .then(d => { if (d && d.synced) refreshRef.current(); })
+        .then(() => refreshRef.current()) // the server also syncs in the background; always re-read
         .catch(() => {});
     };
     tick();
@@ -400,10 +402,10 @@ export default function EmployeeAttendance() {
                   </thead>
                   <tbody>
                     {(records?.records || []).length > 0 ? records.records.map((r, idx) => {
-                      const stMap = { 'P': 'Present', 'HD': 'Half Day', 'EW': 'Extra Work', 'HOL': 'Holiday', 'A': 'Absent', 'WO': 'Week Off', 'PL': 'Planned Leave', 'CL': 'Casual Leave', 'SL': 'Sick Leave', 'NH': 'National Holiday', 'WFH': 'Work From Home' };
-                      const stLabel = stMap[r.status] || r.status;
-                      const stColor = r.status === 'P' ? '#10b981' : r.status === 'A' ? '#ef4444' : r.status === 'WO' ? '#94a3b8' : '#f59e0b';
-                      const stBg = r.status === 'P' ? '#ecfdf5' : r.status === 'A' ? '#fef2f2' : r.status === 'WO' ? '#f8fafc' : '#fffbeb';
+                      const st = statusMaster.find('attendance', r.status);
+                      const stLabel = st.label;
+                      const stColor = st.color;
+                      const stBg = st.color + '1a';
                       const hrs = r.working_hours || 0;
                       const hrsStr = hrs > 0 ? `${Math.floor(hrs)}h ${Math.round((hrs % 1) * 60)}m` : '—';
                       return (

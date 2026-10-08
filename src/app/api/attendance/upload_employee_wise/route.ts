@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now, calcHours, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { attendanceWeightSql, attendanceCountSql } from '@/lib/status-master';
 import * as XLSX from 'xlsx';
 
 // Helper to convert Excel date serial number to YYYY-MM-DD string
@@ -255,10 +256,13 @@ export async function POST(req: NextRequest) {
       const month = parseInt(mStr);
       const year = parseInt(yStr);
 
+      // What counts as present / absent comes from Settings > Status Master.
+      const presentSql = await attendanceWeightSql('status', 'present');
+      const absentSql = await attendanceCountSql('status', 'absent');
       const metrics = await query<RowDataPacket[]>(
         `SELECT 
-          COALESCE(SUM(CASE WHEN status='P' THEN 1 ELSE 0 END), 0) as present,
-          COALESCE(SUM(CASE WHEN status='A' THEN 1 ELSE 0 END), 0) as absent,
+          COALESCE(SUM(${presentSql}), 0) as present,
+          COALESCE(SUM(${absentSql}), 0) as absent,
           COALESCE(SUM(working_hours), 0) as total_hours
          FROM attendance 
          WHERE emp_code = ? AND MONTH(attendance_date) = ? AND YEAR(attendance_date) = ?`,

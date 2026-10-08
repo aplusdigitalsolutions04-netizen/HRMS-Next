@@ -63,7 +63,7 @@ export const candidateDataStyles = `
         border-radius:18px 18px 0 0;
     }
     .email-modal-title {
-        color:#fff; font-family:'Outfit',sans-serif; font-weight:800;
+        color:#fff; font-family:'Outfit',sans-serif; font-weight:700;
         font-size:1.15rem; display:flex; align-items:center; gap:10px;
     }
     .email-modal-close {

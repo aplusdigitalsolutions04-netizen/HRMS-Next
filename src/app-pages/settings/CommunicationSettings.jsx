@@ -297,7 +297,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
         ].map(c => (
           <div key={c.key} style={{ background:c.bg, borderRadius:14, padding:'14px 18px', border:`1.5px solid ${c.border}20`, boxShadow:'0 2px 8px rgba(0,0,0,.04)', display:'flex', flexDirection:'column', gap:2 }}>
             <div style={{ fontSize:'.72rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.5px' }}>{c.icon} {c.label}</div>
-            <div style={{ fontSize:'1.8rem', fontWeight:800, fontFamily:'Outfit,sans-serif', lineHeight:1.2, color:c.color }}>{dashboard[c.key] ?? 0}</div>
+            <div style={{ fontSize:'1.4rem', fontWeight:700, fontFamily:'Outfit,sans-serif', lineHeight:1.2, color:c.color }}>{dashboard[c.key] ?? 0}</div>
           </div>
         ))}
       </div>
@@ -456,7 +456,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, animation:'fadeIn .2s ease' }} onClick={() => setViewing(null)}>
           <div style={{ background:'#fff', borderRadius:16, width:'92%', maxWidth:500, boxShadow:'0 20px 60px rgba(0,0,0,.15)', maxHeight:'90vh', overflowY:'auto', animation:'modalSlide .25s ease' }} onClick={e => e.stopPropagation()}>
             <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', color:'#fff', padding:'16px 22px 14px', borderTopLeftRadius:16, borderTopRightRadius:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontWeight:800, fontSize:'1rem' }}>Reminder Details</h3>
+              <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'1rem' }}>Reminder Details</h3>
               <button onClick={() => setViewing(null)} style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,.2)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>✕</button>
             </div>
             <div style={{ padding:'18px 22px' }}>

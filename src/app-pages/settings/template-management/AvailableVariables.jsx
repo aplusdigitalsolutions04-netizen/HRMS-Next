@@ -87,7 +87,7 @@ export default function AvailableVariables({ onInsert }) {
                     <span style={{
                         background: '#ede9fe', color: '#7c3aed',
                         borderRadius: '50px', padding: '3px 12px',
-                        fontSize: '.75rem', fontWeight: 800, marginLeft: '8px'
+                        fontSize: '.75rem', fontWeight: 700, marginLeft: '8px'
                     }}>
                         {ALL_VARS.length}
                     </span>

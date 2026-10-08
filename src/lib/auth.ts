@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { query, execute } from './db';
+import { employeeCodes, inList } from './status-master';
 import { RowDataPacket } from 'mysql2';
 
 function randomIndex(max: number): number {
@@ -214,9 +215,11 @@ export async function authenticateUser(email: string, password: string, type: 'a
     // gates what they see (complete-profile form / "under review" screen)
     // based on status, rather than blocking the login itself. 'dropped' and
     // anything else stays blocked.
+    // Which statuses may log in is set in Settings > Status Master (Can log in).
+    const loginable = inList(await employeeCodes('can_login'));
     const emps = await query<EmployeeRow[]>(
-      "SELECT * FROM employees WHERE email_id = ? AND is_deleted = 0 AND status IN ('active','invited','pending','needs_correction')",
-      [email]
+      `SELECT * FROM employees WHERE email_id = ? AND is_deleted = 0 AND status IN ${loginable.sql}`,
+      [email, ...loginable.params]
     );
     if (emps.length === 0) return null;
     const e = emps[0];

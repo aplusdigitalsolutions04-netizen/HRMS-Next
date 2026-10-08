@@ -193,14 +193,14 @@ export const templateManagementStyles = `
     .empty-state .icon { font-size: 3.5rem; margin-bottom: 12px; opacity: .6; }
     .empty-state p { font-size: 1rem; margin: 0; }
     .section-title {
-        font-family: 'Outfit', sans-serif; font-weight: 800;
+        font-family: 'Outfit', sans-serif; font-weight: 700;
         font-size: 1.15rem; color: #1e293b;
         display: flex; align-items: center; gap: 10px;
     }
     .step-num {
         width: 28px; height: 28px; border-radius: 50%;
         background: linear-gradient(135deg, #4338ca, #7c3aed);
-        color: #fff; font-size: .82rem; font-weight: 800;
+        color: #fff; font-size: .82rem; font-weight: 700;
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
     }

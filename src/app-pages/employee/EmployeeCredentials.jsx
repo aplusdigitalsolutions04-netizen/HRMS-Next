@@ -98,7 +98,7 @@ const EmployeeCredentials = () => {
         <div className="notif-loading" />
       ) : filtered.length === 0 ? (
         <div className="notif-empty">
-          <span style={{ fontSize: '2rem' }}>🔐</span>
+          <span style={{ fontSize: '1.6rem' }}>🔐</span>
           <p>{rows.length === 0 ? 'No employee credentials sent yet. They appear here after approving a pending employee with a template.' : 'No records match your search.'}</p>
         </div>
       ) : (

@@ -110,7 +110,7 @@ function MainLayout() {
           <div className="app-main">
             <header className="app-header">
               <div className="header-left">
-                <span style={{ fontSize: '1.35rem', fontWeight: 800, background: 'linear-gradient(135deg, #4338ca, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.5px' }}>HRMS</span>
+                <span style={{ fontSize: '1.35rem', fontWeight: 700, background: 'linear-gradient(135deg, #4338ca, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.5px' }}>HRMS</span>
               </div>
               <div className="header-right">
                 <NotificationDropdown />

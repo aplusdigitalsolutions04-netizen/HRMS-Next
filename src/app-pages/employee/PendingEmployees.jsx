@@ -194,7 +194,7 @@ const PendingEmployees = () => {
         .pe-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
         .pe-hdr-l { display:flex; align-items:center; gap:14px; }
         .pe-hdr-icon { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; box-shadow:0 4px 12px rgba(99,102,241,.3); }
-        .pe-hdr-txt h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:800; font-size:1.45rem; color:#0f172a; letter-spacing:-0.3px; }
+        .pe-hdr-txt h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.2rem; color:#0f172a; letter-spacing:-0.3px; }
         .pe-hdr-txt p { margin:2px 0 0; font-size:.82rem; color:#6b7280; }
 
         .pe-back-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; background:#fff; color:#6b7280; border:1.5px solid #e5e7eb; border-radius:10px; font-weight:600; font-size:.82rem; text-decoration:none; transition:all .2s; cursor:pointer; }
@@ -205,7 +205,7 @@ const PendingEmployees = () => {
         .pe-stat-icon { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#eef2ff,#f5f4ff); display:flex; align-items:center; justify-content:center; color:#6366f1; flex-shrink:0; }
         .pe-stat-info { flex:1; }
         .pe-stat-label { font-size:.75rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
-        .pe-stat-count { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.8rem; color:#0f172a; line-height:1.1; }
+        .pe-stat-count { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.4rem; color:#0f172a; line-height:1.1; }
         .pe-stat-sub { font-size:.75rem; color:#6b7280; margin-top:2px; }
 
         .pe-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }

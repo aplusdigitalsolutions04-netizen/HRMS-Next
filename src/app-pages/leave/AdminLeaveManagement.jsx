@@ -100,7 +100,7 @@ export default function AdminLeaveManagement() {
           <div key={stat.label} className="alm-c">
             <div style={{ background: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff', height: '100%' }}>
               <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>{stat.label}</div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: stat.color }}>{stat.value}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: stat.color }}>{stat.value}</div>
               <div style={{ height: 4, width: '40%', borderRadius: 4, background: stat.bg, marginTop: 10 }}><div style={{ height: '100%', width: '60%', borderRadius: 4, background: stat.color }} /></div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { employeeCodesWithout } from '@/lib/status-master';
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,6 +26,9 @@ export async function GET(req: NextRequest) {
     // all (e.g. synced from TeamOffice for someone not yet registered in HR)
     // - those wouldn't otherwise appear since the first half is driven by
     // the employees table.
+    // Employees whose status is switched off for "In attendance" (Settings > Status Master) are left out.
+    const excluded = await employeeCodesWithout('in_attendance');
+    const excludeSql = excluded.length ? `AND e.status NOT IN (${excluded.map(() => '?').join(',')})` : '';
     const sql = `
       SELECT
         e.emp_code, e.full_name AS name, e.designation AS department,
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
         ON a.emp_code = e.emp_code
         AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?
         AND a.attendance_date <= CURDATE()
-      WHERE e.status != 'dropped' AND e.is_deleted = 0
+      WHERE e.is_deleted = 0 ${excludeSql}
 
       UNION ALL
 
@@ -50,7 +54,7 @@ export async function GET(req: NextRequest) {
       ORDER BY name ASC, attendance_date DESC
     `;
 
-    const records = await query<RowDataPacket[]>(sql, [month, year, month, year]);
+    const records = await query<RowDataPacket[]>(sql, [month, year, ...excluded, month, year]);
 
     return NextResponse.json({ success: true, data: records });
   } catch (e: any) {

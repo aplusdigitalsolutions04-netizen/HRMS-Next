@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { attendanceWeightSql, attendanceCountSql } from '@/lib/status-master';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,10 +12,14 @@ export async function GET(req: NextRequest) {
     const emp = await query<RowDataPacket[]>('SELECT emp_code FROM employees WHERE email_id = ?', [user.email || user.id]);
     if (emp.length === 0) return jsonError('Employee not found', 404);
     
+    // What counts as present / absent / week off comes from Settings > Status Master.
+    const presentSql = await attendanceWeightSql('a.status', 'present');
+    const absentSql = await attendanceCountSql('a.status', 'absent');
+    const offSql = await attendanceCountSql('a.status', 'week_off');
     const rows = await query<RowDataPacket[]>(
-      `SELECT COALESCE(SUM(CASE WHEN a.status='P' THEN 1 WHEN a.status='HD' THEN 0.5 WHEN a.status='WFH' THEN 1 ELSE 0 END),0) as present,
-        COALESCE(SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END),0) as absent,
-        COALESCE(SUM(CASE WHEN a.status='WO' THEN 1 ELSE 0 END),0) as late,
+      `SELECT COALESCE(SUM(${presentSql}),0) as present,
+        COALESCE(SUM(${absentSql}),0) as absent,
+        COALESCE(SUM(${offSql}),0) as late,
         COALESCE(SUM(CASE WHEN a.in_time IS NOT NULL AND a.in_time!='--:--' AND a.out_time IS NOT NULL AND a.out_time!='--:--' THEN ROUND(TIME_TO_SEC(TIMEDIFF(a.out_time,a.in_time))/3600,1) ELSE 0 END),0) as total_hours
       FROM attendance a WHERE a.emp_code=? AND MONTH(a.attendance_date)=MONTH(CURDATE()) AND YEAR(a.attendance_date)=YEAR(CURDATE())`,
       [emp[0].emp_code]

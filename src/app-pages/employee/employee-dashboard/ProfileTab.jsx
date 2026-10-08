@@ -13,7 +13,7 @@ export default function ProfileTab({ profile, setProfile, role }) {
   return (
     <div className="emp-card" style={{ padding: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28 }}>
-        <div className="emp-avatar" style={{ width: 64, height: 64, fontSize: 24 }}>{profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}</div>
+        <div className="emp-avatar" style={{ width: 64, height: 64, fontSize: 20 }}>{profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}</div>
         <div style={{ flex: 1 }}>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>{profile?.full_name || profile?.email?.split('@')[0]}</h2>
           <div style={{ color: '#64748b', fontSize: 14, marginTop: 2 }}>{profile?.designation || 'Employee'} · {profile?.emp_code || ''}</div>

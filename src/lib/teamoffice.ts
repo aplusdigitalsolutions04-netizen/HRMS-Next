@@ -1,6 +1,7 @@
 import { query, execute } from './db';
 import { calcHours, uuidv4 } from './utils';
 import { isHoliday } from './holidays';
+import { attendanceByBehavior, matchSourceCode, getStatuses } from './status-master';
 import { RowDataPacket } from 'mysql2';
 
 async function getTeamOfficeSettings(): Promise<Record<string, string>> {
@@ -38,16 +39,64 @@ const parsePunchTime = (raw: any) => {
   return /^\d{1,2}:\d{2}/.test(s) ? s : '';
 };
 
-// Pulls today's IN/OUT punches from TeamOffice ('ALL' or one emp code) and
-// upserts them into the attendance table. Anyone with an IN punch counts as
-// present, even before their OUT punch exists. Employees with no punch yet
-// are left untouched (not marked absent mid-day).
-export async function syncTodayPunches(empCode: string, createdBy: string): Promise<{ synced: boolean; count: number; reason?: string }> {
+// Half-day threshold (hours) from Attendance Settings; default 4.
+export async function getHalfDayThreshold(): Promise<number> {
+  const rows = await query<RowDataPacket[]>("SELECT setting_value FROM system_settings WHERE setting_key = 'half_day_threshold'");
+  const v = parseFloat(rows[0]?.setting_value);
+  return v > 0 ? v : 4;
+}
+
+// The status code to save for a day, decided from the Status Master (Settings > Status
+// Master) and the day's punches. Used by both the monthly import and the live sync so
+// they always agree.
+//
+//   raw status from TeamOffice -> mapped through each status's "TeamOffice codes"
+//   punched on a week off / holiday          -> the Extra Work status
+//   holiday (Holiday Calendar) and nobody in -> the Holiday status, not an absence
+//   Present with both punches under the Half Day threshold -> the Half Day status
+//   no usable raw status                     -> Present if both punches exist, else Absent
+//
+// live = true is for a day still in progress: an IN punch alone is already Present
+// (TeamOffice reports such a day as absent until the OUT punch arrives).
+export async function resolveAttendanceStatus(o: {
+  rawStatus?: string; inTime: string; outTime: string; hours: number; threshold: number;
+  isHoliday: boolean; existingStatus?: string; live?: boolean;
+}): Promise<{ status: string; recognized: boolean }> {
+  const code = async (behavior: string, fallback: string) => (await attendanceByBehavior(behavior))?.code || fallback;
+  const raw = (o.rawStatus || '').trim();
+  const row = raw ? await matchSourceCode(raw) : undefined;
+  const existing = o.existingStatus ? (await getStatuses('attendance', true)).find(r => r.code === o.existingStatus) : undefined;
+  const punched = !!o.inTime;
+  const complete = !!(o.inTime && o.outTime);
+
+  let behavior = row?.behavior || '';
+  let recognized = !raw || !!row;
+  if (!raw || !row) behavior = (o.live ? punched : complete) ? 'present' : 'absent'; // nothing usable from TeamOffice
+  if (o.live && behavior === 'absent' && punched) behavior = 'present';
+
+  const offDay = o.isHoliday || behavior === 'week_off' || behavior === 'holiday'
+    || existing?.behavior === 'week_off' || existing?.behavior === 'extra_work';
+  if (offDay && punched) return { status: await code('extra_work', 'EW'), recognized };
+  if (o.isHoliday && behavior === 'absent') return { status: await code('holiday', 'HOL'), recognized };
+  if (behavior === 'present') {
+    const half = complete && o.hours > 0 && o.hours < o.threshold;
+    return { status: await code(half ? 'half_day' : 'present', half ? 'HD' : 'P'), recognized };
+  }
+  if (row && behavior === row.behavior) return { status: row.code, recognized };
+  return { status: await code(behavior, behavior === 'absent' ? 'A' : 'P'), recognized };
+}
+
+// Pulls IN/OUT punches for one day (today by default) from TeamOffice ('ALL' or one
+// emp code) and saves them: check-in time, check-out time, hours and status. Anyone
+// with an IN punch is counted in right away, even before their OUT punch exists, and
+// the OUT time is filled in the next time this runs. People with no punch are left
+// alone (not marked absent mid-day). HR's manual entries are never overwritten.
+export async function syncTodayPunches(empCode: string, createdBy: string, date: Date = new Date()): Promise<{ synced: boolean; count: number; reason?: string }> {
   const apiKey = await getTeamOfficeApiKey();
   if (!apiKey) return { synced: false, count: 0, reason: 'TeamOffice not configured' };
   const apiUrl = await getTeamOfficeApiUrl();
 
-  const d = new Date();
+  const d = date;
   const dmy = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
   const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const day = d.toLocaleDateString('en-US', { weekday: 'long' });
@@ -73,9 +122,10 @@ export async function syncTodayPunches(empCode: string, createdBy: string): Prom
     const existing = await query<RowDataPacket[]>('SELECT id, status, remark FROM attendance WHERE emp_code = ? AND attendance_date = ?', [code, dateStr]);
     // Manual entries (e.g. Work From Home) are never overwritten by a sync.
     if (existing[0]?.remark?.startsWith('Manual entry')) continue;
-    // Punching in on a weekly off or a holiday is Extra Work.
-    const offDay = todayIsHoliday || String(rec.Status || '').trim().toUpperCase().startsWith('W') || ['WO', 'EW'].includes(existing[0]?.status);
-    const status = offDay ? 'EW' : presentOrHalfDay(hours, !!outTime, threshold);
+    const { status } = await resolveAttendanceStatus({
+      rawStatus: String(rec.Status || ''), inTime, outTime, hours, threshold,
+      isHoliday: todayIsHoliday, existingStatus: existing[0]?.status, live: true,
+    });
     if (existing.length > 0) {
       await execute(
         'UPDATE attendance SET in_time=?, out_time=?, working_hours=?, status=?, remark=?, is_status=1 WHERE id=?',
@@ -90,17 +140,4 @@ export async function syncTodayPunches(empCode: string, createdBy: string): Prom
     count++;
   }
   return { synced: count > 0, count, reason: count > 0 ? undefined : 'No punch yet' };
-}
-
-// Half-day threshold (hours) from Attendance Settings; default 4.
-export async function getHalfDayThreshold(): Promise<number> {
-  const rows = await query<RowDataPacket[]>("SELECT setting_value FROM system_settings WHERE setting_key = 'half_day_threshold'");
-  const v = parseFloat(rows[0]?.setting_value);
-  return v > 0 ? v : 4;
-}
-
-// A present day with both punches whose worked hours fall below the
-// threshold is a half day. Days still in progress (no OUT yet) stay present.
-export function presentOrHalfDay(hours: number, hasOut: boolean, threshold: number): 'P' | 'HD' {
-  return hasOut && hours > 0 && hours < threshold ? 'HD' : 'P';
 }

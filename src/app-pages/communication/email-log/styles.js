@@ -6,7 +6,7 @@ export const emailLogStyles = `
 
     /* ── Page Header ── */
     .el-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
-    .el-header-left h2 { margin:0; font-family:'Outfit',sans-serif; font-weight:800; font-size:1.65rem; color:#0f172a; letter-spacing:-0.5px; }
+    .el-header-left h2 { margin:0; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.3rem; color:#0f172a; letter-spacing:-0.5px; }
     .el-header-left p { margin:4px 0 0; color:#64748b; font-size:.88rem; }
     .el-header-right { display:flex; gap:10px; }
     .el-btn-refresh {
@@ -30,11 +30,11 @@ export const emailLogStyles = `
     .el-card-icon {
         width:46px; height:46px; border-radius:12px;
         display:flex; align-items:center; justify-content:center;
-        font-size:1.4rem; flex-shrink:0;
+        font-size:1.2rem; flex-shrink:0;
         background:#f8fafc;
     }
     .el-card-body { display:flex; flex-direction:column; gap:2px; }
-    .el-card-value { font-size:1.75rem; font-weight:800; color:#0f172a; font-family:'Outfit',sans-serif; line-height:1.2; }
+    .el-card-value { font-size:1.35rem; font-weight:700; color:#0f172a; font-family:'Outfit',sans-serif; line-height:1.2; }
     .el-card-label { font-size:.78rem; font-weight:500; color:#94a3b8; }
 
     /* ── Filter Toolbar ── */

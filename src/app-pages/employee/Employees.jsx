@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Pagination, { paginate } from '../shared/Pagination';
+import useStatusMaster, { pillStyle } from '../shared/useStatusMaster';
 
 const PAGE_SIZE = 10;
 
@@ -7,6 +8,7 @@ const thStyle = { textAlign: 'left', padding: '12px 16px', borderBottom: '2px so
 const tdStyle = { padding: '12px 16px', borderBottom: '1px solid var(--border, #f1f5f9)', fontSize: '0.9rem' };
 
 function Employees() {
+  const statusMaster = useStatusMaster(); // status labels / colours come from Settings > Status Master
   const [employees, setEmployees] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ emp_code: '', email_id: '', full_name: '', mobile_no: '' });
@@ -92,15 +94,8 @@ function Employees() {
                 <td style={{...tdStyle, color: 'var(--text-secondary)'}}>{emp.email_id}</td>
                 <td style={tdStyle}>{emp.mobile_no}</td>
                 <td style={tdStyle}>
-                  <span style={{
-                    padding: '0.25rem 0.75rem', 
-                    borderRadius: '9999px', 
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    background: emp.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : emp.status === 'dropped' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(250, 204, 21, 0.2)',
-                    color: emp.status === 'active' ? 'var(--success)' : emp.status === 'dropped' ? 'var(--danger)' : '#a16207'
-                  }}>
-                    {emp.status === 'active' ? 'Active' : emp.status === 'dropped' ? 'Dropped' : 'Pending'}
+                  <span style={pillStyle(statusMaster.find('employee', emp.status).color)} title={statusMaster.find('employee', emp.status).description}>
+                    {statusMaster.find('employee', emp.status).label}
                   </span>
                 </td>
                 <td style={tdStyle}>{new Date(emp.created_on).toLocaleDateString()}</td>

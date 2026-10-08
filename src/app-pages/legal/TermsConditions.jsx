@@ -10,7 +10,7 @@ export default function TermsConditions() {
                 .legal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid #f1f5f9; }
                 .legal-brand { display:flex; align-items:center; gap:10px; }
                 .legal-brand img { height:32px; width:auto; max-width:150px; object-fit:contain; }
-                .legal-title { font-family:'Outfit',sans-serif; font-weight:800; font-size:2rem; color:#0f172a; margin:0 0 6px; letter-spacing:-0.5px; }
+                .legal-title { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.6rem; color:#0f172a; margin:0 0 6px; letter-spacing:-0.5px; }
                 .legal-updated { font-size:.82rem; color:#64748b; margin:0 0 32px; }
                 .legal-card h2 { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.15rem; color:#0f172a; margin:28px 0 10px; }
                 .legal-card p, .legal-card li { font-size:.92rem; line-height:1.7; color:#334155; }

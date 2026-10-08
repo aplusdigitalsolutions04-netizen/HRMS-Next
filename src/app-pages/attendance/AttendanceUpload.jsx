@@ -177,7 +177,7 @@ const AttendanceUpload = () => {
                 .au-hdr { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; gap:16px; flex-wrap:wrap; }
                 .au-hdr-l { display:flex; align-items:center; gap:16px; }
                 .au-hdr-icon { width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg,#eef2ff,#f5f4ff); display:flex; align-items:center; justify-content:center; color:#6366f1; flex-shrink:0; }
-                .au-hdr-txt h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a; letter-spacing:-0.3px; }
+                .au-hdr-txt h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.2rem; color:#0f172a; letter-spacing:-0.3px; }
                 .au-hdr-txt p { margin:2px 0 0; font-size:.82rem; color:#6b7280; }
 
                 .au-support-card { display:flex; align-items:center; gap:12px; padding:12px 18px; background:#faf9ff; border:1.5px dashed #ddd6fe; border-radius:12px; max-width:1800px; }

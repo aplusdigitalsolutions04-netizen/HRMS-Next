@@ -166,9 +166,9 @@ const CandidateEmailActionModal = ({
                     {status.status === 'overdue' && status.reminder && (
                         <>
                             <div style={{ background: '#fef2f2', borderRadius: 12, padding: '14px 18px', marginBottom: 16, border: '1.5px solid #fecaca', display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ fontSize: '2rem' }}>🔴</div>
+                                <div style={{ fontSize: '1.6rem' }}>🔴</div>
                                 <div>
-                                    <div style={{ fontWeight: 800, color: '#991b1b', fontSize: '1rem' }}>Reminder Overdue</div>
+                                    <div style={{ fontWeight: 700, color: '#991b1b', fontSize: '1rem' }}>Reminder Overdue</div>
                                     <div style={{ color: '#b91c1c', fontSize: '.82rem' }}>Overdue since {status.reminder.reminder_time ? new Date(status.reminder.reminder_time).toLocaleString() : '—'}</div>
                                 </div>
                             </div>

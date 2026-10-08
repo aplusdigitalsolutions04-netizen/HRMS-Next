@@ -195,7 +195,7 @@ export default function ProfilePage() {
           color: white;
         }
         .profile-header h2 {
-          font-size: 1.8rem;
+          font-size: 1.4rem;
           color: var(--text-main);
           margin-bottom: 0.25rem;
         }

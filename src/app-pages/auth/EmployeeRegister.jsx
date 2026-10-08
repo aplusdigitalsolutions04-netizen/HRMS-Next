@@ -153,7 +153,7 @@ export default function EmployeeRegister() {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 4 }}><polyline points="15 18 9 12 15 6"/></svg>
                             Back
                         </button>
-                        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Add New Employee</h2>
+                        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Add New Employee</h2>
                     </div>
                 </div>
 

@@ -4,41 +4,79 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
+// Settings are grouped by topic. A group with several pages opens as a submenu; a group
+// with a single page is shown as a plain link.
 const GROUPS = [
   {
-    label: 'My Account',
+    label: 'My Account', icon: svgBell(),
     items: [
       { key: 'view-notifications', label: 'Notifications', icon: svgBell(), perm: null },
     ],
   },
   {
-    label: 'General',
+    label: 'General', icon: svgBuilding(),
     items: [
       { key: 'company', label: 'Company Settings', icon: svgBuilding(), perm: 'settings_company' },
       { key: 'smtp', label: 'SMTP Settings', icon: svgMail(), perm: 'settings_smtp' },
-      { key: 'payslip', label: 'Payslip Settings', icon: svgBuilding(), perm: 'manage_salary_structures' },
+      { key: 'google-drive', label: 'Google Drive', icon: svgDrive(), perm: null },
     ],
   },
   {
-    label: 'Recruitment',
+    label: 'Recruitment', icon: svgUsers(),
     items: [
       { key: 'interviews', label: 'Interview Settings', icon: svgClock(), perm: null },
       { key: 'templates', label: 'Email Templates', icon: svgMail(), perm: 'settings_templates' },
     ],
   },
   {
-    label: 'System',
+    label: 'Attendance & Leave', icon: svgClock(),
+    items: [
+      { key: 'attendance', label: 'Attendance Settings', icon: svgChart(), perm: null },
+      { key: 'holidays', label: 'Holiday Calendar', icon: svgClock(), perm: null },
+      { key: 'statuses', label: 'Status Master', icon: svgChart(), perm: null },
+    ],
+  },
+  {
+    label: 'Payroll', icon: svgBuilding(),
+    items: [
+      { key: 'payslip', label: 'Payslip Settings', icon: svgBuilding(), perm: 'manage_salary_structures' },
+    ],
+  },
+  {
+    label: 'Users & Access', icon: svgUsers(),
     items: [
       { key: 'users', label: 'User Management', icon: svgUsers(), perm: null },
       { key: 'roles', label: 'Roles & Permissions', icon: svgUsers(), perm: 'manage_departments' },
-      { key: 'attendance', label: 'Attendance Settings', icon: svgChart(), perm: null },
-      { key: 'holidays', label: 'Holiday Calendar', icon: svgClock(), perm: null },
+    ],
+  },
+  {
+    label: 'Communication', icon: svgMessage(),
+    items: [
       { key: 'notifications', label: 'Notification Settings', icon: svgBell(), perm: null },
       { key: 'communication', label: 'Communication Settings', icon: svgMessage(), perm: null },
-      { key: 'google-drive', label: 'Google Drive', icon: svgDrive(), perm: null },
     ],
   },
 ];
+
+const OPEN_KEY = 'settings_open_groups';
+const readOpen = () => { try { return JSON.parse(sessionStorage.getItem(OPEN_KEY) || '[]'); } catch { return []; } };
+
+const sidebarStyles = `
+.sg-btn { width:100%; display:flex; align-items:center; gap:12px; padding:10px 12px; border:none; background:transparent; border-radius:10px; cursor:pointer; color:#475569; font:inherit; font-size:.9rem; font-weight:600; text-align:left; transition:background .15s, color .15s; }
+.sg-btn:hover { background:#f1f5f9; color:#1e293b; }
+.sg-btn.has-active { color:#4338ca; }
+.sg-btn .sg-ic { display:flex; color:#64748b; }
+.sg-btn.has-active .sg-ic { color:#6366f1; }
+.sg-btn .sg-lb { flex:1; }
+.sg-chev { transition:transform .2s ease; color:#94a3b8; flex-shrink:0; }
+.sg-chev.open { transform:rotate(90deg); }
+.sg-sub { overflow:hidden; max-height:0; transition:max-height .25s ease; margin-left:21px; padding-left:8px; border-left:2px solid #eef2f7; }
+.sg-sub.open { max-height:400px; margin-bottom:4px; }
+.sg-sub .nav-link { padding:8px 12px; font-size:.84rem; }
+.sg-sub .nav-link .nav-icon { display:none; }
+.sg-sub .nav-link.active { font-weight:700; }
+.sg-count { font-size:.68rem; font-weight:700; background:#eef2ff; color:#6366f1; border-radius:20px; padding:1px 7px; }
+`;
 
 export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
   const location = useLocation();
@@ -62,6 +100,25 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
     ...group,
     items: group.items.filter(item => hasPerm(item.perm)),
   })).filter(group => group.items.length > 0);
+
+  const [openGroups, setOpenGroups] = useState(readOpen);
+  const activeGroup = (filteredGroups.find(g => g.items.some(i => i.key === activeSection)) || {}).label;
+  // Opening a page (e.g. from a link elsewhere) opens its submenu too.
+  useEffect(() => {
+    if (activeGroup) setOpenGroups(prev => (prev.includes(activeGroup) ? prev : [...prev, activeGroup]));
+  }, [activeGroup]);
+  const toggleGroup = (label) => setOpenGroups(prev => {
+    const next = prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label];
+    try { sessionStorage.setItem(OPEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+
+  const linkFor = (item, label) => (
+    <Link key={item.key} to={`/settings/${item.key}`} className={`nav-link${activeSection === item.key ? ' active' : ''}`} title={collapsed ? item.label : undefined}>
+      <span className="nav-icon">{item.icon}</span>
+      {!collapsed && <span className="nav-label">{label || item.label}</span>}
+    </Link>
+  );
 
   return (
     <aside className={`app-sidebar settings-sidebar${collapsed ? ' collapsed' : ''}`}>
@@ -91,17 +148,29 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
       </div>
 
       <nav className="sidebar-nav settings-nav">
-        {!collapsed && <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', margin: '4px 0 16px', padding: '0 12px' }}>Settings</h2>}
-        {filteredGroups.flatMap(group => group.items).map(item => (
-          <Link
-            key={item.key}
-            to={`/settings/${item.key}`}
-            className={`nav-link${activeSection === item.key ? ' active' : ''}`}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            {!collapsed && <span className="nav-label">{item.label}</span>}
-          </Link>
-        ))}
+        {!collapsed && <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 700, color: '#1e293b', margin: '4px 0 16px', padding: '0 12px' }}>Settings</h2>}
+        <style>{sidebarStyles}</style>
+        {collapsed
+          ? filteredGroups.flatMap(group => group.items).map(item => linkFor(item))
+          : filteredGroups.map(group => {
+              // one page in the group: plain link, no submenu
+              if (group.items.length === 1) return linkFor(group.items[0]);
+              const open = openGroups.includes(group.label);
+              const hasActive = group.items.some(i => i.key === activeSection);
+              return (
+                <div key={group.label}>
+                  <button type="button" className={`sg-btn${hasActive ? ' has-active' : ''}`} onClick={() => toggleGroup(group.label)} aria-expanded={open}>
+                    <span className="sg-ic">{group.icon}</span>
+                    <span className="sg-lb">{group.label}</span>
+                    <span className="sg-count">{group.items.length}</span>
+                    <svg className={`sg-chev${open ? ' open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                  </button>
+                  <div className={`sg-sub${open ? ' open' : ''}`}>
+                    {group.items.map(item => linkFor(item))}
+                  </div>
+                </div>
+              );
+            })}
       </nav>
 
       <div style={{ flexShrink: 0, padding: '10px 16px', borderTop: '1px solid #f1f5f9' }}>

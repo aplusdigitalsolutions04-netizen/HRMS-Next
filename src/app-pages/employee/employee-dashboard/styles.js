@@ -33,7 +33,7 @@ export const empDashboardStyles = `
     display: flex; flex-direction: column; flex: 1; min-width: 0;
   }
   .emp-sidebar-brand-text span:first-child {
-    font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.2rem;
+    font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.2rem;
     background: linear-gradient(135deg, #4338ca, #8b5cf6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;

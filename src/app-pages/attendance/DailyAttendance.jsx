@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Pagination, { paginate } from '../shared/Pagination';
+import useStatusMaster, { pillStyle } from '../shared/useStatusMaster';
+import { Link } from 'react-router-dom';
 
 const API = '/api';
 const PAGE_SIZE = 10;
@@ -7,7 +9,7 @@ const PAGE_SIZE = 10;
 const s = {
   wrap: { maxWidth: 1800, margin: '0 auto', fontFamily: "'Inter', sans-serif" },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 16 },
-  title: { fontSize: 24, fontWeight: 700, color: '#1e293b', margin: 0 },
+  title: { fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 },
   sub: { fontSize: 14, color: '#64748b', margin: '4px 0 0 0' },
   ctrls: { display: 'flex', gap: 12, alignItems: 'center' },
   sel: { padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 14, color: '#334155', background: '#fff', outline: 'none' },
@@ -19,21 +21,6 @@ const s = {
   backBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   empHdr: { display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' },
   empAvatar: { width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 },
-  statusBadge: (status) => {
-    let bg = '#f1f5f9', color = '#64748b';
-    if (status === 'P') { bg = '#dcfce7'; color = '#166534'; }
-    else if (status === 'A') { bg = '#fee2e2'; color = '#991b1b'; }
-    else if (status === 'HD') { bg = '#fef3c7'; color = '#92400e'; }
-    else if (status === 'WO') { bg = '#e0e7ff'; color = '#3730a3'; }
-    else if (status === 'WFH') { bg = '#cffafe'; color = '#155e75'; }
-    else if (status === 'HOL') { bg = '#ffedd5'; color = '#9a3412'; }
-    else if (status === 'EW') { bg = '#f3e8ff'; color = '#6b21a8'; }
-
-    return {
-      padding: '4px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-      background: bg, color: color, display: 'inline-block', textAlign: 'center', minWidth: 24
-    };
-  },
   countPill: (color, bg) => ({
     padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: bg, color
   }),
@@ -47,6 +34,9 @@ const initials = (name) => {
 };
 
 export default function DailyAttendance() {
+  // Every attendance status (label, colour, meaning, how it counts) comes from Settings > Status Master.
+  const sm = useStatusMaster();
+  const L = (behavior, fallback) => (sm.attendance.find(x => x.behavior === behavior) || {}).label || fallback;
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmpCode, setSelectedEmpCode] = useState(null);
@@ -91,14 +81,24 @@ export default function DailyAttendance() {
     const tick = () => {
       if (document.hidden) return;
       fetch(`${API}/attendance/live-sync`, { method: 'POST', headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` } })
-        .then(r => r.json())
-        .then(d => { if (d && d.synced) fetchRef.current(true); })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => fetchRef.current(true)); // the server also syncs in the background; always re-read
     };
     tick();
     const id = setInterval(tick, 30000);
     document.addEventListener('visibilitychange', tick);
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, [month, year]);
+
+  // The selected month is pulled from TeamOffice by itself when the page opens (the server also
+  // does it in the background): no Sync button needed. The list is re-read only if it imported.
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API}/attendance/auto-sync`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }, body: JSON.stringify({ month, year }) })
+      .then(r => r.json())
+      .then(d => { if (alive && d && d.ran) fetchRef.current(true); })
+      .catch(() => {});
+    return () => { alive = false; };
   }, [month, year]);
 
   const fetchData = async (silent = false) => {
@@ -128,7 +128,9 @@ export default function DailyAttendance() {
   const [savingEdit, setSavingEdit] = useState(false);
   const startEdit = (r) => setEditing({
     date: String(r.attendance_date).slice(0, 10),
-    status: r.missing ? 'WFH' : (r.status || 'P'),
+    status: r.missing
+      ? ((sm.attendance.find(x => x.behavior === 'wfh') || sm.attendance[0] || {}).code || '')
+      : (r.status || (sm.attendance.find(x => x.behavior === 'present') || {}).code || ''),
     in_time: r.in_time || '', out_time: r.out_time || '', remark: '',
   });
   const saveEdit = async () => {
@@ -175,14 +177,15 @@ export default function DailyAttendance() {
       const entry = map.get(r.emp_code);
       if (!r.id) continue; // no attendance record for this employee this month
       entry.days.push(r);
-      if (r.status === 'P') entry.present++;
-      else if (r.status === 'HD') { entry.present += 0.5; entry.half++; }
-      else if (r.status === 'WFH') { entry.present++; entry.wfh++; }
-      else if (r.status === 'EW') entry.ew++;
-      else if (r.status === 'A') entry.absent++;
+      const st = sm.find('attendance', r.status);
+      entry.present += Number(st.present_weight) || 0;
+      if (st.behavior === 'half_day') entry.half++;
+      else if (st.behavior === 'wfh') entry.wfh++;
+      else if (st.behavior === 'extra_work') entry.ew++;
+      else if (st.behavior === 'absent') entry.absent++;
     }
     return Array.from(map.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [records]);
+  }, [records, sm.attendance]);
 
   const selectedEmployee = useMemo(
     () => employees.find(e => e.emp_code === selectedEmpCode) || null,
@@ -229,7 +232,7 @@ export default function DailyAttendance() {
             </button>
           )}
           <button style={{ ...s.backBtn, opacity: syncing ? 0.6 : 1 }} disabled={syncing} onClick={syncTeamOffice}>
-            {syncing ? 'Syncing...' : 'Sync from TeamOffice'}
+            {syncing ? 'Syncing...' : '⟳ Refresh now'}
           </button>
           <select style={s.sel} value={month} onChange={e => setMonth(Number(e.target.value))}>
             {monthNames.map((m, i) => (
@@ -245,6 +248,16 @@ export default function DailyAttendance() {
       </div>
 
       {syncMsg && <div style={{ marginBottom: 12, fontSize: 13, color: '#334155' }}>{syncMsg}</div>}
+
+      {sm.attendance.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Status key:</span>
+          {sm.attendance.map(st => (
+            <span key={st.code} style={pillStyle(st.color)} title={st.description + (st.used_for ? ' - ' + st.used_for : '')}>{st.code} = {st.label}</span>
+          ))}
+          <Link to="/settings/statuses" style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>What do these mean?</Link>
+        </div>
+      )}
 
       <div style={s.card}>
         {selectedEmployee ? (
@@ -283,13 +296,7 @@ export default function DailyAttendance() {
                             <td style={s.td}>-</td>
                             <td style={s.td}>
                               <select style={inp} value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value })}>
-                                <option value="P">P - Present</option>
-                                <option value="A">A - Absent</option>
-                                <option value="HD">HD - Half Day</option>
-                                <option value="WO">WO - Week Off</option>
-                                <option value="WFH">WFH - Work From Home</option>
-                                <option value="EW">EW - Extra Work</option>
-                                <option value="HOL">HOL - Holiday</option>
+                                {sm.attendance.map(st => <option key={st.code} value={st.code}>{st.code} - {st.label}</option>)}
                               </select>
                             </td>
                             <td style={s.td}><input style={{ ...inp, width: 160 }} placeholder="Remark (optional)" value={editing.remark} onChange={e => setEditing({ ...editing, remark: e.target.value })} /></td>
@@ -304,7 +311,7 @@ export default function DailyAttendance() {
                             <td style={s.td}>{r.out_time || '--:--'}</td>
                             <td style={s.td}>{fmtHours(r.working_hours)} hrs</td>
                             <td style={s.td}>
-                              {r.missing ? <span style={{ color: '#94a3b8' }}>No record</span> : <span style={s.statusBadge(r.status)}>{r.status}</span>}
+                              {r.missing ? <span style={{ color: '#94a3b8' }}>No record</span> : <span style={pillStyle(sm.find('attendance', r.status).color)} title={sm.find('attendance', r.status).description}>{sm.find('attendance', r.status).label}</span>}
                             </td>
                             <td style={{ ...s.td, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.remark}>{r.remark || '-'}</td>
                             <td style={s.td}><button style={s.backBtn} onClick={() => startEdit(r)}>{r.missing ? 'Add' : 'Edit'}</button></td>
@@ -326,11 +333,11 @@ export default function DailyAttendance() {
                   <th style={s.th}>Employee</th>
                   <th style={s.th}>Emp Code</th>
                   <th style={s.th}>Department</th>
-                  <th style={s.th}>Present</th>
-                  <th style={s.th}>Half Day</th>
-                  <th style={s.th}>WFH</th>
-                  <th style={s.th}>Extra Work</th>
-                  <th style={s.th}>Absent</th>
+                  <th style={s.th}>{L('present', 'Present')}</th>
+                  <th style={s.th}>{L('half_day', 'Half Day')}</th>
+                  <th style={s.th}>{L('wfh', 'WFH')}</th>
+                  <th style={s.th}>{L('extra_work', 'Extra Work')}</th>
+                  <th style={s.th}>{L('absent', 'Absent')}</th>
                 </tr>
               </thead>
               <tbody>

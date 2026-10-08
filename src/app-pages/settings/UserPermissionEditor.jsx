@@ -139,7 +139,7 @@ export default function UserPermissionEditor() {
           &larr; Back
         </button>
         <div>
-          <h2 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '1.4rem', color: '#1e293b' }}>Permission Editor</h2>
+          <h2 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', color: '#1e293b' }}>Permission Editor</h2>
           {user && (
             <p style={{ margin: '4px 0 0', fontSize: '.85rem', color: '#64748b' }}>
               {user.name} &lt;{user.email}&gt; &mdash; <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 8px', borderRadius: 50, fontWeight: 600, fontSize: '.75rem' }}>HR Staff</span>

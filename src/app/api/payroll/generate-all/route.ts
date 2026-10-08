@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
     for (const r of sheet) {
       if (existingEmpCodes.has(r.emp_code)) { results.push({ emp_code: r.emp_code, status: 'already_exists' }); continue; }
       await execute(
-        `INSERT INTO payslips (id, emp_code, month, year, basic_pay, hra, conveyance_allowance, food_vouchers, medical_insurance, other_deductions, incentives, el_encashment, gross_salary, total_deductions, total_adjustments, net_salary, paid_days, extra_work_days, extra_work_pay, variable_pay, leave_availed, casual_leave, earned_leave, generated_by, generated_at, email_sent_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,0,?,NOW(),NULL)`,
-        [uuidv4(), r.emp_code, month, year, r.basic_pay, r.hra, r.conveyance_allowance, r.food_vouchers, r.insurance, r.other_deductions, r.incentive, r.el_pay, r.net_payable, r.total_deductions, r.total_adjustments, r.final_salary, r.paid_days, r.extra_work_days, r.extra_work_pay, r.variable_pay, user.email]
+        `INSERT INTO payslips (id, emp_code, month, year, basic_pay, hra, conveyance_allowance, food_vouchers, medical_insurance, other_deductions, incentives, el_encashment, gross_salary, total_deductions, total_adjustments, net_salary, paid_days, extra_work_days, extra_work_pay, variable_pay, extra_components, leave_availed, casual_leave, earned_leave, generated_by, generated_at, email_sent_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,0,?,NOW(),NULL)`,
+        [uuidv4(), r.emp_code, month, year, r.basic_pay, r.hra, r.conveyance_allowance, r.food_vouchers, r.insurance, r.other_deductions, r.incentive, r.el_pay, r.net_payable, r.total_deductions, r.total_adjustments, r.final_salary, r.paid_days, r.extra_work_days, r.extra_work_pay, r.variable_pay, r.extra_components.length ? JSON.stringify(r.extra_components.map(x => ({ label: x.label, amount: x.amount, type: x.type }))) : null, user.email]
       );
       results.push({ emp_code: r.emp_code, status: 'generated' });
     }

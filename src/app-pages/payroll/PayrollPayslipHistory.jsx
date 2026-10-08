@@ -257,7 +257,7 @@ function formatNum(v) {
 const pgStyles = `
 .pr-page { padding: 0; }
 .pr-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.pr-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+.pr-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .pr-subtitle { margin: 4px 0 0; font-size: .88rem; color: #64748b; }
 .pr-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; overflow: hidden; }
 .pr-toolbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 16px 20px; border-bottom: 1.5px solid #e2e8f0; align-items: center; }

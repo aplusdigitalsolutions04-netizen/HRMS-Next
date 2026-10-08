@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     ];
     const data = rows.map(r => [
       r.emp_code, r.full_name, r.month_days, r.paid_days, r.unpaid_days, r.per_day_salary, r.net_payable,
-      r.insurance, r.other_deductions, r.variable_pay, r.incentive, r.el_days ?? '', r.el_pay, r.extra_work_days, r.extra_work_pay, r.net_payable, r.final_salary,
+      r.insurance, r.other_deductions + r.custom_deductions, r.variable_pay, r.incentive, r.el_days ?? '', r.el_pay, r.extra_work_days, r.extra_work_pay, r.net_payable, r.final_salary,
     ]);
     const sum = (i: number) => Math.round(data.reduce((t, row) => t + (Number(row[i]) || 0), 0) * 100) / 100;
     const totals = ['', 'TOTAL', '', '', '', '', sum(6), sum(7), sum(8), sum(9), sum(10), '', sum(12), '', sum(14), sum(15), sum(16)];

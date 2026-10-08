@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { employeeCodesWithout } from '@/lib/status-master';
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,14 +41,17 @@ export async function GET(req: NextRequest) {
       params = [selectedYear];
     }
 
+    // Employees whose status is switched off for "In attendance" (Settings > Status Master) are left out.
+    const excluded = await employeeCodesWithout('in_attendance');
+    const excludeSql = excluded.length ? `AND e.status NOT IN (${excluded.map(() => '?').join(',')})` : '';
     summary = await query<RowDataPacket[]>(
       `SELECT ${baseSelect}
        FROM employees e
        LEFT JOIN attendance_summary asm ON ${joinCondition}
-       WHERE e.status != 'dropped' AND e.is_deleted = 0
+       WHERE e.is_deleted = 0 ${excludeSql}
        GROUP BY e.emp_code
        ORDER BY employee_name`,
-      params
+      [...params, ...excluded]
     );
     
     const availableMonths = await query<RowDataPacket[]>('SELECT DISTINCT MONTH(attendance_from_date) as month FROM attendance_summary ORDER BY month');

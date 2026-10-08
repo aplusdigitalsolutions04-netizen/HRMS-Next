@@ -258,7 +258,7 @@ const formatEmailBody = (body) => {
           </button>
           <div style={{ background:'#fff', borderRadius:14, border:'1px solid #f1f5f9', padding:24 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, paddingBottom:16, borderBottom:'1px solid #f1f5f9' }}>
-              <h3 style={{ margin:0, fontFamily:'Outfit,sans-serif', fontWeight:800, fontSize:'1.15rem', color:'#0f172a' }}>{viewingDraft.candidate_name || 'Draft'} — Email Details</h3>
+              <h3 style={{ margin:0, fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.15rem', color:'#0f172a' }}>{viewingDraft.candidate_name || 'Draft'} — Email Details</h3>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 {(viewingDraft.status || '').toUpperCase() === 'DRAFT' && (
                     isEditing ? (
@@ -369,7 +369,7 @@ const formatEmailBody = (body) => {
         <div className="notif-loading" />
       ) : filtered.length === 0 ? (
         <div className="notif-empty">
-          <span style={{ fontSize: '2rem' }}>📭</span>
+          <span style={{ fontSize: '1.6rem' }}>📭</span>
           <p>{drafts.length === 0 ? 'No email drafts saved yet. Save a draft from Candidate Pool to see it here.' : 'No drafts match your search.'}</p>
         </div>
       ) : (

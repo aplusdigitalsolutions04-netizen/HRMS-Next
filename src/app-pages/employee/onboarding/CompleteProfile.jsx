@@ -7,7 +7,7 @@ const s = {
     card: { maxWidth: 900, margin: '0 auto', background: '#fff', borderRadius: 16, padding: '28px 32px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff' },
     header: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 4 },
     logoutBtn: { flexShrink: 0, padding: '8px 18px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' },
-    title: { fontSize: 22, fontWeight: 700, color: '#0f172a', margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" },
+    title: { fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" },
     subtitle: { fontSize: 13.5, color: '#64748b', margin: '0 0 20px' },
     remarksBox: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '14px 16px', marginBottom: 20 },
     remarksTitle: { fontSize: 13, fontWeight: 700, color: '#b91c1c', margin: '0 0 4px' },

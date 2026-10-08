@@ -266,7 +266,7 @@ export default function EmployeeLeave() {
           ].map(s => (
             <div key={s.label} style={{ background: '#fff', borderRadius: 16, padding: '16px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
               <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
             </div>
           ))}
         </div>

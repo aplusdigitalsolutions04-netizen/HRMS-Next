@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { employeeCodes, getStatuses } from '@/lib/status-master';
 import { RowDataPacket } from 'mysql2';
 
 export async function POST(req: NextRequest) {
@@ -37,9 +38,11 @@ export async function POST(req: NextRequest) {
     if (emps.length === 0) {
       return NextResponse.json({ detail: 'No account found with this email' }, { status: 401 });
     }
-    const loginableStatuses = ['active', 'invited', 'pending', 'needs_correction'];
+    // Which statuses may log in comes from Settings > Status Master (Can log in).
+    const loginableStatuses = await employeeCodes('can_login');
     if (!loginableStatuses.includes(emps[0].status)) {
-      return NextResponse.json({ detail: `Account is ${emps[0].status}. Please contact HR to activate your account.` }, { status: 401 });
+      const row = (await getStatuses('employee', true)).find(s => s.code === emps[0].status);
+      return NextResponse.json({ detail: `Account is ${row?.label || emps[0].status}. Please contact HR to activate your account.` }, { status: 401 });
     }
     authResult = await authenticateUser(email, password, 'employee');
     if (!authResult) {

@@ -137,7 +137,7 @@ function formatNum(v) {
 const mpStyles = `
 .mp-page { padding: 0; }
 .mp-header { margin-bottom: 24px; }
-.mp-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+.mp-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .mp-subtitle { margin: 4px 0 0; font-size: .88rem; color: #64748b; }
 .mp-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; overflow: hidden; }
 .mp-toolbar { display: flex; gap: 10px; padding: 16px 20px; border-bottom: 1.5px solid #e2e8f0; }

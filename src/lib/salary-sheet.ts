@@ -1,7 +1,8 @@
 import { query, execute } from './db';
 import { RowDataPacket } from 'mysql2';
-import { getEwMultiplier, getElPayoutInterval, elEncashmentForMonth } from './payroll-calc';
+import { getEwMultiplier, getElPayoutInterval, elEncashmentForMonth, parseExtraComponents } from './payroll-calc';
 import { getHolidayDates } from './holidays';
+import { employeeCodes, inList, attendanceWeights } from './status-master';
 
 const n = (v: any) => Number(v) || 0;
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -74,6 +75,8 @@ export interface SalarySheetRow {
   hra: number;
   conveyance_allowance: number;
   food_vouchers: number;
+  extra_components: { key: string; label: string; amount: number; type: 'earning' | 'deduction' }[]; // custom split columns (earnings prorated, deductions as saved)
+  custom_deductions: number;
   insurance: number;
   other_deductions: number;
   incentive: number;
@@ -93,14 +96,17 @@ export async function computeSalarySheet(month: number, year: number, onlyEmpCod
   await ensureAdjustmentsTable();
   const [mode, ewMultiplier, elInterval] = await Promise.all([getMonthDaysMode(), getEwMultiplier(), getElPayoutInterval()]);
 
+  // Which employee statuses are paid on the salary sheet: Settings > Status Master (Working employee).
+  const working = inList(await employeeCodes('is_working'));
+  const weights = await attendanceWeights();
   const employees = await query<RowDataPacket[]>(
     `SELECT e.emp_code, e.full_name, e.designation,
             ss.basic_pay, ss.hra, ss.conveyance_allowance, ss.food_vouchers,
-            ss.medical_insurance, ss.other_deductions, ss.incentives, ss.el_encashment
+            ss.medical_insurance, ss.other_deductions, ss.incentives, ss.el_encashment, ss.extra_components
      FROM employees e JOIN salary_structures ss ON e.emp_code = ss.emp_code
-     WHERE e.status = 'active' AND e.is_deleted = 0 ${onlyEmpCode ? 'AND e.emp_code = ?' : ''}
+     WHERE e.status IN ${working.sql} AND e.is_deleted = 0 ${onlyEmpCode ? 'AND e.emp_code = ?' : ''}
      ORDER BY e.full_name`,
-    onlyEmpCode ? [onlyEmpCode] : []
+    [...working.params, ...(onlyEmpCode ? [onlyEmpCode] : [])]
   );
 
   const calendarDays = new Date(year, month, 0).getDate();
@@ -120,18 +126,16 @@ export async function computeSalarySheet(month: number, year: number, onlyEmpCod
      FROM attendance WHERE attendance_date BETWEEN ? AND ?`,
     [from, to]
   );
-  const attBy = new Map<string, { total: number; absent: number; half: number; ew: number }>();
+  const attBy = new Map<string, { total: number; unpaid: number; ew: number }>();
   for (const a of rowsAtt) {
     const k = String(a.emp_code);
-    const t = attBy.get(k) || { total: 0, absent: 0, half: 0, ew: 0 };
+    const t = attBy.get(k) || { total: 0, unpaid: 0, ew: 0 };
     t.total++;
-    if (a.status === 'EW') t.ew++;
+    const w = weights[a.status]; // from Settings > Status Master
+    if (w?.extraPay) t.ew++;
     // A holiday is a paid day whatever the punch data says. A future day (TeamOffice
     // lists the whole month, with no-punch days as absent) is not unpaid yet either.
-    if (!holidays.has(a.d) && a.d <= today) {
-      if (a.status === 'A') t.absent++;
-      else if (a.status === 'HD') t.half++;
-    }
+    if (w && w.unpaid > 0 && !holidays.has(a.d) && a.d <= today) t.unpaid += w.unpaid;
     attBy.set(k, t);
   }
 
@@ -142,17 +146,22 @@ export async function computeSalarySheet(month: number, year: number, onlyEmpCod
   return employees.map((e): SalarySheetRow => {
     const a = attBy.get(String(e.emp_code));
     const hasAtt = !!a && a.total > 0;
-    const unpaid = hasAtt ? a!.absent + a!.half * 0.5 : 0;
+    const unpaid = hasAtt ? a!.unpaid : 0;
     const paid = Math.max(0, Math.min(monthDays, monthDays - unpaid));
     const factor = monthDays > 0 ? paid / monthDays : 0;
 
-    const salary = n(e.basic_pay) + n(e.hra) + n(e.conveyance_allowance) + n(e.food_vouchers);
+    const allExtras = parseExtraComponents(e.extra_components);
+    const extras = allExtras.filter(x => x.type === 'earning');            // part of the salary
+    const extraDeds = allExtras.filter(x => x.type === 'deduction');       // taken off, never prorated
+    const customDeductions = r2(extraDeds.reduce((t, x) => t + x.amount, 0));
+    const salary = n(e.basic_pay) + n(e.hra) + n(e.conveyance_allowance) + n(e.food_vouchers) + extras.reduce((t, x) => t + x.amount, 0);
     const perDay = monthDays > 0 ? salary / monthDays : 0;
     const basic = r2(n(e.basic_pay) * factor);
     const hra = r2(n(e.hra) * factor);
     const conv = r2(n(e.conveyance_allowance) * factor);
     const food = r2(n(e.food_vouchers) * factor);
-    const netPayable = r2(basic + hra + conv + food);
+    const extraPaid = extras.map(x => ({ key: x.key, label: x.label, amount: r2(x.amount * factor), type: 'earning' as const }));
+    const netPayable = r2(basic + hra + conv + food + extraPaid.reduce((t, x) => t + x.amount, 0));
 
     const o = adjByEmp.get(String(e.emp_code));
     const incentiveOverridden = !!o && has(o.incentive);
@@ -167,14 +176,14 @@ export async function computeSalarySheet(month: number, year: number, onlyEmpCod
 
     const insurance = n(e.medical_insurance);
     const otherDed = n(e.other_deductions);
-    const totalDed = r2(insurance + otherDed);
+    const totalDed = r2(insurance + otherDed + customDeductions);
     const totalAdj = r2(variablePay + incentive + elPay + ewPay);
 
     return {
       emp_code: String(e.emp_code), full_name: e.full_name || '', designation: e.designation || '',
       month_days: monthDays, paid_days: paid, unpaid_days: unpaid, has_attendance: hasAtt,
       salary: r2(salary), per_day_salary: r2(perDay), net_payable: netPayable,
-      basic_pay: basic, hra, conveyance_allowance: conv, food_vouchers: food,
+      basic_pay: basic, hra, conveyance_allowance: conv, food_vouchers: food, extra_components: [...extraPaid, ...extraDeds.map(x => ({ key: x.key, label: x.label, amount: r2(x.amount), type: 'deduction' as const }))], custom_deductions: customDeductions,
       insurance, other_deductions: otherDed,
       incentive, incentive_overridden: incentiveOverridden,
       variable_pay: variablePay,

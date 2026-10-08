@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { employeeManagementStyles } from './employee-management/styles';
 import { AnimatedValue, initials, statusBadge, canDeleteEmployee, formatDT } from './employee-management/helpers';
+import useStatusMaster from '../shared/useStatusMaster';
 
 const EmployeeDrawer = lazy(() => import('./employee-management/EmployeeDrawer'));
 
@@ -10,6 +11,7 @@ const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const EmployeeManagement = () => {
+  const statusMaster = useStatusMaster(); // labels / colours of every employee status
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, dropped: 0, new_this_month: 0, growth_pct: 0 });
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -314,32 +316,20 @@ const EmployeeManagement = () => {
           </div>
         </div>
 
-        <div className="emp-grid">
-
-          <div className="emp-card">
-            <div className="emp-card-icon" style={{ background:'#dcfce7', color:'#15803d' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div className="emp-card-lbl">Active</div>
-            <div className="emp-card-val"><AnimatedValue value={stats.active} /></div>
-            <div className="emp-card-sub green">● {total > 0 ? Math.round(stats.active / total * 100) : 0}% of total</div>
-          </div>
-          <div className="emp-card">
-            <div className="emp-card-icon" style={{ background:'#fef9c3', color:'#a16207' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div className="emp-card-lbl">Pending</div>
-            <div className="emp-card-val"><AnimatedValue value={stats.pending} /></div>
-            <div className="emp-card-sub" style={{color:'#a16207'}}>● {total > 0 ? Math.round(stats.pending / total * 100) : 0}% of total</div>
-          </div>
-          <div className="emp-card">
-            <div className="emp-card-icon" style={{ background:'#fef2f2', color:'#dc2626' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div className="emp-card-lbl">Dropped</div>
-            <div className="emp-card-val"><AnimatedValue value={stats.dropped} /></div>
-            <div className="emp-card-sub red">● {total > 0 ? Math.round(stats.dropped / total * 100) : 0}% of total</div>
-          </div>
+        <div className="emp-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 14 }}>
+          {statusMaster.employee.map(st => {
+            const count = (stats.by_status && stats.by_status[st.code]) || 0;
+            return (
+              <div className="emp-card" key={st.code} title={st.description} style={{ padding: '12px 14px', borderRadius: 14 }}>
+                <div className="emp-card-icon" style={{ background: st.color + '1a', color: st.color, width: 32, height: 32, borderRadius: 9 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div className="emp-card-lbl" style={{ fontSize: '.68rem', marginBottom: 2, paddingRight: 36 }}>{st.label}</div>
+                <div className="emp-card-val" style={{ fontSize: '1.2rem' }}><AnimatedValue value={count} /></div>
+                <div className="emp-card-sub" style={{ color: st.color, fontSize: '.7rem', marginTop: 1 }}>● {stats.total > 0 ? Math.round(count / stats.total * 100) : 0}% of total</div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="emp-toolbar">
@@ -361,10 +351,8 @@ const EmployeeManagement = () => {
           </select>
           <select className="emp-select" value={statusFilter} onChange={e => setStatus(e.target.value)}>
             <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="dropped">Dropped</option>
-            <option value="deleted">Deleted</option>
+            {statusMaster.employee.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}
+            <option value="deleted">Deleted (removed)</option>
           </select>
           <button className="emp-filter-btn" onClick={applyFilters}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>

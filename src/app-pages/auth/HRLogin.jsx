@@ -81,7 +81,7 @@ export default function HRLogin() {
                 .lr-eyebrow { display:flex; align-items:center; gap:10px; font-size:.78rem; font-weight:700; letter-spacing:.12em; color:#0f766e; text-transform:uppercase; margin-bottom:20px; }
                 .lr-eyebrow::before { content:''; width:22px; height:2px; background:#10b981; display:inline-block; }
 
-                .lr-hero h1 { font-family:'Outfit',sans-serif; font-weight:800; font-size:2.7rem; line-height:1.15; color:#0f172a; margin:0 0 28px; letter-spacing:-0.5px; }
+                .lr-hero h1 { font-family:'Outfit',sans-serif; font-weight:700; font-size:2.7rem; line-height:1.15; color:#0f172a; margin:0 0 28px; letter-spacing:-0.5px; }
                 .lr-hero h1 .accent { color:#10b981; }
 
                 .lr-features { display:flex; flex-direction:column; gap:14px; margin-bottom:32px; }
@@ -97,7 +97,7 @@ export default function HRLogin() {
                 .lr-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:30px; }
                 .lr-brand { display:flex; align-items:center; gap:8px; }
                 .lr-brand-logo-img { height:32px; width:auto; max-width:150px; object-fit:contain; }
-                .lr-card-top .lr-login-label { font-family:'Outfit',sans-serif; font-weight:800; font-size:.95rem; color:#0f172a; letter-spacing:.04em; animation:lrBackInRight .5s ease .3s both; }
+                .lr-card-top .lr-login-label { font-family:'Outfit',sans-serif; font-weight:700; font-size:.95rem; color:#0f172a; letter-spacing:.04em; animation:lrBackInRight .5s ease .3s both; }
 
                 .lr-error { display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; color:#dc2626; font-size:.8rem; font-weight:500; margin-bottom:18px; animation:lrSlideUp .25s ease; }
 
@@ -123,7 +123,7 @@ export default function HRLogin() {
                     .lr-wrap { flex-direction:column; gap:40px; }
                     .lr-left { max-width:100%; text-align:center; }
                     .lr-eyebrow { justify-content:center; }
-                    .lr-hero h1 { font-size:2rem; }
+                    .lr-hero h1 { font-size:1.6rem; }
                     .lr-feature { justify-content:center; }
                     .lr-badges { justify-content:center; }
                     .lr-right { width:100%; max-width:420px; }

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { openEmployeeDocument } from '@/lib/clientDocs';
+import useStatusMaster from '../shared/useStatusMaster';
 
 export default function EditEmployee() {
+  const statusMaster = useStatusMaster(); // the list of employee statuses comes from Settings > Status Master
     const navigate = useNavigate();
     const { id } = useParams();
 
@@ -160,7 +162,7 @@ export default function EditEmployee() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                                 Back
                             </button>
-                            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Edit Employee</h2>
+                            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Edit Employee</h2>
                         </div>
                     </div>
 
@@ -206,9 +208,7 @@ export default function EditEmployee() {
                             <div style={s.field}>
                                 <label style={s.label}>Employee Status</label>
                                 <select style={s.select} name="status" value={employee.status || 'pending'} onChange={handleChange}>
-                                    <option value="active">Active</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="dropped">Dropped</option>
+                                    {statusMaster.employee.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}
                                 </select>
                             </div>
                         </div>
