@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Menu } from '@/lib/ui-motion';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -42,8 +43,7 @@ export default function NotificationDropdown() {
         </svg>
         {unreadCount > 0 && <span className="notif-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
-      {open && (
-        <div className="global-notif-dropdown">
+      <Menu open={open} className="global-notif-dropdown">
           <div className="notif-dropdown-header">
             <span>Notifications {unreadCount > 0 && `(${unreadCount})`}</span>
             {unreadCount > 0 && <button className="notif-mark-all-btn" onClick={markAllRead}>Mark All Read</button>}
@@ -66,8 +66,7 @@ export default function NotificationDropdown() {
           <div className="notif-dropdown-footer">
             <button onClick={() => { setOpen(false); navigate('/settings/view-notifications'); }}>View All Notifications</button>
           </div>
-        </div>
-      )}
+      </Menu>
     </div>
   );
 }

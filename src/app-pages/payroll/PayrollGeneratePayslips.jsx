@@ -41,7 +41,7 @@ export default function PayrollGeneratePayslips() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Generation failed');
-      setMessage(`Payslip generated for ${selectedEmp.full_name}`);
+      setMessage(`Draft payslip created for ${selectedEmp.full_name}. Approve it in Payslip History to publish and email it.`);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -99,7 +99,7 @@ export default function PayrollGeneratePayslips() {
       <div className="pr-gen-grid">
         <div className="pr-card">
           <div className="pr-card-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
             <h3>Single Employee</h3>
           </div>
           <div className="pr-card-body">
@@ -141,7 +141,7 @@ export default function PayrollGeneratePayslips() {
 
         <div className="pr-card">
           <div className="pr-card-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             <h3>All Employees</h3>
           </div>
           <div className="pr-card-body">
@@ -186,19 +186,19 @@ const pgStyles = `
 .pr-field { margin-bottom: 14px; }
 .pr-label { display: block; font-size: .82rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
 .pr-input { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .88rem; outline: none; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-.pr-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.pr-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
 select.pr-input { cursor: pointer; appearance: auto; }
 .pr-row { display: flex; gap: 14px; }
 .pr-emp-list { max-height: 200px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; margin-top: 4px; }
 .pr-emp-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
 .pr-emp-item:hover { background: #f8fafc; }
-.pr-emp-item.selected { background: #eef2ff; }
+.pr-emp-item.selected { background: #eff6ff; }
 .pr-emp-item.no-ss { opacity: .5; cursor: not-allowed; }
 .pr-emp-name { font-size: .88rem; font-weight: 500; color: #0f172a; }
 .pr-emp-desig { font-size: .78rem; color: #94a3b8; margin-top: 2px; }
 .pr-btn { padding: 10px 22px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; font-family: 'Outfit', sans-serif; border: none; display: inline-flex; align-items: center; gap: 6px; }
-.pr-btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
-.pr-btn-primary:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(99,102,241,.35); transform: translateY(-1px); }
+.pr-btn-primary { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; }
+.pr-btn-primary:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(37,99,235,.35); transform: translateY(-1px); }
 .pr-btn-primary:disabled { opacity: .6; cursor: not-allowed; }
 .pr-toast { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 12px; margin-bottom: 20px; font-size: .88rem; font-weight: 500; }
 .pr-toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import { DOC_OPTIONS } from '@/lib/documents';
 import { useNavigate } from 'react-router-dom';
 
 const s = {
-    page: { minHeight: '100vh', background: '#f8fafc', padding: '32px 20px', boxSizing: 'border-box' },
-    card: { maxWidth: 900, margin: '0 auto', background: '#fff', borderRadius: 16, padding: '28px 32px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff' },
+    page: { minHeight: '100vh', background: '#f8fafc', padding: '24px 15px', boxSizing: 'border-box' },
+    card: { maxWidth: 900, margin: '0 auto', background: '#fff', borderRadius: 16, padding: '21px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' },
     header: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 4 },
-    logoutBtn: { flexShrink: 0, padding: '8px 18px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' },
+    logoutBtn: { flexShrink: 0, padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' },
     title: { fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" },
     subtitle: { fontSize: 13.5, color: '#64748b', margin: '0 0 20px' },
     remarksBox: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '14px 16px', marginBottom: 20 },
@@ -17,11 +18,13 @@ const s = {
     input: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' },
     textarea: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', background: '#fff' },
     fileInput: { width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fafbfc' },
-    sectionTitle: { fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #eef2ff', fontFamily: "'Outfit', sans-serif" },
+    sectionTitle: { fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #eff6ff', fontFamily: "'Outfit', sans-serif" },
     grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
     grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 },
-    submitBtn: { padding: '12px 32px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
+    submitBtn: { padding: '12px 24px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
 };
+
+const DOCS = DOC_OPTIONS.map(d => ({ label: d.label, name: d.key }));
 
 export default function CompleteProfile({ onSubmitted }) {
     const navigate = useNavigate();
@@ -74,6 +77,15 @@ export default function CompleteProfile({ onSubmitted }) {
             Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Please fill in all the required fields (marked with *).' });
             return;
         }
+        // compulsory documents set by HR: each needs a file now, or one uploaded earlier
+        const requiredKeys = (profile && profile.required_documents) || [];
+        const doneKeys = (profile && profile.uploaded_documents) || [];
+        const missingKeys = requiredKeys.filter(k => !(files[k]) && !doneKeys.includes(k));
+        if (missingKeys.length > 0) {
+            const names = DOCS.filter(d => missingKeys.includes(d.name)).map(d => d.label).join(', ');
+            Swal.fire({ icon: 'warning', title: 'Documents required', text: 'Please upload the compulsory document(s): ' + names });
+            return;
+        }
         setSubmitting(true);
         const data = new FormData();
         Object.entries(form).forEach(([k, v]) => data.append(k, v || ''));
@@ -94,7 +106,7 @@ export default function CompleteProfile({ onSubmitted }) {
                     title: 'Details Saved',
                     text: 'Your details have been submitted to HR. You can use the portal once HR reviews and activates your account.',
                     confirmButtonText: 'OK',
-                    confirmButtonColor: '#4338ca',
+                    confirmButtonColor: '#1e40af',
                 });
                 onSubmitted && onSubmitted();
             } else {
@@ -107,7 +119,7 @@ export default function CompleteProfile({ onSubmitted }) {
         }
     };
 
-    if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>Loading...</div>;
+    if (loading) return <div style={{ textAlign: 'center', padding: 45, color: '#64748b' }}>Loading...</div>;
 
     return (
         <div style={s.page}>
@@ -215,28 +227,21 @@ export default function CompleteProfile({ onSubmitted }) {
 
                     <div style={s.sectionTitle}>Documents</div>
                     <p style={{ fontSize: 12.5, color: '#94a3b8', margin: '-8px 0 14px' }}>
-                        Upload whichever of these you have - none are required to submit, and you can add the rest later.
+                        {profile && profile.required_documents && profile.required_documents.length > 0
+                            ? <>Documents marked <b style={{ color: '#dc2626' }}>*</b> are compulsory - HR needs them before you can submit. The rest are optional.</>
+                            : 'Upload whichever of these you have - none are required to submit, and you can add the rest later.'}
                     </p>
                     <div style={s.grid3}>
-                        {[
-                            { label: 'Identity Proof', name: 'IdentityProof' },
-                            { label: 'Address Proof', name: 'AddressProof' },
-                            { label: 'Resume', name: 'Resume' },
-                            { label: 'UG Degree', name: 'UGDegree' },
-                            { label: '10th Marksheet', name: 'Marksheet10' },
-                            { label: '12th Marksheet', name: 'Marksheet12' },
-                            { label: 'Offer Letter', name: 'OfferLetter' },
-                            { label: 'PG Degree', name: 'PGDegree' },
-                            { label: 'Appointment Letter', name: 'AppointmentLetter' },
-                            { label: 'Internship Certificate', name: 'InternshipCertificate' },
-                            { label: 'Photograph', name: 'Photograph' },
-                            { label: 'Bank Document', name: 'BankDocument' },
-                        ].map(({ label, name }) => (
-                            <div style={s.field} key={name}>
-                                <label style={s.label}>{label}</label>
-                                <input type="file" style={s.fileInput} name={name} accept="application/pdf,image/jpeg,image/jpg,image/png" onChange={handleFile} />
-                            </div>
-                        ))}
+                        {DOCS.map(({ label, name }) => {
+                            const isReq = !!(profile && profile.required_documents && profile.required_documents.includes(name));
+                            const had = !!(profile && profile.uploaded_documents && profile.uploaded_documents.includes(name));
+                            return (
+                                <div style={s.field} key={name}>
+                                    <label style={s.label}>{label}{isReq && <span style={{ color: '#dc2626' }}> *</span>}{had && <span style={{ color: '#16a34a', fontWeight: 500, fontSize: 11.5 }}> (already uploaded)</span>}</label>
+                                    <input type="file" style={s.fileInput} name={name} accept="application/pdf,image/jpeg,image/jpg,image/png" onChange={handleFile} />
+                                </div>
+                            );
+                        })}
                         <div style={{ ...s.field, gridColumn: '1 / -1' }}>
                             <label style={s.label}>Additional Documents</label>
                             <input type="file" style={s.fileInput} name="AdditionalDocuments" multiple accept="application/pdf,image/jpeg,image/jpg,image/png" onChange={handleFile} />

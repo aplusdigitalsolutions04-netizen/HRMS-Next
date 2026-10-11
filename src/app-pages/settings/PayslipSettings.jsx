@@ -57,7 +57,7 @@ function Signatory({ title, nameLabel, name, signature, onName, onSignature }) {
 }
 
 export default function PayslipSettings({ saving, setSaving }) {
-  const [form, setForm] = useState({ prepared_by: '', authorised_by: '', prepared_signature: '', authorised_signature: '', ew_pay_multiplier: '1', el_payout_interval_months: '1', salary_month_days_mode: 'actual' });
+  const [form, setForm] = useState({ prepared_by: '', authorised_by: '', prepared_signature: '', authorised_signature: '', ew_pay_multiplier: '1', el_payout_interval_months: '1', salary_month_days_mode: 'actual', payslip_auto_draft: '1', payslip_draft_day: '1' });
   const [loading, setLoading] = useState(true);
   const set = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -69,6 +69,8 @@ export default function PayslipSettings({ saving, setSaving }) {
         ew_pay_multiplier: d.ew_pay_multiplier || '1',
         el_payout_interval_months: d.el_payout_interval_months || '1',
         salary_month_days_mode: d.salary_month_days_mode || 'actual',
+        payslip_auto_draft: d.payslip_auto_draft === '0' ? '0' : '1',
+        payslip_draft_day: d.payslip_draft_day || '1',
       });
     }).finally(() => setLoading(false));
   }, []);
@@ -110,6 +112,24 @@ export default function PayslipSettings({ saving, setSaving }) {
           <input type="number" min="1" max="12" step="1" className="settings-input" value={form.el_payout_interval_months} onChange={e => setForm(f => ({ ...f, el_payout_interval_months: e.target.value }))} />
         </FormField>
         <div style={{ fontSize: 12, color: '#64748b' }}>1 = paid in every month's payslip. 3 = paid together once every 3 months (in March, June, September and December) as the monthly EL amount x 3; the payslips in between show 0.</div>
+      </div>
+      <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid #e2e8f0', maxWidth: 420 }}>
+        <h4 style={{ margin: '0 0 4px', fontSize: 15 }}>Monthly draft payslips</h4>
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: '#64748b' }}>
+          Every month the server prepares DRAFT payslips for the month that just ended. Nothing is emailed and employees see nothing until you approve them in Payroll &gt; Payslip History.
+        </p>
+        <FormField label="Prepare drafts automatically">
+          <select className="settings-input" value={form.payslip_auto_draft} onChange={e => setForm(f => ({ ...f, payslip_auto_draft: e.target.value }))}>
+            <option value="1">On</option>
+            <option value="0">Off (use Generate Payroll myself)</option>
+          </select>
+        </FormField>
+        <FormField label="Prepare on">
+          <select className="settings-input" value={form.payslip_draft_day} onChange={e => setForm(f => ({ ...f, payslip_draft_day: e.target.value }))}>
+            <option value="last">Last day of the month (28 / 29 / 30 / 31) - for that same month</option>
+            {Array.from({ length: 28 }, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d} of the next month - for the month that ended</option>)}
+          </select>
+        </FormField>
       </div>
       <div className="settings-actions"><SaveButton onClick={save} saving={saving} /></div>
     </SettingsCard>

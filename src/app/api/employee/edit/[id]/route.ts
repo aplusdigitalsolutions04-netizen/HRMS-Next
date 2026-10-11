@@ -5,6 +5,7 @@ import { hashPassword } from '@/lib/auth';
 import { execute, query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { saveEmployeeDocument } from '@/lib/googleDrive';
+import { auditFrom } from '@/lib/audit';
 
 const allowedFields = ['emp_code', 'full_name', 'email_id', 'mobile_no', 'father_spouse_name', 'dob', 'present_address',
   'permanent_address', 'college_name', 'course_name', 'specialization', 'course_duration', 'cgpa',
@@ -77,8 +78,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     if (sets.length === 0) return jsonError('No fields to update', 400);
+
+    // what it was before - used for the audit trail and to stamp the exit date when someone is dropped
+    const before = (await query<RowDataPacket[]>('SELECT * FROM employees WHERE id = ?', [id]))[0];
+    if (body.status !== undefined && before) {
+      if (body.status === 'dropped' && before.status !== 'dropped') sets.push('exit_date = CURDATE()');
+      else if (body.status !== 'dropped' && before.status === 'dropped') sets.push('exit_date = NULL');
+    }
     vals.push(id);
     await execute(`UPDATE employees SET ${sets.join(', ')} WHERE id = ?`, vals);
+    if (before) {
+      const changed: Record<string, any> = {};
+      for (const f of allowedFields) {
+        if (body[f] === undefined || f === 'profile_photo' || f === 'document_sources') continue;
+        const was = before[f] instanceof Date ? before[f].toISOString().slice(0, 10) : (before[f] ?? '');
+        const now = String(body[f] ?? '');
+        if (String(was) !== now && !(f === 'manager_id' && !was && !now)) changed[f] = { from: was === '' ? null : was, to: now === '' ? null : now };
+      }
+      if (body.password && body.password.length >= 6) changed.password = 'changed';
+      if (Object.keys(changed).length > 0) await auditFrom(user, body.status !== undefined && changed.status ? 'employee_status_changed' : 'employee_updated', 'employee', id, { emp_code: before.emp_code, name: before.full_name, changes: changed });
+    }
     if (body.password && body.password.length >= 6) {
       // Keep the credentials-sent record in sync so "Employee Credentials"
       // reflects the employee's actual current password, not the stale one.

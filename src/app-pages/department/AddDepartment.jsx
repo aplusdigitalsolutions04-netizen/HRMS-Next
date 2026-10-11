@@ -50,7 +50,7 @@ const AddDepartment = () => {
             max-width: 600px;
             margin: 40px auto;
             background: #fff;
-            padding: 30px;
+            padding: 23px;
             border-radius: 16px;
             box-shadow: 0 15px 30px rgba(0,0,0,.08);
         }
@@ -83,7 +83,7 @@ const AddDepartment = () => {
         .btn-cancel {
             background: #e5e7eb;
             color: #333;
-            padding: 10px 18px;
+            padding: 10px 14px;
             border-radius: 50px;
             text-decoration: none;
             font-weight: 600;
@@ -102,7 +102,7 @@ const AddDepartment = () => {
             background-position: right bottom;
             transition: all .5s ease-out;
             border-radius: 50px;
-            padding: 10px 22px;
+            padding: 10px 17px;
             font-weight: 600;
             text-decoration: none;
             display: inline-block;

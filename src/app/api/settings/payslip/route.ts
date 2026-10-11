@@ -4,6 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib
 import { query, execute } from '@/lib/db';
 import { getPayslipSignatories, getEwMultiplier, getElPayoutInterval, SIGNATORY_KEYS } from '@/lib/payroll-calc';
 import { getMonthDaysMode } from '@/lib/salary-sheet';
+import { auditFrom } from '@/lib/audit';
 
 // system_settings.setting_value is TEXT (64KB); the page shrinks signatures
 // well below this before uploading.
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    return jsonSuccess({ ...(await getPayslipSignatories()), ew_pay_multiplier: String(await getEwMultiplier()), el_payout_interval_months: String(await getElPayoutInterval()), salary_month_days_mode: await getMonthDaysMode() });
+    return jsonSuccess({ ...(await getPayslipSignatories()), ew_pay_multiplier: String(await getEwMultiplier()), el_payout_interval_months: String(await getElPayoutInterval()), payslip_auto_draft: ((await query('SELECT setting_value FROM system_settings WHERE setting_key=?', ['payslip_auto_draft']))[0]?.setting_value === '0') ? '0' : '1', payslip_draft_day: String((await query('SELECT setting_value FROM system_settings WHERE setting_key=?', ['payslip_draft_day']))[0]?.setting_value || '1'), salary_month_days_mode: await getMonthDaysMode() });
   } catch (e: any) { return jsonError(e, 500); }
 }
 
@@ -56,6 +57,17 @@ export async function POST(req: NextRequest) {
       values.el_payout_interval_months = String(n);
     }
 
+    // Monthly draft payslips: on/off and the day of the month they are prepared (for the month that just ended).
+    if (body.payslip_auto_draft !== undefined) values.payslip_auto_draft = body.payslip_auto_draft === '0' ? '0' : '1';
+    if (body.payslip_draft_day !== undefined) {
+      if (body.payslip_draft_day === 'last') values.payslip_draft_day = 'last';
+      else {
+        const d = parseInt(body.payslip_draft_day);
+        if (isNaN(d) || d < 1 || d > 28) return jsonError('Draft day must be between 1 and 28, or the last day of the month', 422);
+        values.payslip_draft_day = String(d);
+      }
+    }
+
     const t = now();
     for (const [key, value] of Object.entries(values)) {
       const existing = await query('SELECT id FROM system_settings WHERE setting_key=?', [key]);
@@ -65,6 +77,7 @@ export async function POST(req: NextRequest) {
         await execute('INSERT INTO system_settings (setting_key, setting_value, updated_on) VALUES (?,?,?)', [key, value, t]);
       }
     }
+    await auditFrom(user, 'settings_changed', 'settings', 'payslip', Object.fromEntries(Object.entries(values).map(([k, v]) => [k, /signature/.test(k) ? '(image)' : v])));
     return jsonSuccess({ message: 'Payslip settings saved' });
   } catch (e: any) { return jsonError(e, 500); }
 }

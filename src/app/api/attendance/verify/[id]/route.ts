@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { auditFrom } from '@/lib/audit';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,6 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const t = now();
     await execute('UPDATE attendance_summary SET is_verified=1, verified_by=?, verified_on=? WHERE id=?', [user.email, t, id]);
+    await auditFrom(user, 'attendance_verified', 'attendance_summary', id, null);
     return jsonSuccess({ message: 'Attendance verified' });
   } catch (e: any) { return jsonError(e, 500); }
 }

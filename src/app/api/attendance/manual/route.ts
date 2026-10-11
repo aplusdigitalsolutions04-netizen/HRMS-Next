@@ -3,6 +3,7 @@ import { getAuthUser, jsonError, jsonSuccess, uuidv4, checkPermission, calcHours
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { attendanceCodes } from '@/lib/status-master';
+import { auditFrom } from '@/lib/audit';
 
 // P present, A absent, HD half day, WO weekly off, WFH work from home,
 // EW extra work (came in on a weekly off / holiday).
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
         [uuidv4(), empCode, emps[0].full_name, null, date, day, inTime, outTime, hours, status, remark, user.email]
       );
     }
+    await auditFrom(user, 'attendance_manual_entry', 'attendance', empCode, { date, status, in: inTime, out: outTime, remark: body.remark || null });
     return jsonSuccess({ message: 'Attendance saved' });
   } catch (e: any) { return jsonError(e, 500); }
 }

@@ -44,7 +44,7 @@ export default function ContactHRTab() {
         <h3>Contact HR / Help Desk</h3>
         <p style={{ fontSize: 13, color: '#64748b', marginTop: 4, margin: 0 }}>Send an email directly to the HR department regarding your concerns.</p>
       </div>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '15px' }}>
         
         <div>
           <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 8 }}>Category</label>
@@ -89,8 +89,8 @@ export default function ContactHRTab() {
             disabled={isSending}
             style={{ 
               display: 'flex', alignItems: 'center', gap: 8,
-              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', 
-              color: '#fff', border: 'none', padding: '12px 24px', 
+              background: 'linear-gradient(135deg, #1d4ed8, #2563eb)', 
+              color: '#fff', border: 'none', padding: '12px 18px', 
               borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: isSending ? 'not-allowed' : 'pointer',
               opacity: isSending ? 0.7 : 1, transition: 'all 0.2s'
             }}

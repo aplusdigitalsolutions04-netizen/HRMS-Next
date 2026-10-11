@@ -5,6 +5,8 @@ import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { ensurePayslipColumns } from '@/lib/payroll-calc';
 import { computeSalarySheet } from '@/lib/salary-sheet';
+import { insertPayslipRow } from '@/lib/payslip-draft';
+import { auditFrom } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +27,8 @@ export async function POST(req: NextRequest) {
     if (!r) return jsonError('Employee not found, not active, or has no salary structure', 404);
 
     await ensurePayslipColumns();
-    const id = uuidv4();
-    await execute(
-      `INSERT INTO payslips (id, emp_code, month, year, basic_pay, hra, conveyance_allowance, food_vouchers, medical_insurance, other_deductions, incentives, el_encashment, gross_salary, total_deductions, total_adjustments, net_salary, paid_days, extra_work_days, extra_work_pay, variable_pay, extra_components, generated_by, generated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
-      [id, r.emp_code, month, year, r.basic_pay, r.hra, r.conveyance_allowance, r.food_vouchers, r.insurance, r.other_deductions, r.incentive, r.el_pay, r.net_payable, r.total_deductions, r.total_adjustments, r.final_salary, r.paid_days, r.extra_work_days, r.extra_work_pay, r.variable_pay, r.extra_components.length ? JSON.stringify(r.extra_components.map(x => ({ label: x.label, amount: x.amount, type: x.type }))) : null, user.email]
-    );
-    return jsonSuccess({ id, message: 'Payslip generated' });
+    const id = await insertPayslipRow(r, month, year, user.email, 'DRAFT');
+    await auditFrom(user, 'payslip_generated', 'payslip', id, { emp_code: r.emp_code, month, year, status: 'DRAFT' });
+    return jsonSuccess({ id, message: 'Draft payslip created. Approve it in Payslip History to publish and email it.' });
   } catch (e: any) { return jsonError(e, 500); }
 }

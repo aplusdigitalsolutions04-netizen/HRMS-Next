@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { initials, statusBadge, formatDT } from './helpers';
 import { openEmployeeDocument } from '@/lib/clientDocs';
 
@@ -19,9 +20,9 @@ function LeaveHistorySection({ employeeId, API, auth }) {
     <div className="emp-drawer-group">
       <h3>Leave History</h3>
       <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-        <div style={{ flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 8, background: '#efeafe' }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#6366f1' }}>{total}</div>
-          <div style={{ fontSize: 10, color: '#6366f1' }}>Total</div>
+        <div style={{ flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 8, background: '#eff6ff' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#2563eb' }}>{total}</div>
+          <div style={{ fontSize: 10, color: '#2563eb' }}>Total</div>
         </div>
         <div style={{ flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: 8, background: '#fffbeb' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#d97706' }}>{pending}</div>
@@ -52,7 +53,7 @@ function LeaveHistorySection({ employeeId, API, auth }) {
           ))}
         </div>
       )}
-      {total > 5 && <div style={{ fontSize: 11, color: '#6366f1', marginTop: 6 }}>+{total - 5} more requests</div>}
+      {total > 5 && <div style={{ fontSize: 11, color: '#2563eb', marginTop: 6 }}>+{total - 5} more requests</div>}
     </div>
   );
 }
@@ -119,7 +120,10 @@ export default function EmployeeDrawer({ selectedEmp, drawerLoading, drawerError
                   <div className="emp-drawer-row"><span className="lbl">CGPA</span><span className="val">{selectedEmp.cgpa || '—'}</span></div>
                 </div>
                 <div className="emp-drawer-group">
-                  <h3>Documents</h3>
+                  <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    Documents
+                    <Link to={`/employees/detail/${selectedEmp.id}?tab=documents`} style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', textTransform: 'none', letterSpacing: 0, whiteSpace: 'nowrap' }} title="Allow the employee to upload a document again, make documents compulsory">Upload permission &rarr;</Link>
+                  </h3>
                   {(() => {
                     let sources = {};
                     try { sources = JSON.parse(selectedEmp.document_sources || '{}'); } catch(e) {}
@@ -144,7 +148,7 @@ export default function EmployeeDrawer({ selectedEmp, drawerLoading, drawerError
                           <span className="val">
                             {path ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <a href="#" onClick={(e) => { e.preventDefault(); openEmployeeDocument(selectedEmp.id, field); }} style={{ color: '#6366f1', textDecoration: 'none', fontWeight: 500, fontSize: 13 }}>
+                                <a href="#" onClick={(e) => { e.preventDefault(); openEmployeeDocument(selectedEmp.id, field); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500, fontSize: 13 }}>
                                   View &darr;
                                 </a>
                                 {isEmployeeUploaded && (

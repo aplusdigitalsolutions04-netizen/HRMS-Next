@@ -151,16 +151,16 @@ export default function ProfilePage() {
     <div className="profile-page">
       <style>{`
         .profile-page {
-          max-width: 800px;
-          margin: 2rem auto;
+          max-width: 720px;
+          margin: 1rem auto;
           padding: 0 1rem;
           animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .profile-card {
-          padding: 2.5rem;
+          padding: 1.4rem 1.6rem;
           background: var(--glass-bg);
           border: 1px solid var(--glass-border);
-          border-radius: 24px;
+          border-radius: 16px;
           box-shadow: var(--shadow-lg);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
@@ -168,23 +168,23 @@ export default function ProfilePage() {
         .profile-header {
           display: flex;
           align-items: center;
-          gap: 1.5rem;
-          margin-bottom: 2.5rem;
-          padding-bottom: 1.5rem;
+          gap: 1rem;
+          margin-bottom: 1.3rem;
+          padding-bottom: 1rem;
           border-bottom: 1px solid var(--border);
         }
         .profile-avatar-large {
-          width: 80px;
-          height: 80px;
+          width: 56px;
+          height: 56px;
           border-radius: 50%;
           background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+          box-shadow: 0 8px 20px rgba(37,99,235, 0.15);
           overflow: hidden;
-          border: 3px solid white;
+          border: 2px solid white;
         }
         .profile-avatar-large img {
           width: 100%;
@@ -195,18 +195,18 @@ export default function ProfilePage() {
           color: white;
         }
         .profile-header h2 {
-          font-size: 1.4rem;
+          font-size: 1.1rem;
           color: var(--text-main);
-          margin-bottom: 0.25rem;
+          margin-bottom: 0.15rem;
         }
         .profile-role-badge {
           display: inline-block;
-          padding: 4px 12px;
+          padding: 3px 10px;
           border-radius: 50px;
           background: var(--primary-light);
           color: var(--primary);
           font-weight: 600;
-          font-size: 0.8rem;
+          font-size: 0.7rem;
           text-transform: uppercase;
           letter-spacing: 0.5px;
           font-family: 'Outfit', sans-serif;
@@ -214,42 +214,42 @@ export default function ProfilePage() {
         .profile-details {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 1.5rem;
-          margin-bottom: 2rem;
+          gap: 0.9rem 1.1rem;
+          margin-bottom: 1.2rem;
         }
         .profile-field {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
+          gap: 0.3rem;
         }
         .profile-field label {
           font-family: 'Outfit', sans-serif;
           font-weight: 600;
           color: var(--text-muted);
-          font-size: 0.85rem;
+          font-size: 0.72rem;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.4px;
         }
         .profile-field span {
-          font-size: 1rem;
+          font-size: 0.88rem;
           color: var(--text-main);
           font-weight: 500;
-          padding: 10px 14px;
+          padding: 7px 12px;
           background: #f8fafc;
-          border-radius: 12px;
+          border-radius: 8px;
           border: 1px solid var(--border);
-          min-height: 45px;
+          min-height: 34px;
           display: flex;
           align-items: center;
         }
         .profile-field input {
           width: 100%;
-          padding: 10px 14px;
-          border: 1.5px solid var(--border);
-          border-radius: 12px;
+          padding: 7px 12px;
+          border: 1px solid var(--border);
+          border-radius: 8px;
           background: #f8fafc;
           color: var(--text-main);
-          font-size: 1rem;
+          font-size: 0.88rem;
           transition: all 0.2s ease;
           outline: none;
         }
@@ -260,8 +260,8 @@ export default function ProfilePage() {
         }
         .profile-actions {
           display: flex;
-          gap: 1rem;
-          margin-top: 1.5rem;
+          gap: 0.7rem;
+          margin-top: 1rem;
         }
         @media (max-width: 600px) {
           .profile-details {

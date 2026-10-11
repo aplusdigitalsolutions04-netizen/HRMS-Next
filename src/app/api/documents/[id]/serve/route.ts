@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { downloadFileFromDrive } from '@/lib/googleDrive';
+import { downloadFileFromDrive, driveErrorMessage } from '@/lib/googleDrive';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,6 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
   } catch (e: any) {
     if (e.code === 'ENOENT') return jsonError('File not found on server', 404);
-    return jsonError(e, 500);
+    const friendly = driveErrorMessage(e);
+    return friendly ? jsonError(friendly, 503) : jsonError(e, 500);
   }
 }

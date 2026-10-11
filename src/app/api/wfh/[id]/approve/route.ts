@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { sendEmail } from '@/lib/email';
+import { sendRequestMail, hrRecipients, managerOf, appUrl, ymd } from '@/lib/request-mail';
 import { getStep, getMaxStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { logAudit } from '@/lib/audit';
 import { markWfhDays } from '@/lib/wfh-attendance';
@@ -34,7 +34,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (!checkPermission(user, 'approve_wfh')) return jsonError('Insufficient permissions', 403);
     }
 
-    await recordAction('wfh', id, lr.current_step || 0, user, 'APPROVED');
+    let note = '';
+    try { note = String((await req.json())?.note || '').trim(); } catch { /* no body */ }
+    const mgr = await managerOf(lr.employee_id);
+    const fd = ymd;
+    const mailVars = { employee_name: lr.full_name, request_type: 'Work From Home', from_date: fd(lr.start_date), to_date: fd(lr.end_date), reason: lr.reason || '-', manager_name: mgr?.full_name || '', remarks: note, review_link: `${appUrl()}/wfh/manage` };
+    await recordAction('wfh', id, lr.current_step || 0, user, 'APPROVED', note || undefined);
 
     const maxStep = lr.workflow_id ? await getMaxStep(lr.workflow_id) : 0;
     const isFinalStep = !currentStep || lr.current_step >= maxStep;
@@ -45,19 +50,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
       const nextStep = await getStep(lr.workflow_id, nextStepOrder);
       if (nextStep && nextStep.approver_type === 'HR') {
-        const hrAdmins = await query<RowDataPacket[]>('SELECT DISTINCT email FROM hr_admins WHERE email IS NOT NULL AND is_active = 1');
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-        if (hrAdmins.length > 0) {
-          sendEmail(
-            hrAdmins.map(a => a.email).join(','),
-            `WFH Request Approved by Manager — ${lr.full_name}`,
-            `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-              <h2 style="color:#0f172a">WFH Request Awaiting HR Approval</h2>
-              <p style="color:#475569">The reporting manager has approved this request. It now needs HR sign-off.</p>
-            </div>`,
-            { asUser: { id: user.id, type: user.type } }
-          );
-        }
+        const hr = await hrRecipients();
+        if (hr.to) sendRequestMail({ kind: 'wfh', event: 'to_hr', to: hr.to, bcc: hr.bcc || undefined, vars: mailVars, asUser: { id: user.id, type: user.type } });
         createNotification(
           `WFH Approval Needed`,
           `${lr.full_name}'s WFH request was approved by their manager and needs HR approval.`,
@@ -104,16 +98,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       String(lr.employee_id)
     );
 
-    sendEmail(
-      lr.email_id,
-      'WFH Approved',
-      `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#16a34a">WFH Approved</h2>
-        <p style="color:#334155">Dear ${lr.full_name || 'Employee'},</p>
-        <p style="color:#334155">Your Work From Home request has been approved.</p>
-      </div>`,
-      { asUser: { id: user.id, type: user.type } }
-    );
+    sendRequestMail({ kind: 'wfh', event: 'approved', to: lr.email_id, vars: mailVars, asUser: { id: user.id, type: user.type } });
 
     await logAudit({
       action: 'wfh_fully_approved',

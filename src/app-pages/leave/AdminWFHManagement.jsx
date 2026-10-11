@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Pagination from '../shared/Pagination';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -23,11 +24,12 @@ export default function AdminWFHManagement() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const perPage = 15;
+  const [perPage, setPerPage] = useState(15);
+  const perPageRef = useRef(15);
 
   const fetchRequests = (p = 1) => {
     setLoading(true);
-    const params = new URLSearchParams({ page: p, per_page: perPage });
+    const params = new URLSearchParams({ page: p, per_page: perPageRef.current });
     fetch(`${API}/wfh/admin/requests?${params}`, { headers: auth() })
       .then(r => r.json())
       .then(d => { setRequests(d.data || []); setTotal(d.total || 0); setPage(d.page || 1); setLoading(false); })
@@ -71,7 +73,7 @@ export default function AdminWFHManagement() {
 
   const s = {
     container: { padding: '0 28px', maxWidth: 1400, margin: '0 auto' },
-    card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff' },
+    card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' },
     btnPrimary: { padding: '9px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#10b981,#34d399)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
     btnOutline: { padding: '8px 16px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   };
@@ -129,13 +131,7 @@ export default function AdminWFHManagement() {
                 </tbody>
               </table>
             </div>
-            {total > perPage && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '14px 0' }}>
-                {Array.from({ length: Math.ceil(total / perPage) }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => { setPage(p); fetchRequests(p); }} style={{ padding: '6px 12px', borderRadius: 6, border: p === page ? '2px solid #10b981' : '1px solid #e2e8f0', background: p === page ? '#ecfdf5' : '#fff', color: p === page ? '#10b981' : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>{p}</button>
-                ))}
-              </div>
-            )}
+            <Pagination onPageSizeChange={n => { perPageRef.current = n; setPerPage(n); setPage(1); fetchRequests(1); }} page={page} totalItems={total} pageSize={perPage} itemLabel="requests" onPageChange={p => { setPage(p); fetchRequests(p); }} />
           </>
         )}
       </div>

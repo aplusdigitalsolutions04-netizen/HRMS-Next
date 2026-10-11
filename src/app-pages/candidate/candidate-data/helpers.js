@@ -93,7 +93,7 @@ export const parseVars = (raw) => {
 };
 
 export const CHIP_COLORS = [
-    { bg: '#ede9fe', color: '#7c3aed' },
+    { bg: '#dbeafe', color: '#2563eb' },
     { bg: '#dbeafe', color: '#1d4ed8' },
     { bg: '#dcfce7', color: '#15803d' },
     { bg: '#fef3c7', color: '#b45309' },

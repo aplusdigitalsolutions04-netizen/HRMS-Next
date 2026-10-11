@@ -103,7 +103,7 @@ function Employees() {
             ))}
             {employees.length === 0 && (
               <tr>
-                <td colSpan="7" style={{textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)'}}>
+                <td colSpan="7" style={{textAlign: 'center', padding: '1.5rem', color: 'var(--text-secondary)'}}>
                   No employees found.
                 </td>
               </tr>

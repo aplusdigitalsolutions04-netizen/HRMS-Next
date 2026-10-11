@@ -17,7 +17,7 @@ const BEHAVIORS = [
 const behaviorLabel = (b) => (BEHAVIORS.find(x => x[0] === b) || [b, b || '-'])[1].split(' - ')[0];
 
 const EMPTY = {
-  id: null, group_key: 'attendance', code: '', label: '', color: '#6366f1', description: '', used_for: '',
+  id: null, group_key: 'attendance', code: '', label: '', color: '#2563eb', description: '', used_for: '',
   behavior: 'other', present_weight: 0, unpaid_weight: 0, extra_pay: 0, source_codes: '',
   can_login: 0, is_working: 0, in_attendance: 0, is_active: 1, sort_order: 100, is_system: 0,
 };
@@ -25,7 +25,7 @@ const EMPTY = {
 const styles = `
 .sm-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
 .sm-tab { padding:8px 18px; border-radius:10px; border:1.5px solid #e2e8f0; background:#fff; color:#475569; font-weight:700; font-size:.88rem; cursor:pointer; transition:all .15s; }
-.sm-tab.on { border-color:#6366f1; background:#eef2ff; color:#4338ca; }
+.sm-tab.on { border-color:#2563eb; background:#eff6ff; color:#1e40af; }
 .sm-note { margin:0 0 14px; padding:10px 14px; border-radius:10px; background:#f8fafc; border:1px solid #eef2f7; font-size:.82rem; color:#64748b; line-height:1.5; }
 .sm-wrap { overflow-x:auto; border:1.5px solid #e2e8f0; border-radius:14px; background:#fff; }
 .sm-table { width:100%; border-collapse:collapse; min-width:980px; }
@@ -43,7 +43,7 @@ const styles = `
 .sm-act { white-space:nowrap; }
 .sm-btn { border:none; border-radius:8px; padding:6px 12px; font-weight:600; font-size:.8rem; cursor:pointer; margin-right:6px; transition:filter .15s; }
 .sm-btn:hover { filter:brightness(.95); }
-.sm-edit { background:#ede9fe; color:#5b21b6; }
+.sm-edit { background:#dbeafe; color:#5b21b6; }
 .sm-del { background:#fee2e2; color:#991b1b; }
 .sm-sw { position:relative; display:inline-block; width:38px; height:22px; }
 .sm-sw input { opacity:0; width:0; height:0; }

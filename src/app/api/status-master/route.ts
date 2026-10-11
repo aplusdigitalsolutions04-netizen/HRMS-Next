@@ -3,6 +3,7 @@ import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/util
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { getAllStatuses, clearStatusCache, ATTENDANCE_BEHAVIORS } from '@/lib/status-master';
+import { auditFrom } from '@/lib/audit';
 
 // Everyone who is logged in may READ the master (labels and colours are needed by the
 // employee attendance page too). Changing it needs the Attendance Settings permission.
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
       [group, code, d.label, d.color, d.description, d.used_for, d.behavior, d.present_weight, d.unpaid_weight, d.extra_pay, d.source_codes, d.can_login, d.is_working, d.in_attendance, d.is_active, d.sort_order]
     );
     clearStatusCache();
+    await auditFrom(user, 'status_added', 'status_master', code, { group, label: d.label, behavior: d.behavior });
     return jsonSuccess({ message: 'Status added' }, 201);
   } catch (e: any) { return jsonError(e?.message || e, e?.message && !/ER_|ECONN/.test(e.message) ? 422 : 500); }
 }
@@ -96,6 +98,7 @@ export async function PUT(req: NextRequest) {
       [d.label, d.color, d.description, d.used_for, d.behavior, d.present_weight, d.unpaid_weight, d.extra_pay, d.source_codes, d.can_login, d.is_working, d.in_attendance, d.is_active, d.sort_order, id]
     );
     clearStatusCache();
+    await auditFrom(user, 'status_changed', 'status_master', String(id), { group: rows[0].group_key, label: d.label, behavior: d.behavior, present_weight: d.present_weight, unpaid_weight: d.unpaid_weight, active: d.is_active });
     return jsonSuccess({ message: 'Status saved' });
   } catch (e: any) { return jsonError(e?.message || e, e?.message && !/ER_|ECONN/.test(e.message) ? 422 : 500); }
 }
@@ -115,6 +118,7 @@ export async function DELETE(req: NextRequest) {
     const used = await query<RowDataPacket[]>(`SELECT COUNT(*) AS n FROM ${table} WHERE status = ?`, [s.code]);
     if (Number(used[0].n) > 0) return jsonError(`${used[0].n} record(s) still use "${s.code}". Switch it off (inactive) instead of deleting it.`, 409);
     await execute('DELETE FROM status_master WHERE id = ?', [id]);
+    await auditFrom(user, 'status_deleted', 'status_master', s.code, { group: s.group_key });
     clearStatusCache();
     return jsonSuccess({ message: 'Status deleted' });
   } catch (e: any) { return jsonError(e, 500); }

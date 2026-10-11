@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const month = searchParams.get('month') || '';
     const year = searchParams.get('year') || '';
 
-    let where = 'WHERE p.emp_code=?'; const params = [user.emp_code];
+    let where = "WHERE p.emp_code=? AND p.status = 'APPROVED'"; const params = [user.emp_code];
     if (month) { where += ' AND p.month=?'; params.push(parseInt(month)); }
     if (year) { where += ' AND p.year=?'; params.push(parseInt(year)); }
 

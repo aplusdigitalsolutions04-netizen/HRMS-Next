@@ -76,7 +76,7 @@ function Departments() {
             ))}
             {departments.length === 0 && (
               <tr>
-                <td colSpan="5" style={{textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)'}}>
+                <td colSpan="5" style={{textAlign: 'center', padding: '1.5rem', color: 'var(--text-secondary)'}}>
                   No departments found.
                 </td>
               </tr>

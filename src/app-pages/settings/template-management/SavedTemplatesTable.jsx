@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { fmt, parseVars, CHIP_COLORS } from './helpers';
+import { Link } from 'react-router-dom';
 import Pagination, { paginate } from '../../shared/Pagination';
 
 const PAGE_SIZE = 10;
+const PILL = [['#dbeafe', '#1d4ed8'], ['#dcfce7', '#15803d'], ['#fef3c7', '#b45309'], ['#ede9fe', '#6d28d9'], ['#fee2e2', '#b91c1c'], ['#cffafe', '#0e7490'], ['#fce7f3', '#be185d']];
 
-export default function SavedTemplatesTable({ templates, loadingList, expandedId, setExpandedId, deleteTemplate, fetchTemplates, editTemplate }) {
+export default function SavedTemplatesTable({ templates: allTemplates, categories = [], loadingList, expandedId, setExpandedId, deleteTemplate, fetchTemplates, editTemplate }) {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(PAGE_SIZE);
-    useEffect(() => { setPage(1); }, [templates.length]);
+    const [cat, setCat] = useState('');
+    const names = categories.map(c => c.name);
+    const catOf = (t) => t.template_type || 'General';
+    const templates = cat ? allTemplates.filter(t => catOf(t) === cat) : allTemplates;
+    const pill = (name) => PILL[Math.max(0, names.indexOf(name)) % PILL.length];
+    useEffect(() => { setPage(1); }, [templates.length, cat]);
     const pageItems = paginate(templates, page, pageSize);
+    const countOf = (n) => allTemplates.filter(t => catOf(t) === n).length;
 
     return (
         <div style={{ marginTop: '8px' }}>
@@ -21,10 +29,16 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                             borderRadius: '50px', padding: '3px 12px',
                             fontSize: '.78rem', fontWeight: 700
                         }}>
-                            {templates.length} total
+                            {templates.length} {cat ? `in ${cat}` : 'total'}
                         </span>
                     )}
                 </div>
+            </div>
+
+            <div className="cat-chips">
+                <button className={`cat-chip${cat === '' ? ' on' : ''}`} onClick={() => setCat('')}>All<small>{allTemplates.length}</small></button>
+                {names.map(n => <button key={n} className={`cat-chip${cat === n ? ' on' : ''}`} onClick={() => setCat(n)}>{n}<small>{countOf(n)}</small></button>)}
+                <Link to="/masters/template-categories" className="cat-link">Manage categories</Link>
             </div>
 
             <div className="tpl-table-wrapper">
@@ -33,17 +47,16 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                         <tr>
                             <th>#</th>
                             <th>Template Name</th>
-                            <th>Type</th>
+                            <th>Category</th>
                             <th>Email Subject</th>
                             <th>Variables</th>
-                            <th>Created On</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loadingList ? (
                             <tr className="loading-row">
-                                <td colSpan={7}>
+                                <td colSpan={6}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '400px', margin: '0 auto' }}>
                                         {[1, 2, 3].map(n => <div key={n} className="skeleton" style={{ height: 14, opacity: 1 - n * 0.2 }} />)}
                                     </div>
@@ -51,11 +64,11 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                             </tr>
                         ) : templates.length === 0 ? (
                             <tr>
-                                <td colSpan={7}>
+                                <td colSpan={6}>
                                     <div className="empty-state">
                                         <div className="icon">📭</div>
-                                        <p><strong>No templates saved yet.</strong></p>
-                                        <p style={{ marginTop: '6px', fontSize: '.88rem' }}>Upload a file above and let AI extract the email structure.</p>
+                                        <p><strong>{cat ? `No templates in ${cat} yet.` : 'No templates saved yet.'}</strong></p>
+                                        <p style={{ marginTop: '6px', fontSize: '.88rem' }}>Click + Add Template, write the mail and pick the category it is for.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -66,25 +79,26 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                                         <td style={{ color: '#94a3b8', fontWeight: 600, width: 40 }}>{(page - 1) * pageSize + i + 1}</td>
                                         <td>
                                             <div style={{ fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' }}>{t.name}</div>
+                                            <div style={{ fontSize: '.7rem', color: '#94a3b8', marginTop: 2 }}>{fmt(t.created_on)}</div>
                                         </td>
                                         <td>
                                             <span style={{
                                                 display: 'inline-block', padding: '3px 10px', borderRadius: '50px', whiteSpace: 'nowrap',
                                                 fontSize: '.72rem', fontWeight: 700,
-                                                background: t.template_type === 'Interview' ? '#dbeafe' : '#f1f5f9',
-                                                color: t.template_type === 'Interview' ? '#1d4ed8' : '#475569',
+                                                background: pill(catOf(t))[0],
+                                                color: pill(catOf(t))[1],
                                             }}>
                                                 {t.template_type || 'General'}
                                             </span>
                                         </td>
-                                        <td style={{ color: '#475569', maxWidth: '320px' }}>
+                                        <td style={{ color: '#475569', maxWidth: '260px' }}>
                                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {t.subject}
                                             </div>
                                         </td>
                                         <td>
                                             <div className="vars-wrap">
-                                                {parseVars(t.variables).slice(0, 3).map((v, i) => {
+                                                {parseVars(t.variables).slice(0, 2).map((v, i) => {
                                                     const c = CHIP_COLORS[i % CHIP_COLORS.length];
                                                     return (
                                                         <span key={i} className="var-chip" style={{ background: c.bg, color: c.color, fontSize: '.7rem', padding: '2px 9px' }}>
@@ -92,16 +106,13 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                                                         </span>
                                                     );
                                                 })}
-                                                {parseVars(t.variables).length > 3 && (
-                                                    <span style={{ color: '#94a3b8', fontSize: '.75rem', alignSelf: 'center' }}>
-                                                        +{parseVars(t.variables).length - 3} more
+                                                {parseVars(t.variables).length > 2 && (
+                                                    <span style={{ color: '#94a3b8', fontSize: '.75rem', alignSelf: 'center', whiteSpace: 'nowrap' }}>
+                                                        +{parseVars(t.variables).length - 2}
                                                     </span>
                                                 )}
                                                 {parseVars(t.variables).length === 0 && <span style={{ color: '#cbd5e1', fontSize: '.8rem' }}>—</span>}
                                             </div>
-                                        </td>
-                                        <td style={{ color: '#64748b', fontSize: '.85rem', whiteSpace: 'nowrap' }}>
-                                            {fmt(t.created_on)}
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
@@ -109,19 +120,19 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                                                     className="tbl-action tbl-view"
                                                     onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
                                                 >
-                                                    {expandedId === t.id ? '🔼 Hide' : '👁️ View'}
+                                                    {expandedId === t.id ? 'Hide' : 'View'}
                                                 </button>
                                                 <button
                                                     className="tbl-action tbl-view"
                                                     onClick={() => editTemplate(t)}
                                                 >
-                                                    ✏️ Edit
+                                                    Edit
                                                 </button>
                                                 <button
                                                     className="tbl-action tbl-del"
                                                     onClick={() => deleteTemplate(t.id, t.name)}
                                                 >
-                                                    🗑️ Delete
+                                                    Delete
                                                 </button>
                                             </div>
                                         </td>
@@ -130,7 +141,7 @@ export default function SavedTemplatesTable({ templates, loadingList, expandedId
                                     {/* Expanded Preview Row */}
                                     {expandedId === t.id && (
                                         <tr className="expand-row">
-                                            <td colSpan={7}>
+                                            <td colSpan={6}>
                                                 <div className="expand-inner">
                                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                                         <div className="expand-field">

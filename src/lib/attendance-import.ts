@@ -87,7 +87,7 @@ export async function importTeamOfficeMonth(month: number, year: number, byEmail
     // status's "TeamOffice codes"; punches on a week off / holiday are Extra Work; a holiday
     // nobody came in on is a Holiday (not an absence); a short Present day is a Half Day.
     const { status, recognized } = await resolveAttendanceStatus({
-      rawStatus, inTime, outTime, hours: workingHours, threshold: halfDayThreshold, isHoliday: holidays.has(dateStr),
+      rawStatus, inTime, outTime, hours: workingHours, threshold: halfDayThreshold, isHoliday: holidays.has(dateStr), date: dateStr,
     });
     // An unrecognised TeamOffice code is inferred from the punches; keep it visible for HR.
     const remark = recognized ? 'Imported from TeamOffice' : `Imported from TeamOffice (raw status: ${rawStatus})`;

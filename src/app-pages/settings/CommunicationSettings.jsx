@@ -277,7 +277,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
     const map = {
       ACTIVE: { bg:'#dcfce7', c:'#166534', label:'Active' },
       PAUSED: { bg:'#fef3c7', c:'#92400e', label:'Paused' },
-      COMPLETED: { bg:'#e0e7ff', c:'#3730a3', label:'Completed' },
+      COMPLETED: { bg:'#dbeafe', c:'#1e3a8a', label:'Completed' },
       OVERDUE: { bg:'#fee2e2', c:'#991b1b', label:'Overdue' },
       CANCELLED: { bg:'#f1f5f9', c:'#64748b', label:'Cancelled' },
     };
@@ -293,9 +293,9 @@ function CandidateReminderManagement({ saving, setSaving }) {
           { key:'active_count', label:'Active Reminders', color:'#10b981', bg:'#ecfdf5', border:'#10b981', icon:'⏰' },
           { key:'paused_count', label:'Paused Reminders', color:'#d97706', bg:'#fffbeb', border:'#f59e0b', icon:'⏸' },
           { key:'overdue_count', label:'Overdue Reminders', color:'#dc2626', bg:'#fef2f2', border:'#ef4444', icon:'⚠️' },
-          { key:'completed_today', label:'Completed Today', color:'#4f46e5', bg:'#eef2ff', border:'#6366f1', icon:'✅' },
+          { key:'completed_today', label:'Completed Today', color:'#1d4ed8', bg:'#eff6ff', border:'#2563eb', icon:'✅' },
         ].map(c => (
-          <div key={c.key} style={{ background:c.bg, borderRadius:14, padding:'14px 18px', border:`1.5px solid ${c.border}20`, boxShadow:'0 2px 8px rgba(0,0,0,.04)', display:'flex', flexDirection:'column', gap:2 }}>
+          <div key={c.key} style={{ background:c.bg, borderRadius:14, padding:'14px 14px', border:`1.5px solid ${c.border}20`, boxShadow:'0 2px 8px rgba(0,0,0,.04)', display:'flex', flexDirection:'column', gap:2 }}>
             <div style={{ fontSize:'.72rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.5px' }}>{c.icon} {c.label}</div>
             <div style={{ fontSize:'1.4rem', fontWeight:700, fontFamily:'Outfit,sans-serif', lineHeight:1.2, color:c.color }}>{dashboard[c.key] ?? 0}</div>
           </div>
@@ -326,17 +326,17 @@ function CandidateReminderManagement({ saving, setSaving }) {
           {COMMUNICATION_TYPES.map(t => <option key={t}>{t}</option>)}
         </select>
         <button className="btn-premium" onClick={() => { fetchReminders(); fetchDashboard(); }}
-          style={{ padding:'9px 18px', fontSize:'.85rem', whiteSpace:'nowrap' }}>🔄 Refresh</button>
+          style={{ padding:'9px 14px', fontSize:'.85rem', whiteSpace:'nowrap' }}>🔄 Refresh</button>
       </div>
 
       {/* Table */}
       <div style={{ overflow: 'hidden', borderRadius: 16, border: '1.5px solid var(--border)', boxShadow: 'var(--shadow-md)' }}>
         {loading ? (
-          <div style={{ display:'flex', justifyContent:'center', padding:56 }}>
+          <div style={{ display:'flex', justifyContent:'center', padding:42 }}>
             <div style={{ width:30, height:30, borderRadius:'50%', border:'3px solid #e2e8f0', borderTopColor:'var(--primary)', animation:'spin .7s linear infinite' }} />
           </div>
         ) : reminders.length === 0 ? (
-          <div style={{ textAlign:'center', padding:'48px 20px', color:'#94a3b8' }}>
+          <div style={{ textAlign:'center', padding:'36px 15px', color:'#94a3b8' }}>
             <div style={{ fontSize:'2.5rem', marginBottom:10, opacity:.6 }}>📬</div>
             <div style={{ fontWeight:600, fontSize:'1rem', marginBottom:4, color:'#64748b' }}>No reminders found</div>
             <div style={{ fontSize:'.85rem' }}>Select <strong>"Remind Me Later"</strong> from Candidate Pool to create reminders.</div>
@@ -370,10 +370,10 @@ function CandidateReminderManagement({ saving, setSaving }) {
                       <div style={{ fontWeight:600, color:'#1e293b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.candidate_name}>{r.candidate_name || '—'}</div>
                     </div>
                   </td>
-                  <td style={{ padding:'10px 14px', verticalAlign:'middle', color:'#4338ca', fontSize:'.82rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.candidate_email}>{r.candidate_email || '—'}</td>
+                  <td style={{ padding:'10px 14px', verticalAlign:'middle', color:'#1e40af', fontSize:'.82rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.candidate_email}>{r.candidate_email || '—'}</td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle', fontSize:'.82rem', color:'#475569' }}>{r.job_role || '—'}</td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle' }}>
-                    <span style={{ background:'#ede9fe', color:'#5b21b6', padding:'2px 10px', borderRadius:50, fontWeight:600, fontSize:'.72rem', display:'inline-block', whiteSpace:'nowrap', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis' }} title={r.communication_type}>{r.communication_type || '—'}</span>
+                    <span style={{ background:'#dbeafe', color:'#5b21b6', padding:'2px 10px', borderRadius:50, fontWeight:600, fontSize:'.72rem', display:'inline-block', whiteSpace:'nowrap', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis' }} title={r.communication_type}>{r.communication_type || '—'}</span>
                   </td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle', fontSize:'.82rem', color:'#64748b' }}>{formatDelay(r.custom_delay || r.default_delay)}</td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle', fontSize:'.78rem', color:'#64748b', whiteSpace:'nowrap' }}>{formatDT(r.reminder_time)}</td>
@@ -389,7 +389,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
                       ].map((btn, bi) => (
                         <button key={bi} onClick={btn.onClick} title={btn.title}
                           style={{ width:30, height:30, borderRadius:8, border:'1.5px solid #e2e8f0', background:'#fff', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:'.8rem', transition:'all .15s', color:btn.danger?'#ef4444':'#64748b' }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = btn.danger?'#ef4444':'var(--primary)'; e.currentTarget.style.background = btn.danger?'#fef2f2':'#eef2ff'; }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = btn.danger?'#ef4444':'var(--primary)'; e.currentTarget.style.background = btn.danger?'#fef2f2':'#eff6ff'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}>
                           {btn.icon}
                         </button>
@@ -410,11 +410,11 @@ function CandidateReminderManagement({ saving, setSaving }) {
       {editing && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, animation:'fadeIn .2s ease' }} onClick={() => setEditing(null)}>
           <div style={{ background:'#fff', borderRadius:16, width:'92%', maxWidth:480, boxShadow:'0 20px 60px rgba(0,0,0,.15)', maxHeight:'90vh', overflowY:'auto', animation:'modalSlide .25s ease' }} onClick={e => e.stopPropagation()}>
-            <div style={{ borderBottom:'1.5px solid #f1f5f9', padding:'18px 22px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ borderBottom:'1.5px solid #f1f5f9', padding:'14px 17px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontSize:'1.05rem', color:'#1e293b' }}>Edit Reminder</h3>
               <button onClick={() => setEditing(null)} style={{ width:30, height:30, borderRadius:8, border:'none', background:'#f1f5f9', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'#64748b' }}>✕</button>
             </div>
-            <div style={{ padding:'20px 22px' }}>
+            <div style={{ padding:'15px 17px' }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
                 <FormField label="Candidate">
                   <div style={{ fontWeight:600, fontSize:'.9rem', padding:'8px 0', color:'#1e293b' }}>{editing.candidate_name}</div>
@@ -428,7 +428,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
                   <div style={{ fontSize:'.88rem', color:'#64748b', padding:'8px 0' }}>{formatDelay(editing.custom_delay || editing.default_delay)}</div>
                 </FormField>
                 <FormField label="Email">
-                  <div style={{ fontSize:'.82rem', color:'#4338ca', padding:'8px 0' }}>{editing.candidate_email}</div>
+                  <div style={{ fontSize:'.82rem', color:'#1e40af', padding:'8px 0' }}>{editing.candidate_email}</div>
                 </FormField>
                 <FormField label="New Reminder Delay" fullWidth>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -443,9 +443,9 @@ function CandidateReminderManagement({ saving, setSaving }) {
                 </FormField>
               </div>
             </div>
-            <div style={{ borderTop:'1.5px solid #f1f5f9', padding:'14px 22px', display:'flex', gap:10, justifyContent:'flex-end' }}>
-              <button className="btn-premium-outline" onClick={() => setEditing(null)} style={{ padding:'8px 18px', fontSize:'.88rem' }}>Cancel</button>
-              <button className="btn-premium" onClick={saveEdit} disabled={saving} style={{ padding:'8px 18px', fontSize:'.88rem' }}>{saving ? 'Saving...' : 'Save Changes'}</button>
+            <div style={{ borderTop:'1.5px solid #f1f5f9', padding:'14px 17px', display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button className="btn-premium-outline" onClick={() => setEditing(null)} style={{ padding:'8px 14px', fontSize:'.88rem' }}>Cancel</button>
+              <button className="btn-premium" onClick={saveEdit} disabled={saving} style={{ padding:'8px 14px', fontSize:'.88rem' }}>{saving ? 'Saving...' : 'Save Changes'}</button>
             </div>
           </div>
         </div>
@@ -455,11 +455,11 @@ function CandidateReminderManagement({ saving, setSaving }) {
       {viewing && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, animation:'fadeIn .2s ease' }} onClick={() => setViewing(null)}>
           <div style={{ background:'#fff', borderRadius:16, width:'92%', maxWidth:500, boxShadow:'0 20px 60px rgba(0,0,0,.15)', maxHeight:'90vh', overflowY:'auto', animation:'modalSlide .25s ease' }} onClick={e => e.stopPropagation()}>
-            <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', color:'#fff', padding:'16px 22px 14px', borderTopLeftRadius:16, borderTopRightRadius:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ background:'linear-gradient(135deg,#1e40af,#2563eb)', color:'#fff', padding:'16px 17px 14px', borderTopLeftRadius:16, borderTopRightRadius:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'1rem' }}>Reminder Details</h3>
               <button onClick={() => setViewing(null)} style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,.2)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>✕</button>
             </div>
-            <div style={{ padding:'18px 22px' }}>
+            <div style={{ padding:'14px 17px' }}>
               {[
                 ['Candidate', viewing.candidate_name],
                 ['Email', viewing.candidate_email],

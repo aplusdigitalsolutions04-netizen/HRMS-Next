@@ -36,11 +36,17 @@ export const ALL_PERMISSIONS: Record<string, { label: string; group: string; def
   manage_salary_structures:{ label: "Manage Salary Structures",   group: "Payroll",              default: false },
   generate_payslips:       { label: "Generate Payslips",          group: "Payroll",              default: false },
   delete_payslips:         { label: "Delete Payslips",            group: "Payroll",              default: false },
+  approve_payslips:        { label: "Approve & Email Payslips",   group: "Payroll",              default: false },
+  approve_regularization:  { label: "Approve Attendance Corrections", group: "Attendance",       default: false },
+  view_reports:            { label: "View & Export Reports",      group: "Reports",              default: false },
+  view_assets:             { label: "View Assets",                group: "Assets",               default: false },
+  manage_assets:           { label: "Manage Assets",              group: "Assets",               default: false },
+  view_audit_log:          { label: "View Audit Log",             group: "System",               default: false },
 };
 
 export const PERMISSION_GROUPS = [
   "Dashboard", "Employee Management", "Leave Management", "Attendance",
-  "Recruitment", "Communications", "Payroll", "System Masters", "Settings", "System",
+  "Recruitment", "Communications", "Payroll", "Reports", "Assets", "System Masters", "Settings", "System",
 ];
 
 export function getDefaultPermissions(): Record<string, boolean> {

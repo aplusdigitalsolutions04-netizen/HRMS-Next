@@ -20,6 +20,19 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
     official_email: 'VARCHAR(150) NULL',
     official_no: 'VARCHAR(50) NULL',
     pay_mode: "VARCHAR(20) NULL DEFAULT 'Online'",
+    required_documents: 'TEXT NULL',
+    exit_date: 'DATE NULL', // set when an employee is dropped or deleted - the Attrition report reads it
+  },
+  // Missed punch / late coming go to the reporting manager first, then HR (same approval engine as leave).
+  attendance_regularizations: {
+    workflow_id: 'VARCHAR(36) NULL',
+    current_step: 'INT NULL',
+  },
+  // Own mailbox: the incoming (IMAP) server next to the outgoing (SMTP) one that was already stored.
+  user_email_accounts: {
+    imap_host: 'VARCHAR(255) NULL',
+    imap_port: 'INT NULL',
+    is_default: 'TINYINT(1) NOT NULL DEFAULT 0',
   },
   salary_structures: {
     extra_components: 'TEXT NULL',
@@ -31,6 +44,10 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
     extra_work_pay: 'FLOAT NOT NULL DEFAULT 0',
     variable_pay: 'FLOAT NOT NULL DEFAULT 0',
     extra_components: 'TEXT NULL',
+    // Draft -> Approved flow: employees only see APPROVED payslips; payslips that existed before stay APPROVED.
+    status: "VARCHAR(20) NOT NULL DEFAULT 'APPROVED'",
+    approved_by: 'VARCHAR(150) NULL',
+    approved_on: 'DATETIME NULL',
   },
 };
 const REQUIRED_TABLES: string[] = [
@@ -48,6 +65,45 @@ const REQUIRED_TABLES: string[] = [
     id VARCHAR(36) PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL,
     reason TEXT, status VARCHAR(50) DEFAULT 'Pending', workflow_id VARCHAR(36), current_step INT,
     applied_on DATETIME DEFAULT CURRENT_TIMESTAMP, reviewed_by VARCHAR(255), reviewed_on DATETIME, rejection_reason TEXT)`,
+  // "I forgot to punch" requests: the employee asks, HR approves, attendance is corrected.
+  `CREATE TABLE IF NOT EXISTS attendance_regularizations (
+    id VARCHAR(36) PRIMARY KEY, emp_code VARCHAR(50) NOT NULL, attendance_date DATE NOT NULL,
+    in_time VARCHAR(20) NULL, out_time VARCHAR(20) NULL, request_type VARCHAR(30) DEFAULT 'Missed punch',
+    reason TEXT, status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+    applied_on DATETIME DEFAULT CURRENT_TIMESTAMP, reviewed_by VARCHAR(255) NULL, reviewed_on DATETIME NULL, review_note TEXT NULL,
+    KEY (emp_code), KEY (status), KEY (attendance_date))`,
+  // Company assets (laptop, ID card, ...) and who has them.
+  `CREATE TABLE IF NOT EXISTS assets (
+    id VARCHAR(36) PRIMARY KEY, asset_tag VARCHAR(60) NOT NULL, asset_type VARCHAR(60) NOT NULL DEFAULT 'Other',
+    name VARCHAR(150) NOT NULL, serial_no VARCHAR(120) NULL, notes TEXT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Available', created_by VARCHAR(255) NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_asset_tag (asset_tag), KEY (status))`,
+  `CREATE TABLE IF NOT EXISTS asset_assignments (
+    id VARCHAR(36) PRIMARY KEY, asset_id VARCHAR(36) NOT NULL, employee_id VARCHAR(36) NOT NULL,
+    assigned_on DATE NOT NULL, returned_on DATE NULL, condition_out VARCHAR(150) NULL, condition_in VARCHAR(150) NULL,
+    notes TEXT NULL, assigned_by VARCHAR(255) NULL, returned_by VARCHAR(255) NULL,
+    KEY (asset_id), KEY (employee_id))`,
+  // Master list of asset types (Laptop, ID Card, ...). HR manages it; nothing is built in.
+  `CREATE TABLE IF NOT EXISTS asset_types (
+    id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(60) NOT NULL, is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_asset_type (name))`,
+  // HR's permission for an employee to upload a document that is already in (one more upload, then it is used up).
+  `CREATE TABLE IF NOT EXISTS document_reupload_permissions (
+    id INT AUTO_INCREMENT PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, document_type VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'requested', note VARCHAR(300) NULL, requested_on DATETIME NULL,
+    granted_by VARCHAR(255) NULL, granted_on DATETIME NULL, UNIQUE KEY uq_doc_perm (employee_id, document_type))`,
+  // Master list of leave types (Annual, Sick, ...). HR manages it; the employee forms and filters read from it.
+  `CREATE TABLE IF NOT EXISTS leave_types (
+    id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(60) NOT NULL, is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_leave_type (name))`,
+  // Master list of email template categories. request_kind links a category to a request mail
+  // (leave / wfh / missed_punch / late_coming) so Settings > Request Mails only offers templates made for it.
+  `CREATE TABLE IF NOT EXISTS template_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, request_kind VARCHAR(30) NULL,
+    is_system TINYINT(1) NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_template_category (name))`,
+  // Per-user settings: notification choices, language, dashboard widgets.
+  `CREATE TABLE IF NOT EXISTS user_preferences (
+    user_key VARCHAR(120) PRIMARY KEY, prefs TEXT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
 ];
 
 async function syncSchema(p: Pool): Promise<void> {
@@ -70,6 +126,25 @@ async function syncSchema(p: Pool): Promise<void> {
       try { await p.query(ddl); }
       catch (e: any) { console.error('[schema] could not create table:', e?.message || e); }
     }
+    // More than one email per person: the old rule allowed a single row per person, now it is one row per address.
+    try {
+      const [ix] = await p.query<RowDataPacket[]>("SELECT COUNT(*) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_email_accounts' AND INDEX_NAME = 'uq_user'");
+      if (Number(ix[0]?.n) > 0) {
+        await p.query('ALTER TABLE user_email_accounts DROP INDEX uq_user');
+        await p.query('ALTER TABLE user_email_accounts ADD UNIQUE KEY uq_user_email (user_id, user_type, sender_email)');
+        console.log('[schema] user_email_accounts now allows several emails per person');
+      }
+      await p.query("UPDATE user_email_accounts a SET is_default = 1 WHERE is_default = 0 AND NOT EXISTS (SELECT 1 FROM (SELECT user_id, user_type FROM user_email_accounts WHERE is_default = 1) d WHERE d.user_id = a.user_id AND d.user_type = a.user_type)");
+    } catch (e: any) { console.error('[schema] could not update user_email_accounts:', e?.message || e); }
+    // notifications.user_id was a number, but people (employees, managers, HR) are identified by a text id, so every
+    // notification meant for one person failed to save. Make it text; existing numbers are kept.
+    try {
+      const [t] = await p.query<RowDataPacket[]>("SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifications' AND COLUMN_NAME = 'user_id'");
+      if (t[0] && /int/i.test(String(t[0].DATA_TYPE))) {
+        await p.query('ALTER TABLE notifications MODIFY COLUMN user_id VARCHAR(36) NULL');
+        console.log('[schema] notifications.user_id is now text');
+      }
+    } catch (e: any) { console.error('[schema] could not change notifications.user_id:', e?.message || e); }
   } catch (e: any) {
     console.error('[schema] check skipped:', e?.message || e);
   }
@@ -80,7 +155,10 @@ export async function getPool(): Promise<Pool> {
     if (!process.env.MYSQL_PASSWORD) {
       throw new Error('MYSQL_PASSWORD environment variable is not set');
     }
-    pool = mysql.createPool({
+    // During development every hot reload re-runs this module. Reusing one pool (kept on globalThis) stops each reload
+    // from opening another set of connections until MySQL says "Too many connections".
+    pool = (globalThis as any).__hrmPool || null;
+    if (!pool) pool = mysql.createPool({
       host: process.env.MYSQL_HOST || 'localhost',
       user: process.env.MYSQL_USER || 'root',
       password: process.env.MYSQL_PASSWORD,
@@ -91,6 +169,7 @@ export async function getPool(): Promise<Pool> {
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
     });
+    (globalThis as any).__hrmPool = pool;
     schemaReady = syncSchema(pool);
   }
   if (schemaReady) await schemaReady;

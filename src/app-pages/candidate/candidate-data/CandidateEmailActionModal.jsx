@@ -74,7 +74,7 @@ const CandidateEmailActionModal = ({
 
     return (
         <div className="email-modal-overlay" onClick={() => !saving && onClose()}>
-            <div className="email-modal" onClick={e => e.stopPropagation()} style={{ width: 580 }}>
+            <div className="email-modal" onClick={e => e.stopPropagation()} style={{ width: 1200, maxWidth: '97vw' }}>
                 <div className="email-modal-header">
                     <div className="email-modal-title">📧 Email — {candidateName}</div>
                     <button className="email-modal-close" onClick={onClose}>✕</button>
@@ -86,7 +86,7 @@ const CandidateEmailActionModal = ({
                     </div>
 
                     {status.status === 'email_sent' && (
-                        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                        <div style={{ textAlign: 'center', padding: '18px 0' }}>
                             <div style={{ fontSize: '3rem', marginBottom: 12 }}>✅</div>
                             <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#166534', marginBottom: 6 }}>Email Already Sent</div>
                             <div style={{ color: '#64748b', fontSize: '.85rem', marginBottom: 20 }}>
@@ -106,7 +106,7 @@ const CandidateEmailActionModal = ({
                                     {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
                             </div>
-                            {templateSubject && <div style={{ background: '#eef2ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '.85rem', color: '#4338ca', fontWeight: 600 }}>Subject: {templateSubject}</div>}
+                            {templateSubject && <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '.85rem', color: '#1e40af', fontWeight: 600 }}>Subject: {templateSubject}</div>}
                             <div style={{ marginBottom: 16 }}>
                                 <label className="em-label" style={{ marginBottom: 6, fontSize: '.72rem' }}>📤 From (Sender) — company email</label>
                                 <div style={{ display: 'flex', gap: 6 }}>
@@ -115,17 +115,17 @@ const CandidateEmailActionModal = ({
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <button className="btn-premium" onClick={() => onSend({})} disabled={!!saving} style={{ flex: 1, minWidth: 130, padding: '12px 20px' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Now'}</button>
-                                <button className="btn-premium-outline" onClick={onSaveDraft} disabled={!!saving} style={{ flex: 1, minWidth: 130, padding: '12px 20px' }}>{saving === 'draft' ? 'Saving...' : '💾 Save Draft'}</button>
-                                <button className="btn-premium-outline" onClick={onCreateReminder} disabled={!!saving} style={{ flex: 1, minWidth: 130, padding: '12px 20px', borderColor: '#f59e0b', color: '#d97706' }}>{saving === 'remind' ? 'Saving...' : '⏰ Remind Me Later'}</button>
+                                <button className="btn-premium" onClick={() => onSend({})} disabled={!!saving} style={{ flex: 1, minWidth: 130, padding: '12px 15px' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Now'}</button>
+                                <button className="btn-premium-outline" onClick={onSaveDraft} disabled={!!saving} style={{ flex: 1, minWidth: 130, padding: '12px 15px' }}>{saving === 'draft' ? 'Saving...' : '💾 Save Draft'}</button>
+                                <button className="btn-premium-outline" onClick={onCreateReminder} disabled={!!saving} style={{ flex: 1, minWidth: 130, padding: '12px 15px', borderColor: '#f59e0b', color: '#d97706' }}>{saving === 'remind' ? 'Saving...' : '⏰ Remind Me Later'}</button>
                             </div>
                         </>
                     )}
 
                     {status.status === 'draft_saved' && status.draft && (
                         <>
-                            <div style={{ background: '#eef2ff', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
-                                <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Template</div>
+                            <div style={{ background: '#eff6ff', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+                                <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Template</div>
                                 <div style={{ fontSize: '.88rem', fontWeight: 600 }}>{status.draft.template_name || '—'}</div>
                                 <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 10, marginBottom: 4 }}>Subject</div>
                                 <div style={{ fontSize: '.85rem' }}>{status.draft.subject || '—'}</div>
@@ -133,9 +133,9 @@ const CandidateEmailActionModal = ({
                             <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px', marginBottom: 16, border: '1.5px solid #e2e8f0', maxHeight: 180, overflowY: 'auto', fontSize: '.82rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{status.draft.body || '—'}</div>
                             {status.draft.last_saved_at && <div style={{ fontSize: '.78rem', color: '#94a3b8', marginBottom: 16 }}>Last saved: {new Date(status.draft.last_saved_at).toLocaleString()}</div>}
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <button className="btn-premium" onClick={() => onSend(status)} disabled={!!saving} style={{ flex: 1, padding: '12px 20px' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Email'}</button>
-                                <button className="btn-premium-outline" onClick={editDraft} disabled={!!saving} style={{ flex: 1, padding: '12px 20px' }}>✏️ Edit Draft</button>
-                                <button className="btn-premium-outline" onClick={deleteDraft} style={{ flex: 1, padding: '12px 20px', borderColor: '#ef4444', color: '#dc2626' }}>🗑 Delete Draft</button>
+                                <button className="btn-premium" onClick={() => onSend(status)} disabled={!!saving} style={{ flex: 1, padding: '12px 15px' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Email'}</button>
+                                <button className="btn-premium-outline" onClick={editDraft} disabled={!!saving} style={{ flex: 1, padding: '12px 15px' }}>✏️ Edit Draft</button>
+                                <button className="btn-premium-outline" onClick={deleteDraft} style={{ flex: 1, padding: '12px 15px', borderColor: '#ef4444', color: '#dc2626' }}>🗑 Delete Draft</button>
                             </div>
                         </>
                     )}
@@ -156,16 +156,16 @@ const CandidateEmailActionModal = ({
                                 <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 16, border: '1.5px solid #e2e8f0', maxHeight: 120, overflowY: 'auto', fontSize: '.82rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{status.draft.body || '—'}</div>
                             )}
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <button className="btn-premium" onClick={() => onSend(status)} disabled={!!saving} style={{ flex: 1, padding: '12px 20px' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Now'}</button>
-                                <button className="btn-premium-outline" onClick={pauseReminder} disabled={!!saving} style={{ flex: 1, padding: '12px 20px', borderColor: '#f59e0b', color: '#d97706' }}>⏸ Pause Reminder</button>
-                                <button className="btn-premium-outline" onClick={cancelReminder} style={{ flex: 1, padding: '12px 20px', borderColor: '#ef4444', color: '#dc2626' }}>🗑 Cancel Reminder</button>
+                                <button className="btn-premium" onClick={() => onSend(status)} disabled={!!saving} style={{ flex: 1, padding: '12px 15px' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Now'}</button>
+                                <button className="btn-premium-outline" onClick={pauseReminder} disabled={!!saving} style={{ flex: 1, padding: '12px 15px', borderColor: '#f59e0b', color: '#d97706' }}>⏸ Pause Reminder</button>
+                                <button className="btn-premium-outline" onClick={cancelReminder} style={{ flex: 1, padding: '12px 15px', borderColor: '#ef4444', color: '#dc2626' }}>🗑 Cancel Reminder</button>
                             </div>
                         </>
                     )}
 
                     {status.status === 'overdue' && status.reminder && (
                         <>
-                            <div style={{ background: '#fef2f2', borderRadius: 12, padding: '14px 18px', marginBottom: 16, border: '1.5px solid #fecaca', display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ background: '#fef2f2', borderRadius: 12, padding: '14px 14px', marginBottom: 16, border: '1.5px solid #fecaca', display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{ fontSize: '1.6rem' }}>🔴</div>
                                 <div>
                                     <div style={{ fontWeight: 700, color: '#991b1b', fontSize: '1rem' }}>Reminder Overdue</div>
@@ -176,9 +176,9 @@ const CandidateEmailActionModal = ({
                                 <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 16, border: '1.5px solid #e2e8f0', maxHeight: 140, overflowY: 'auto', fontSize: '.82rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{status.draft.body || '—'}</div>
                             )}
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <button className="btn-premium" onClick={() => onSend(status)} disabled={!!saving} style={{ flex: 1, padding: '12px 20px', background: 'linear-gradient(135deg,#dc2626,#ef4444)' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Now'}</button>
-                                <button className="btn-premium-outline" onClick={rescheduleReminder} disabled={!!saving} style={{ flex: 1, padding: '12px 20px', borderColor: '#f59e0b', color: '#d97706' }}>🔄 Reschedule</button>
-                                <button className="btn-premium-outline" onClick={cancelReminder} style={{ flex: 1, padding: '12px 20px', borderColor: '#ef4444', color: '#dc2626' }}>🗑 Cancel</button>
+                                <button className="btn-premium" onClick={() => onSend(status)} disabled={!!saving} style={{ flex: 1, padding: '12px 15px', background: 'linear-gradient(135deg,#dc2626,#ef4444)' }}>{saving === 'sending' ? 'Sending...' : '📤 Send Now'}</button>
+                                <button className="btn-premium-outline" onClick={rescheduleReminder} disabled={!!saving} style={{ flex: 1, padding: '12px 15px', borderColor: '#f59e0b', color: '#d97706' }}>🔄 Reschedule</button>
+                                <button className="btn-premium-outline" onClick={cancelReminder} style={{ flex: 1, padding: '12px 15px', borderColor: '#ef4444', color: '#dc2626' }}>🗑 Cancel</button>
                             </div>
                         </>
                     )}

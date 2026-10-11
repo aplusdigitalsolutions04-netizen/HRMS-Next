@@ -25,7 +25,6 @@ const GROUPS = [
     label: 'Recruitment', icon: svgUsers(),
     items: [
       { key: 'interviews', label: 'Interview Settings', icon: svgClock(), perm: null },
-      { key: 'templates', label: 'Email Templates', icon: svgMail(), perm: 'settings_templates' },
     ],
   },
   {
@@ -37,9 +36,9 @@ const GROUPS = [
     ],
   },
   {
-    label: 'Payroll', icon: svgBuilding(),
+    label: 'Payroll', icon: svgMoney(),
     items: [
-      { key: 'payslip', label: 'Payslip Settings', icon: svgBuilding(), perm: 'manage_salary_structures' },
+      { key: 'payslip', label: 'Payslip Settings', icon: svgMoney(), perm: 'manage_salary_structures' },
     ],
   },
   {
@@ -54,19 +53,21 @@ const GROUPS = [
     items: [
       { key: 'notifications', label: 'Notification Settings', icon: svgBell(), perm: null },
       { key: 'communication', label: 'Communication Settings', icon: svgMessage(), perm: null },
+      { key: 'templates', label: 'Email Templates', icon: svgMail(), perm: 'settings_templates' },
+      { key: 'request-mails', label: 'Request Mails', icon: svgMail(), perm: 'settings_templates' },
     ],
   },
 ];
 
 const OPEN_KEY = 'settings_open_groups';
-const readOpen = () => { try { return JSON.parse(sessionStorage.getItem(OPEN_KEY) || '[]'); } catch { return []; } };
+const readOpen = () => { try { return JSON.parse(sessionStorage.getItem(OPEN_KEY) || '[]').slice(0, 1); } catch { return []; } };
 
 const sidebarStyles = `
 .sg-btn { width:100%; display:flex; align-items:center; gap:12px; padding:10px 12px; border:none; background:transparent; border-radius:10px; cursor:pointer; color:#475569; font:inherit; font-size:.9rem; font-weight:600; text-align:left; transition:background .15s, color .15s; }
 .sg-btn:hover { background:#f1f5f9; color:#1e293b; }
-.sg-btn.has-active { color:#4338ca; }
+.sg-btn.has-active { color:#1e40af; }
 .sg-btn .sg-ic { display:flex; color:#64748b; }
-.sg-btn.has-active .sg-ic { color:#6366f1; }
+.sg-btn.has-active .sg-ic { color:#2563eb; }
 .sg-btn .sg-lb { flex:1; }
 .sg-chev { transition:transform .2s ease; color:#94a3b8; flex-shrink:0; }
 .sg-chev.open { transform:rotate(90deg); }
@@ -75,7 +76,10 @@ const sidebarStyles = `
 .sg-sub .nav-link { padding:8px 12px; font-size:.84rem; }
 .sg-sub .nav-link .nav-icon { display:none; }
 .sg-sub .nav-link.active { font-weight:700; }
-.sg-count { font-size:.68rem; font-weight:700; background:#eef2ff; color:#6366f1; border-radius:20px; padding:1px 7px; }
+.sg-single { text-decoration:none; }
+.sg-single.has-active { background:rgba(255,255,255,.1); }
+.sg-btn .sg-lb { white-space:nowrap; }
+.sg-count { font-size:.68rem; font-weight:700; background:#eff6ff; color:#2563eb; border-radius:14px; padding:1px 7px; }
 `;
 
 export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
@@ -85,7 +89,7 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
   const isAdminOrHr = role === 'ADMIN' || role === 'HR';
   const hasPerm = (p) => p === null || isAdminOrHr || (p && rawPerms[p] === true);
 
-  const activeSection = location.pathname.includes('/permissions') ? 'users' : location.pathname.split('/settings/')[1] || 'company';
+  const activeSection = location.pathname.includes('/permissions') ? 'users' : (location.pathname.split('/settings/')[1] || 'company').replace('template-editor', 'templates');
 
   const [companySettings, setCompanySettings] = useState(null);
 
@@ -105,13 +109,21 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
   const activeGroup = (filteredGroups.find(g => g.items.some(i => i.key === activeSection)) || {}).label;
   // Opening a page (e.g. from a link elsewhere) opens its submenu too.
   useEffect(() => {
-    if (activeGroup) setOpenGroups(prev => (prev.includes(activeGroup) ? prev : [...prev, activeGroup]));
+    if (activeGroup) setOpenGroups([activeGroup]);
   }, [activeGroup]);
   const toggleGroup = (label) => setOpenGroups(prev => {
-    const next = prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label];
+    // accordion: opening one group closes the others
+    const next = prev.includes(label) ? [] : [label];
     try { sessionStorage.setItem(OPEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
     return next;
   });
+
+  const singleFor = (item) => (
+    <Link key={item.key} to={`/settings/${item.key}`} className={`sg-btn sg-single${activeSection === item.key ? ' has-active' : ''}`}>
+      <span className="sg-ic">{item.icon}</span>
+      <span className="sg-lb">{item.label}</span>
+    </Link>
+  );
 
   const linkFor = (item, label) => (
     <Link key={item.key} to={`/settings/${item.key}`} className={`nav-link${activeSection === item.key ? ' active' : ''}`} title={collapsed ? item.label : undefined}>
@@ -131,7 +143,7 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
               <rect width="32" height="32" rx="8" fill="url(#brand-grad)"/>
               <path d="M8 20V12l8-4 8 4v8l-8 4-8-4z" fill="rgba(255,255,255,.2)"/>
               <circle cx="16" cy="16" r="4" fill="#fff"/>
-              <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#6366f1"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
+              <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#2563eb"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs>
             </svg>
           )}
         </div>
@@ -148,13 +160,13 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
       </div>
 
       <nav className="sidebar-nav settings-nav">
-        {!collapsed && <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 700, color: '#1e293b', margin: '4px 0 16px', padding: '0 12px' }}>Settings</h2>}
+        {!collapsed && <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: '4px 0 12px', padding: '0 12px' }}>Settings</h2>}
         <style>{sidebarStyles}</style>
         {collapsed
           ? filteredGroups.flatMap(group => group.items).map(item => linkFor(item))
           : filteredGroups.map(group => {
               // one page in the group: plain link, no submenu
-              if (group.items.length === 1) return linkFor(group.items[0]);
+              if (group.items.length === 1) return singleFor(group.items[0]);
               const open = openGroups.includes(group.label);
               const hasActive = group.items.some(i => i.key === activeSection);
               return (
@@ -162,7 +174,6 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
                   <button type="button" className={`sg-btn${hasActive ? ' has-active' : ''}`} onClick={() => toggleGroup(group.label)} aria-expanded={open}>
                     <span className="sg-ic">{group.icon}</span>
                     <span className="sg-lb">{group.label}</span>
-                    <span className="sg-count">{group.items.length}</span>
                     <svg className={`sg-chev${open ? ' open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                   </button>
                   <div className={`sg-sub${open ? ' open' : ''}`}>
@@ -200,6 +211,9 @@ function svgUsers() {
 }
 function svgChart() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>;
+}
+function svgMoney() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
 }
 function svgBell() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;

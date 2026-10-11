@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { auditFrom } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,6 +39,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // keys that were saved (values only when they are short and not secret)
+    const shown: Record<string, any> = {};
+    for (const item of items) { if (item && item.setting_key) shown[item.setting_key] = /pass|secret|key|token/i.test(item.setting_key) || String(item.setting_value ?? '').length > 60 ? '(changed)' : item.setting_value; }
+    await auditFrom(user, 'settings_changed', 'settings', 'system', shown);
     return jsonSuccess({ message: 'System settings saved' });
   } catch (e: any) { return jsonError(e, 500); }
 }

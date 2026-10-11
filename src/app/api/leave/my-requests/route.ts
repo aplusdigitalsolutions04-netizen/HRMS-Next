@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     if (status) { where += ' AND status=?'; params.push(status); }
     
     const cnt = await query<RowDataPacket[]>(`SELECT COUNT(*) as cnt FROM leave_requests ${where}`, params);
-    const rows = await query<RowDataPacket[]>(`SELECT * FROM leave_requests ${where} ORDER BY applied_on DESC LIMIT ${perPage} OFFSET ${offset}`, params);
+    const rows = await query<RowDataPacket[]>(`SELECT lr.*, (NOT EXISTS (SELECT 1 FROM approval_actions aa WHERE aa.request_type='leave' AND aa.request_id = CAST(lr.id AS CHAR) COLLATE utf8mb4_unicode_ci) AND LOWER(lr.status) = 'pending') AS can_edit FROM leave_requests lr ${where} ORDER BY applied_on DESC LIMIT ${perPage} OFFSET ${offset}`, params);
     return jsonSuccess({ requests: rows, total: cnt[0].cnt, page, per_page: perPage });
   } catch (e: any) {
     return jsonError(e, 500);

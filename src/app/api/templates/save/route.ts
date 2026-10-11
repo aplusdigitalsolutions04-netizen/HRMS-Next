@@ -13,11 +13,11 @@ export async function POST(req: NextRequest) {
     
     const existing = await execute('SELECT id FROM email_templates WHERE name=?', [body.name]);
     if (existing && existing.length > 0) {
-      await execute('UPDATE email_templates SET subject=?, body=?, variables=? WHERE name=?',
-        [body.subject||'', body.body||'', body.variables||'[]', body.name]);
+      await execute('UPDATE email_templates SET subject=?, body=?, variables=?, template_type=? WHERE name=?',
+        [body.subject||'', body.body||'', body.variables||'[]', body.template_type||'General', body.name]);
     } else {
-      await execute('INSERT INTO email_templates (id, name, subject, body, variables, created_on) VALUES (?,?,?,?,?,NOW())',
-        [uuidv4(), body.name, body.subject||'', body.body||'', body.variables||'[]']);
+      await execute('INSERT INTO email_templates (id, name, subject, body, variables, template_type, created_on) VALUES (?,?,?,?,?,?,NOW())',
+        [uuidv4(), body.name, body.subject||'', body.body||'', body.variables||'[]', body.template_type||'General']);
     }
     return jsonSuccess({ message: 'Template saved' });
   } catch (e: any) { return jsonError(e, 500); }

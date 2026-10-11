@@ -7,11 +7,15 @@ import { useState, useEffect } from 'react';
 // Page components using Next.js dynamic imports
 import dynamic from 'next/dynamic';
 
-import { ADMIN_HR, ADMIN_HR_STAFF } from './layout-parts/routeConfig';
+import { ADMIN_HR, ADMIN_HR_STAFF, ADMIN_ONLY } from './layout-parts/routeConfig';
 import PrivateRoute from './layout-parts/PrivateRoute';
 import NotificationDropdown from './layout-parts/NotificationDropdown';
 import ProfileDropdown from './layout-parts/ProfileDropdown';
 import Navigation from './layout-parts/Navigation';
+import GlobalSearch from './layout-parts/GlobalSearch';
+import { MotionProvider, PageTransition } from '@/lib/ui-motion';
+import { LanguageProvider } from '@/lib/i18n';
+import InstallApp from './layout-parts/InstallApp';
 
 const Dashboard = dynamic(() => import('@/app-pages/dashboard/Dashboard'), { ssr: false });
 const Departments = dynamic(() => import('@/app-pages/department/Departments'), { ssr: false });
@@ -39,12 +43,23 @@ const CandidateView = dynamic(() => import('@/app-pages/candidate/CandidateView'
 const CandidatesForm = dynamic(() => import('@/app-pages/candidate/CandidatesForm'), { ssr: false });
 const TemplateManagement = dynamic(() => import('@/app-pages/settings/TemplateManagement'), { ssr: false });
 const EmailLog = dynamic(() => import('@/app-pages/communication/EmailLog'), { ssr: false });
+const TemplateEditor = dynamic(() => import('@/app-pages/settings/TemplateEditor'), { ssr: false });
 const SettingsWorkspace = dynamic(() => import('@/app-pages/settings/SettingsWorkspace'), { ssr: false });
 const ProfilePage = dynamic(() => import('@/app-pages/auth/ProfilePage'), { ssr: false });
 const ChangePassword = dynamic(() => import('@/app-pages/auth/ChangePassword'), { ssr: false });
 const NotificationsPage = dynamic(() => import('@/app-pages/communication/NotificationsPage'), { ssr: false });
 const DraftManagement = dynamic(() => import('@/app-pages/communication/DraftManagement'), { ssr: false });
 const EmployeeCredentials = dynamic(() => import('@/app-pages/employee/EmployeeCredentials'), { ssr: false });
+const Preferences = dynamic(() => import('@/app-pages/settings/Preferences'), { ssr: false });
+const MyMail = dynamic(() => import('@/app-pages/mail/MyMail'), { ssr: false });
+const AuditLog = dynamic(() => import('@/app-pages/system/AuditLog'), { ssr: false });
+const Backup = dynamic(() => import('@/app-pages/system/Backup'), { ssr: false });
+const AssetTypes = dynamic(() => import('@/app-pages/assets/AssetTypes'), { ssr: false });
+const LeaveTypes = dynamic(() => import('@/app-pages/leave/LeaveTypes'), { ssr: false });
+const TemplateCategories = dynamic(() => import('@/app-pages/settings/TemplateCategories'), { ssr: false });
+const Assets = dynamic(() => import('@/app-pages/assets/Assets'), { ssr: false });
+const Reports = dynamic(() => import('@/app-pages/reports/Reports'), { ssr: false });
+const AttendanceCorrections = dynamic(() => import('@/app-pages/attendance/AttendanceCorrections'), { ssr: false });
 const AttendanceTemplateManager = dynamic(() => import('@/app-pages/attendance/AttendanceTemplateManager'), { ssr: false });
 const Unauthorized = dynamic(() => import('@/app-pages/auth/Unauthorized'), { ssr: false });
 const EmployeeDashboard = dynamic(() => import('@/app-pages/employee/EmployeeDashboard'), { ssr: false });
@@ -62,9 +77,11 @@ const OrgChart = dynamic(() => import('@/app-pages/organization/OrgChart'), { ss
 const ReportingStructure = dynamic(() => import('@/app-pages/organization/ReportingStructure'), { ssr: false });
 function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
   const [employeeStatus, setEmployeeStatus] = useState(() => sessionStorage.getItem('employee_status') || '');
   const location = useLocation();
   const pathname = location.pathname;
+  useEffect(() => { setMobileNav(false); }, [pathname]); // the phone menu closes when you open a page
 
   const isAuthPage = ['/login', '/register', '/privacy-policy', '/terms-conditions'].includes(pathname);
   const isUserPortal = (() => {
@@ -105,14 +122,20 @@ function MainLayout() {
           )}
         </>
       ) : (
-        <div className={`app-layout ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className={`app-layout ${sidebarCollapsed ? 'collapsed' : ''} ${mobileNav ? 'mobile-open' : ''}`}>
+          <div className="mobile-backdrop" onClick={() => setMobileNav(false)} />
           <Navigation collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} pathname={pathname} />
           <div className="app-main">
             <header className="app-header">
               <div className="header-left">
-                <span style={{ fontSize: '1.35rem', fontWeight: 700, background: 'linear-gradient(135deg, #4338ca, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.5px' }}>HRMS</span>
+                <button type="button" className="mobile-menu-btn" aria-label="Menu" onClick={() => setMobileNav(o => !o)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <GlobalSearch />
+                <span style={{ fontSize: '1.35rem', fontWeight: 700, background: 'linear-gradient(135deg, #1e40af, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.5px' }}>HRMS</span>
               </div>
               <div className="header-right">
+                <InstallApp />
                 <NotificationDropdown />
                 <ProfileDropdown />
                 <Link to="/settings/company" className="header-icon-btn" title="Settings">
@@ -123,7 +146,7 @@ function MainLayout() {
               </div>
             </header>
             <main className="app-content">
-              <div className="page-container">
+              <PageTransition pageKey={pathname} className="page-container">
                 <Routes>
                   <Route path="/dashboard" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Dashboard /></PrivateRoute>} />
                   <Route path="/departments" element={<PrivateRoute allowedRoles={ADMIN_HR}><Departments /></PrivateRoute>} />
@@ -132,6 +155,16 @@ function MainLayout() {
                   <Route path="/attendance/result" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><AttendanceResult /></PrivateRoute>} />
                   <Route path="/attendance/daily" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><DailyAttendance /></PrivateRoute>} />
                   <Route path="/attendance/update" element={<PrivateRoute allowedRoles={ADMIN_HR}><UpdateAttendance /></PrivateRoute>} />
+                  <Route path="/preferences" element={<PrivateRoute allowedRoles={null}><Preferences /></PrivateRoute>} />
+                  <Route path="/mail" element={<PrivateRoute allowedRoles={null}><MyMail /></PrivateRoute>} />
+                  <Route path="/audit-log" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><AuditLog /></PrivateRoute>} />
+                  <Route path="/backup" element={<PrivateRoute allowedRoles={ADMIN_ONLY}><Backup /></PrivateRoute>} />
+                  <Route path="/masters/asset-types" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><AssetTypes /></PrivateRoute>} />
+                  <Route path="/masters/leave-types" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><LeaveTypes /></PrivateRoute>} />
+                  <Route path="/masters/template-categories" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><TemplateCategories /></PrivateRoute>} />
+                  <Route path="/assets" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Assets /></PrivateRoute>} />
+                  <Route path="/reports" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Reports /></PrivateRoute>} />
+                  <Route path="/attendance/corrections" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><AttendanceCorrections /></PrivateRoute>} />
                   <Route path="/attendance/templates" element={<PrivateRoute allowedRoles={ADMIN_HR}><AttendanceTemplateManager /></PrivateRoute>} />
                   <Route path="/employees/add" element={<PrivateRoute allowedRoles={ADMIN_HR}><EmployeeRegister /></PrivateRoute>} />
                   <Route path="/employees/invite" element={<PrivateRoute allowedRoles={ADMIN_HR}><InviteEmployee /></PrivateRoute>} />
@@ -151,6 +184,7 @@ function MainLayout() {
                     <Route path="/candidates/data" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><CandidateData /></PrivateRoute>} />
                   <Route path="/candidates/view/:id" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><CandidateView /></PrivateRoute>} />
                   <Route path="/candidates/add" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><CandidatesForm /></PrivateRoute>} />
+                  <Route path="/settings/template-editor" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><TemplateEditor /></PrivateRoute>} />
                   <Route path="/settings/templates" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><TemplateManagement /></PrivateRoute>} />
                   <Route path="/email-log" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><EmailLog /></PrivateRoute>} />
                   <Route path="/drafts" element={<PrivateRoute allowedRoles={ADMIN_HR}><DraftManagement /></PrivateRoute>} />
@@ -171,7 +205,7 @@ function MainLayout() {
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
-              </div>
+              </PageTransition>
             </main>
           </div>
         </div>
@@ -185,6 +219,8 @@ export default function ClientApp() {
   useEffect(() => { setMounted(true); }, []);
   if (!mounted) return null;
   return (
+    <MotionProvider>
+    <LanguageProvider>
     <Router>
       <Routes>
         <Route path="/login" element={<HRLogin />} />
@@ -195,5 +231,7 @@ export default function ClientApp() {
         <Route path="/*" element={<MainLayout />} />
       </Routes>
     </Router>
+    </LanguageProvider>
+    </MotionProvider>
   );
 }

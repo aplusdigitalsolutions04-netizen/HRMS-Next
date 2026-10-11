@@ -63,7 +63,7 @@ const EmployeeCredentials = () => {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Resend',
-      confirmButtonColor: '#4338ca',
+      confirmButtonColor: '#1e40af',
     }).then(res => {
       if (!res.isConfirmed) return;
       setResendingId(row.id);
@@ -80,7 +80,7 @@ const EmployeeCredentials = () => {
 
   return (
     <div>
-      <h2 className="page-title">🔐 Employee Credentials {!loading && <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>({rows.length})</span>}</h2>
+      <h2 className="page-title">Employee Credentials {!loading && <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>({rows.length})</span>}</h2>
       <p className="page-subtitle">Login details sent to newly approved employees</p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
@@ -129,7 +129,7 @@ const EmployeeCredentials = () => {
                       <button
                         onClick={() => setRevealedId(revealedId === r.id ? null : r.id)}
                         title={revealedId === r.id ? 'Hide' : 'Show'}
-                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#6366f1', fontSize: 13 }}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', fontSize: 13 }}
                       >
                         {revealedId === r.id ? '🙈' : '👁️'}
                       </button>

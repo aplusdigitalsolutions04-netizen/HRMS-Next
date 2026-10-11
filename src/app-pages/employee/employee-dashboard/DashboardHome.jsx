@@ -120,7 +120,7 @@ const homeStyles = `
 .td-day { display:flex; flex-direction:column; align-items:center; gap:4px; }
 .td-day span { font-size:.68rem; color:#94a3b8; font-weight:600; }
 .td-dot { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; background:#f1f5f9; color:#94a3b8; border:1.5px solid #e2e8f0; }
-.td-dot.today { box-shadow:0 0 0 3px #e0e7ff; }
+.td-dot.today { box-shadow:0 0 0 3px #dbeafe; }
 .td-hol { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid #f8fafc; }
 .td-hol:last-child { border-bottom:none; }
 .td-hol-d { width:44px; text-align:center; border-radius:10px; padding:4px 0 5px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; flex-shrink:0; }
@@ -145,8 +145,8 @@ export default function DashboardHome({ greeting, empName, presentDays, totalAtt
       <div className="emp-stats">
         <div className="emp-stat-card">
           <div className="emp-stat-header">
-            <div className="emp-stat-icon" style={{ background: '#eef2ff' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div className="emp-stat-icon" style={{ background: '#eff6ff' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
           </div>
           <div className="emp-stat-value">{presentDays} / {totalAttDays} Days</div>

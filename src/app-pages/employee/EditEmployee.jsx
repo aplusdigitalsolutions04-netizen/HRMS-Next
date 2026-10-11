@@ -107,12 +107,12 @@ export default function EditEmployee() {
         });
     };
 
-    if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Loading...</div>;
-    if (!employee.id && !id) return <div style={{ textAlign: 'center', padding: 40, color: '#ef4444' }}>No Employee Selected</div>;
+    if (loading) return <div style={{ textAlign: 'center', padding: 30, color: '#64748b' }}>Loading...</div>;
+    if (!employee.id && !id) return <div style={{ textAlign: 'center', padding: 30, color: '#ef4444' }}>No Employee Selected</div>;
 
     const s = {
-        page: { background: '#f8fafc', minHeight: '100vh', padding: '10px 24px' },
-        card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', padding: 28, border: '1px solid #f1f0ff' },
+        page: { background: '#f8fafc', minHeight: '100vh', padding: '10px 18px' },
+        card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', padding: 21, border: '1px solid #e8f0ff' },
         sectionTitle: { fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 16, fontFamily: "'Outfit', sans-serif" },
         field: { marginBottom: 16 },
         label: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 },
@@ -120,13 +120,13 @@ export default function EditEmployee() {
         textarea: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', background: '#fff' },
         select: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' },
         fileInput: { width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fafbfc' },
-        divider: { border: 'none', borderTop: '2px solid #eef2ff', margin: '24px 0' },
+        divider: { border: 'none', borderTop: '2px solid #eff6ff', margin: '24px 0' },
         grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
         grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 },
         grid4: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 },
         gridFull: { gridColumn: '1 / -1' },
-        submitBtn: { width: '100%', padding: '12px 24px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
-        link: { color: '#6366f1', fontSize: 12, textDecoration: 'none', fontWeight: 500 },
+        submitBtn: { width: '100%', padding: '12px 18px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
+        link: { color: '#2563eb', fontSize: 12, textDecoration: 'none', fontWeight: 500 },
         badge: { fontSize: 9, background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: 3, fontWeight: 600 },
     };
 
@@ -151,8 +151,8 @@ export default function EditEmployee() {
 
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ background: '#fff', borderRadius: 16, padding: '24px 32px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '2px solid #eef2ff' }}>
+            <div style={{ background: '#fff', borderRadius: 16, padding: '18px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '2px solid #eff6ff' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                             <button
                                 type="button"

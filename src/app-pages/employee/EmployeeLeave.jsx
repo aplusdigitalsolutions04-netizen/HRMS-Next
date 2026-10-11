@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Pagination from '../shared/Pagination';
+import LeaveApplyPage from './LeaveApplyPage';
 
 const API = '/api';
+import useLiveRefresh from '@/lib/live';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const formatDT = (d) => {
   if (!d) return '\u2014';
   try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
+};
+
+// <input type="date"> value from a date that came back from the API (local parts, so the day never shifts)
+const toInputDate = (d) => {
+  if (!d) return '';
+  const x = new Date(d);
+  if (isNaN(x.getTime())) return '';
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
 };
 
 const statusBadge = (s) => {
@@ -17,7 +28,7 @@ const statusBadge = (s) => {
   };
   const c = m[(s || '').toLowerCase()] || { bg: '#f1f5f9', color: '#64748b', text: s };
   return (
-    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: c.bg, color: c.color }}>
+    <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600, background: c.bg, color: c.color }}>
       {c.text}
     </span>
   );
@@ -40,7 +51,7 @@ const Icon = ({ name, size = 18, color = 'currentColor' }) => {
   const d = paths[name] || paths.calendar;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {d.split(' ').map((seg, i) => <path key={i} d={seg} />)}
+      {d.split(/\s(?=M)/).map((seg, i) => <path key={i} d={seg} />)}
     </svg>
   );
 };
@@ -54,13 +65,19 @@ export default function EmployeeLeave() {
   const [balances, setBalances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ leave_type: 'Annual Leave', start_date: '', end_date: '', reason: '', file: null, cc: '', bcc: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  useEffect(() => {
+    fetch(`${API}/leave-types`, { headers: auth() }).then(r => r.json()).then(d => setLeaveTypes(d.types || [])).catch(() => {});
+  }, []);
+  const [form, setForm] = useState({ leave_type: '', start_date: '', end_date: '', reason: '', file: null, cc: '', bcc: '' });
   const [submitting, setSubmitting] = useState(false);
   const [formErr, setFormErr] = useState('');
   const [selectedReq, setSelectedReq] = useState(null);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [page, setPage] = useState(1);
-  const perPage = 10;
+  const [perPage, setPerPage] = useState(10);
+  const perPageRef = useRef(10);
   const [teamRequests, setTeamRequests] = useState([]);
   const [teamActing, setTeamActing] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
@@ -100,7 +117,7 @@ export default function EmployeeLeave() {
     const s = statusFilter && statusFilter !== 'all' ? statusFilter : '';
     Promise.all([
       fetch(`${API}/profile`, { headers: h }).then(r => r.json()).catch(() => null),
-      fetch(`${API}/leave/my-requests?status=${s}&page=${p}&per_page=${perPage}`, { headers: h }).then(r => r.json()).catch(() => ({ requests: [], total: 0 })),
+      fetch(`${API}/leave/my-requests?status=${s}&page=${p}&per_page=${perPageRef.current}`, { headers: h }).then(r => r.json()).catch(() => ({ requests: [], total: 0 })),
       fetch(`${API}/leave/my-balance`, { headers: h }).then(r => r.json()).catch(() => ({ balances: [] })),
       fetch(`${API}/leave/my-stats`, { headers: h }).then(r => r.json()).catch(() => ({ total: 0, pending: 0, approved: 0, rejected: 0, cancelled: 0 })),
     ]).then(([prof, reqData, balData, statsData]) => {
@@ -114,6 +131,7 @@ export default function EmployeeLeave() {
   };
 
   useEffect(() => { setPage(1); fetchData(tab, 1); }, [tab]);
+  useLiveRefresh(() => { fetchData(tab, page); fetchTeamPending(); });
 
   const totalPages = Math.ceil(reqTotal / perPage);
 
@@ -126,15 +144,21 @@ export default function EmployeeLeave() {
     return Math.floor((ed - sd) / (86400000)) + 1;
   };
 
-  const handleApply = async (e) => {
-    e.preventDefault();
+  const openNew = () => { setEditingId(null); setFormErr(''); setForm({ leave_type: leaveTypes[0] || '', start_date: '', end_date: '', reason: '', file: null, cc: '', bcc: '' }); setShowModal(true); };
+  const openEdit = (r) => {
+    setEditingId(r.id); setFormErr('');
+    setForm({ leave_type: r.leave_type, start_date: toInputDate(r.start_date), end_date: toInputDate(r.end_date), reason: r.reason || '', file: null, cc: '', bcc: '' });
+    setShowModal(true);
+  };
+
+  const handleApply = async (mail = {}) => {
     setFormErr('');
     if (!form.start_date || !form.end_date) { setFormErr('Please select start and end dates'); return; }
     if (!form.reason.trim()) { setFormErr('Please enter a reason'); return; }
     const dur = calcDuration(form.start_date, form.end_date);
     if (dur <= 0) { setFormErr('End date must be after start date'); return; }
     const bal = balances.find(b => b.leave_type === form.leave_type);
-    if (bal && dur > (bal.remaining || 0)) { setFormErr(`Insufficient ${form.leave_type} balance. Available: ${(bal.remaining || 0).toFixed(0)} days`); return; }
+    if (!editingId && bal && dur > (bal.remaining || 0)) { setFormErr(`Insufficient ${form.leave_type} balance. Available: ${(bal.remaining || 0).toFixed(0)} days`); return; }
     setSubmitting(true);
     const fd = new FormData();
     fd.append('leave_type', form.leave_type);
@@ -142,16 +166,24 @@ export default function EmployeeLeave() {
     fd.append('end_date', form.end_date);
     fd.append('reason', form.reason);
     if (form.file) fd.append('supporting_doc', form.file);
+    if (mail.mail_subject) fd.append('mail_subject', mail.mail_subject);
+    if (mail.mail_message) fd.append('mail_message', mail.mail_message);
+    if (mail.from_account_id) fd.append('from_account_id', mail.from_account_id);
     if (form.cc) fd.append('cc', form.cc);
     if (form.bcc) fd.append('bcc', form.bcc);
     try {
-      const res = await fetch(`${API}/leave/apply`, { method: 'POST', headers: auth(), body: fd });
+      const res = editingId
+        ? await fetch(`${API}/leave/${editingId}`, { method: 'PUT', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ leave_type: form.leave_type, start_date: form.start_date, end_date: form.end_date, reason: form.reason, mail_message: mail.mail_message }) })
+        : await fetch(`${API}/leave/apply`, { method: 'POST', headers: auth(), body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to submit');
+      const wasEdit = editingId;
+      const noMail = data.mail_sent === false;
+      setEditingId(null);
       setShowModal(false);
-      setForm({ leave_type: 'Annual Leave', start_date: '', end_date: '', reason: '', file: null, cc: '', bcc: '' });
+      setForm({ leave_type: '', start_date: '', end_date: '', reason: '', file: null, cc: '', bcc: '' });
       fetchData(tab, 1);
-      import('sweetalert2').then(Swal => Swal.default.fire({ icon: 'success', title: 'Leave Submitted!', text: 'Your leave request has been submitted and HR has been notified.', timer: 2500, showConfirmButton: false }));
+      import('sweetalert2').then(Swal => Swal.default.fire({ icon: 'success', title: wasEdit ? 'Leave Updated!' : 'Leave Submitted!', text: noMail ? 'Your request is submitted and your manager can see it in the app. No email was sent because your email is not connected (My Mail).' : wasEdit ? 'Your changes were sent to the person who is reviewing it.' : 'Your leave request has been sent to your reporting manager.', timer: 2500, showConfirmButton: false }));
     } catch (err) {
       setFormErr(err.message);
     } finally {
@@ -174,11 +206,20 @@ export default function EmployeeLeave() {
 
   if (loading) {
     return (
-      <div style={{ padding: 40, borderRadius: 16, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff' }}>
+      <div style={{ padding: 30, borderRadius: 16, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' }}>
         {[1,2,3,4].map(i => (
           <div key={i} style={{ height: 20, background: '#e2e8f0', borderRadius: 8, margin: '8px 0' }} />
         ))}
       </div>
+    );
+  }
+
+  if (showModal) {
+    return (
+      <LeaveApplyPage
+        form={form} setForm={setForm} editing={!!editingId} onBack={() => setShowModal(false)} onSubmit={handleApply}
+        leaveTypes={leaveTypes} submitting={submitting} formErr={formErr} dur={dur} profile={profile} balance={balances.find(b => b.leave_type === form.leave_type)}
+      />
     );
   }
 
@@ -189,7 +230,7 @@ export default function EmployeeLeave() {
         {/* Team Approvals (visible only if this employee is someone's reporting manager) */}
         {teamRequests.length > 0 && (
           <div className="el-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 16, border: '1.5px solid #fde68a' }}>
-            <div style={{ padding: '14px 20px', background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
+            <div style={{ padding: '14px 15px', background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
               <h3 style={{ margin: 0, fontSize: 15, color: '#92400e' }}>Team Leave Requests Awaiting Your Approval</h3>
               <p style={{ margin: '2px 0 0', fontSize: 12, color: '#b45309' }}>These are pending on you as the reporting manager before HR reviews them.</p>
             </div>
@@ -234,10 +275,10 @@ export default function EmployeeLeave() {
         )}
 
         {/* Header */}
-        <div className="el-card" style={{ padding: '20px 24px', marginBottom: 16 }}>
+        <div className="el-card" style={{ padding: '15px 18px', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="3" />
                   <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="2" y1="10" x2="22" y2="10" />
@@ -249,22 +290,22 @@ export default function EmployeeLeave() {
                 <p style={{ margin: '2px 0 0', fontSize: 13, color: '#94a3b8' }}>Apply for leave and track the status of your requests.</p>
               </div>
             </div>
-            <button onClick={() => setShowModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               <Icon name="plus" size={16} color="#fff" /> Apply Leave
             </button>
-            <style>{`.el-card{border-radius:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #f1f0ff}`}</style>
+            <style>{`.el-card{border-radius:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e8f0ff}`}</style>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 16 }}>
           {[
-            { label: 'Total Requests', value: stats.total, color: '#6366f1', bg: '#efeafe' },
+            { label: 'Total Requests', value: stats.total, color: '#2563eb', bg: '#eff6ff' },
             { label: 'Pending', value: stats.pending, color: '#d97706', bg: '#fffbeb' },
             { label: 'Approved', value: stats.approved, color: '#16a34a', bg: '#f0fdf4' },
             { label: 'Rejected', value: stats.rejected, color: '#dc2626', bg: '#fef2f2' },
           ].map(s => (
-            <div key={s.label} style={{ background: '#fff', borderRadius: 16, padding: '16px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div key={s.label} style={{ background: '#fff', borderRadius: 16, padding: '16px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
               <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{s.label}</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
             </div>
@@ -274,7 +315,7 @@ export default function EmployeeLeave() {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid #e2e8f0', paddingBottom: 0, flexWrap: 'wrap' }}>
           {['all', 'pending', 'approved', 'rejected', 'cancelled'].map(t => (
-            <button key={t} onClick={() => handleTab(t)} style={{ padding: '8px 16px', border: 'none', background: 'none', fontSize: 13, fontWeight: 600, color: tab === t ? '#6366f1' : '#94a3b8', cursor: 'pointer', borderBottom: tab === t ? '2px solid #6366f1' : '2px solid transparent', textTransform: 'capitalize' }}>
+            <button key={t} onClick={() => handleTab(t)} style={{ padding: '8px 16px', border: 'none', background: 'none', fontSize: 13, fontWeight: 600, color: tab === t ? '#2563eb' : '#94a3b8', cursor: 'pointer', borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent', textTransform: 'capitalize' }}>
               {t === 'all' ? 'All Requests' : t}
             </button>
           ))}
@@ -283,7 +324,7 @@ export default function EmployeeLeave() {
         {/* Table */}
         <div className="el-card" style={{ padding: 0, overflow: 'hidden' }}>
           {requests.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8' }}>
+            <div style={{ textAlign: 'center', padding: 45, color: '#94a3b8' }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" style={{ marginBottom: 12 }}>
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
               </svg>
@@ -312,6 +353,9 @@ export default function EmployeeLeave() {
                       <td style={{ padding: '10px 14px' }}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => setSelectedReq(r)} style={{ border: 'none', background: '#f1f5f9', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: '#475569' }} title="View Details">View</button>
+                          {Number(r.can_edit) === 1 && (
+                            <button onClick={() => openEdit(r)} style={{ border: 'none', background: '#eff6ff', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: '#2563eb' }} title="Change this request">Edit</button>
+                          )}
                           {(r.status || '').toLowerCase() === 'pending' && (
                             <button onClick={() => handleCancel(r.id)} style={{ border: 'none', background: '#fef2f2', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: '#dc2626' }} title="Cancel">Cancel</button>
                           )}
@@ -321,15 +365,7 @@ export default function EmployeeLeave() {
                   ))}
                 </tbody>
               </table>
-              {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '12px 0' }}>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <button key={p} onClick={() => { setPage(p); fetchData(tab, p); }} style={{ padding: '4px 10px', borderRadius: 6, border: p === page ? '2px solid #6366f1' : '1px solid #e2e8f0', background: p === page ? '#efeafe' : '#fff', color: p === page ? '#6366f1' : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <Pagination onPageSizeChange={n => { perPageRef.current = n; setPerPage(n); setPage(1); fetchData(tab, 1); }} page={page} totalItems={reqTotal} pageSize={perPage} itemLabel="requests" onPageChange={p => { setPage(p); fetchData(tab, p); }} />
             </div>
           )}
         </div>
@@ -338,15 +374,15 @@ export default function EmployeeLeave() {
       {/* Right Sidebar */}
       <div style={{ width: 300, display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
         {/* Leave Balance Card */}
-        <div className="el-card" style={{ padding: '20px' }}>
+        <div className="el-card" style={{ padding: '15px' }}>
           <h4 style={{ margin: '0 0 16px', fontSize: 15, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" />
             </svg>
             Leave Balance
           </h4>
           {balances.length === 0 ? (
-            <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 20 }}>No leave balance data</div>
+            <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 15 }}>No leave balance data</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {balances.map((b, idx) => {
@@ -355,7 +391,7 @@ export default function EmployeeLeave() {
                 const remaining = Math.max(0, b.remaining);
                 const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0;
                 const fmtNum = (n) => Number.isInteger(n) ? n.toString() : n.toFixed(1);
-                const barColor = remaining <= 2 ? '#ef4444' : remaining <= 5 ? '#f59e0b' : '#6366f1';
+                const barColor = remaining <= 2 ? '#ef4444' : remaining <= 5 ? '#f59e0b' : '#2563eb';
                 return (
                   <div key={b.id ?? idx}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
@@ -382,116 +418,11 @@ export default function EmployeeLeave() {
 
       </div>
 
-      {/* Apply Leave Modal */}
-      {showModal && (
-        <>
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000 }} onClick={() => setShowModal(false)} />
-          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#fff', borderRadius: 16, padding: 28, width: '90%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', zIndex: 1001, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 17, color: '#0f172a' }}>Apply for Leave</h3>
-              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleApply}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>Leave Type</label>
-                <select value={form.leave_type} onChange={e => setForm(f => ({ ...f, leave_type: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, color: '#0f172a', background: '#fff' }}>
-                  {['Annual Leave', 'Sick Leave', 'Casual Leave'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>Start Date</label>
-                  <input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>End Date</label>
-                  <input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                </div>
-              </div>
-              {dur > 0 && (
-                <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: '#efeafe', color: '#6366f1', fontSize: 13, fontWeight: 600 }}>
-                  Duration: {dur} day{dur > 1 ? 's' : ''}
-                </div>
-              )}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>Reason <span style={{ color: '#dc2626' }}>*</span></label>
-                <textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} rows={3} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Enter the reason for your leave..." />
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>Supporting Document (Optional)</label>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setForm(f => ({ ...f, file: e.target.files[0] || null }))} style={{ width: '100%', padding: '8px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13 }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>Email CC</label>
-                  <input type="text" value={form.cc} onChange={e => setForm(f => ({ ...f, cc: e.target.value }))} placeholder="cc@example.com" style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 }}>Email BCC</label>
-                  <input type="text" value={form.bcc} onChange={e => setForm(f => ({ ...f, bcc: e.target.value }))} placeholder="bcc@example.com" style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                </div>
-              </div>
-              {formErr && <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13 }}>{formErr}</div>}
-
-              {/* Email Preview Toggle */}
-              <div style={{ marginBottom: 12 }}>
-                <button type="button" onClick={() => setShowEmailPreview(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#475569', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                  <span style={{ flex: 1, textAlign: 'left' }}>Email Preview</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showEmailPreview ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-                {showEmailPreview && (
-                    <div style={{ marginTop: 8, padding: 14, borderRadius: 10, background: '#f8fafc', border: '1.5px solid #e2e8f0', fontSize: 12, lineHeight: 1.6 }}>
-                      <div style={{ marginBottom: 10 }}><span style={{ color: '#64748b' }}>Subject:</span> <span style={{ color: '#0f172a', fontWeight: 500 }}>Leave Application</span></div>
-                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10, color: '#334155' }}>
-                        <p style={{ margin: '0 0 6px' }}>To,<br />HR Department<br />A Plus Digital Solutions<br />633/7, Rohtash Kataria, Ashok Vihar, Gurugram, Haryana</p>
-                        <p style={{ margin: '10px 0 6px' }}>Dear HR Manager,</p>
-                        <p style={{ margin: '0 0 6px' }}>I hope this message finds you well.</p>
-                        <p style={{ margin: '0 0 6px' }}>I am writing to formally request a leave of absence from <strong>{form.start_date || '[Start Date]'}</strong> to <strong>{form.end_date || '[End Date]'}</strong> (total <strong>{dur} day{dur > 1 ? 's' : ''}</strong>), due to <strong>{form.reason || '[Reason]'}</strong>.</p>
-                        <p style={{ margin: '0 0 6px' }}>During my absence, I will ensure that all my pending tasks and responsibilities are handed over appropriately before I leave, so that there is no disruption to ongoing work.</p>
-                        <p style={{ margin: '0 0 6px' }}>I will remain reachable on my phone/email for any urgent matters during this period.</p>
-                        <p style={{ margin: '0 0 6px' }}>Kindly approve my leave request at your earliest convenience.</p>
-                        <p style={{ margin: '0 0 6px' }}><strong>Employee Details:</strong></p>
-                        <table style={{ width: '100%', fontSize: 12 }}>
-                          <tbody>
-                            {[
-                              ['Name', profile?.full_name || '—'],
-                              ['Employee ID', profile?.emp_code || '—'],
-                              ['Designation', profile?.designation || '—'],
-                              ['Contact', profile?.mobile_no || '—'],
-                              ['Email', profile?.email || '—'],
-                            ].map(([l, v]) => (
-                              <tr key={l}><td style={{ padding: '2px 8px 2px 0', color: '#64748b', width: 110 }}>{l}</td><td style={{ padding: '2px 0', fontWeight: 500 }}>: {v}</td></tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        <p style={{ margin: '10px 0 0' }}>Thanking you,</p>
-                        <p style={{ margin: '6px 0 0' }}><strong>{profile?.full_name || profile?.email?.split('@')[0]}</strong><br />{profile?.designation || ''}{profile?.emp_code ? ` | ${profile.emp_code}` : ''}<br />Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-              <button type="submit" disabled={submitting} style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: submitting ? '#a5b4fc' : '#6366f1', color: '#fff', fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-                {submitting ? 'Submitting...' : 'Submit Leave Request'}
-              </button>
-            </form>
-          </div>
-        </>
-      )}
-
       {/* View Detail Modal */}
       {selectedReq && (
         <>
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000 }} onClick={() => setSelectedReq(null)} />
-          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#fff', borderRadius: 16, padding: 28, width: '90%', maxWidth: 420, zIndex: 1001, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#fff', borderRadius: 16, padding: 32, width: '96%', maxWidth: 820, zIndex: 1001, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ margin: 0, fontSize: 17, color: '#0f172a' }}>Leave Details</h3>
               <button onClick={() => setSelectedReq(null)} style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -513,7 +444,7 @@ export default function EmployeeLeave() {
               )}
               {selectedReq.supporting_doc && (
                 <div style={{ padding: '8px 0' }}>
-                  <a href={`${API}/${selectedReq.supporting_doc.replace(/\\/g, '/')}`} target="_blank" rel="noreferrer" style={{ color: '#6366f1', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>View Supporting Document &darr;</a>
+                  <a href="#" onClick={async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/leave/${selectedReq.id}/document`, { headers: auth() }); if (!res.ok) throw new Error((await res.json()).detail || 'Could not open the document'); window.open(URL.createObjectURL(await res.blob()), '_blank'); } catch (err) { alert(err.message); } }} style={{ color: '#2563eb', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>View Supporting Document &darr;</a>
                 </div>
               )}
             </div>
@@ -527,8 +458,8 @@ export default function EmployeeLeave() {
                   { label: (selectedReq.status || '').toLowerCase() === 'approved' ? 'Approved' : (selectedReq.status || '').toLowerCase() === 'rejected' ? 'Rejected' : 'Approved / Rejected', done: ['approved','rejected'].includes((selectedReq.status || '').toLowerCase()), active: false, isRejected: (selectedReq.status || '').toLowerCase() === 'rejected' },
                 ].map((step, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingBottom: i < 2 ? 20 : 0, position: 'relative' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: step.done ? (step.isRejected ? '#dc2626' : '#6366f1') : '#e2e8f0', flexShrink: 0, marginTop: 3, boxShadow: step.active ? '0 0 0 4px #efeafe' : 'none' }} />
-                    {i < 2 && <div style={{ position: 'absolute', left: 4, top: 13, width: 2, height: 28, background: step.done ? '#6366f1' : '#e2e8f0' }} />}
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: step.done ? (step.isRejected ? '#dc2626' : '#2563eb') : '#e2e8f0', flexShrink: 0, marginTop: 3, boxShadow: step.active ? '0 0 0 4px #eff6ff' : 'none' }} />
+                    {i < 2 && <div style={{ position: 'absolute', left: 4, top: 13, width: 2, height: 28, background: step.done ? '#2563eb' : '#e2e8f0' }} />}
                     <div style={{ fontSize: 13, color: step.done ? '#0f172a' : '#94a3b8', fontWeight: step.active ? 600 : step.done ? 500 : 400 }}>{step.label}</div>
                   </div>
                 ))}

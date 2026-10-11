@@ -1,5 +1,6 @@
 export const ADMIN_HR = ['ADMIN', 'HR'];
 export const ADMIN_HR_STAFF = ['ADMIN', 'HR', 'HR_STAFF'];
+export const ADMIN_ONLY = ['ADMIN'];
 
 export const ROUTE_ROLES: Record<string, string[]> = {
   '/': ADMIN_HR,
@@ -28,6 +29,11 @@ export const ROUTE_ROLES: Record<string, string[]> = {
   '/payroll/salary-structures': ADMIN_HR_STAFF,
   '/payroll/generate': ADMIN_HR_STAFF,
   '/payroll/history': ADMIN_HR_STAFF,
+  '/attendance/corrections': ADMIN_HR_STAFF,
+  '/reports': ADMIN_HR_STAFF,
+  '/assets': ADMIN_HR_STAFF,
+  '/audit-log': ADMIN_HR_STAFF,
+  '/backup': ADMIN_ONLY,
 };
 
 export function getRouteRole(pathname: string): string[] {

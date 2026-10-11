@@ -117,20 +117,20 @@ export default function UserPermissionEditor() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#6366f1', animation: 'spin .7s linear infinite' }} />
+        <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', animation: 'spin .7s linear infinite' }} />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '100%', padding: '28px 0' }}>
+    <div style={{ maxWidth: '100%', padding: '21px 0' }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .perm-toggle { position:relative; display:inline-block; width:40px; height:22px; flex-shrink:0; }
         .perm-toggle input { opacity:0; width:0; height:0; }
-        .perm-slider { position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:22px; transition:.2s; }
+        .perm-slider { position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:14px; transition:.2s; }
         .perm-slider:before { content:''; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
-        .perm-toggle input:checked + .perm-slider { background:#6366f1; }
+        .perm-toggle input:checked + .perm-slider { background:#2563eb; }
         .perm-toggle input:checked + .perm-slider:before { transform:translateX(18px); }
       `}</style>
 
@@ -151,14 +151,14 @@ export default function UserPermissionEditor() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {Object.entries(PERMISSION_GROUPS).map(([group, keys]) => (
           <div key={group} style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.04)' }}>
-            <div style={{ padding: '14px 20px', background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '14px 15px', background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: '.95rem', fontWeight: 700, color: '#1e293b' }}>{group}</h3>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => selectAllInGroup(keys)} style={{ padding: '4px 12px', borderRadius: 6, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: '.72rem', fontWeight: 600, color: '#6366f1', cursor: 'pointer' }}>Select All</button>
+                <button onClick={() => selectAllInGroup(keys)} style={{ padding: '4px 12px', borderRadius: 6, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: '.72rem', fontWeight: 600, color: '#2563eb', cursor: 'pointer' }}>Select All</button>
                 <button onClick={() => deselectAllInGroup(keys)} style={{ padding: '4px 12px', borderRadius: 6, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: '.72rem', fontWeight: 600, color: '#94a3b8', cursor: 'pointer' }}>Deselect</button>
               </div>
             </div>
-            <div style={{ padding: '8px 20px' }}>
+            <div style={{ padding: '8px 15px' }}>
               {keys.map(key => (
                 <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
                   <span style={{ fontSize: '.88rem', fontWeight: 500, color: '#334155' }}>{PERMISSION_LABELS[key] || key}</span>
@@ -174,8 +174,8 @@ export default function UserPermissionEditor() {
       </div>
 
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 28 }}>
-        <button onClick={() => navigate('/settings/users')} style={{ padding: '10px 24px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: '.88rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>Cancel</button>
-        <button onClick={save} disabled={saving} style={{ padding: '10px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+        <button onClick={() => navigate('/settings/users')} style={{ padding: '10px 18px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: '.88rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>Cancel</button>
+        <button onClick={save} disabled={saving} style={{ padding: '10px 21px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', fontSize: '.88rem', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
           {saving ? 'Saving...' : 'Save Permissions'}
         </button>
       </div>

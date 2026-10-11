@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useLiveRefresh from '@/lib/live';
+import { Stagger, Item } from '@/lib/ui-motion';
 import { Link } from 'react-router-dom';
 
 const API = '/api';
@@ -71,7 +73,23 @@ const Icon = ({ name, size = 18 }) => (
   </svg>
 );
 
-const PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
+const LT_COLORS = ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9'];
+const ACT_COLORS = {
+  pending: { bg: '#fffbeb', fg: '#b45309' }, approved: { bg: '#f0fdf4', fg: '#15803d' }, rejected: { bg: '#fef2f2', fg: '#b91c1c' },
+  cancelled: { bg: '#f1f5f9', fg: '#64748b' }, active: { bg: '#f0fdf4', fg: '#15803d' }, needs_correction: { bg: '#fff7ed', fg: '#c2410c' },
+  default: { bg: '#eff6ff', fg: '#1d4ed8' },
+};
+const timeAgo = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso); if (isNaN(d)) return '';
+  const m = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.floor(m / 60); if (h < 24) return h + ' hour' + (h === 1 ? '' : 's') + ' ago';
+  const dd = Math.floor(h / 24); if (dd < 30) return dd + ' day' + (dd === 1 ? '' : 's') + ' ago';
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+};
+const PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#3b82f6', '#14b8a6', '#f97316'];
 
 const initialsOf = (name) => (name || '?').split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '?';
 
@@ -97,6 +115,8 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [ready, setReady] = useState(false);
 
+  const liveRef = React.useRef(null);
+  useLiveRefresh(() => { if (liveRef.current) liveRef.current(); }, 60000);
   const fetchData = useCallback(async () => {
     try {
       const token = sessionStorage.getItem('token');
@@ -119,10 +139,9 @@ function Dashboard() {
       setOverview(ovRes.ok ? await ovRes.json() : null);
       const now = new Date();
       const ago30 = new Date(now); ago30.setDate(ago30.getDate() - 30);
-      const ago60 = new Date(now); ago60.setDate(ago60.getDate() - 60);
       const recent30 = emps.filter(e => e.created_on && new Date(e.created_on) >= ago30).length;
-      const prev30 = emps.filter(e => e.created_on && new Date(e.created_on) >= ago60 && new Date(e.created_on) < ago30).length;
-      setStats({ depts: depts.length || 0, emps: emps.length || 0, pendingEmps: pending.length || 0, candidates: (candidates.data ? candidates.data.length : candidates.length) || 0, empGrowth: prev30 > 0 ? Math.round(((recent30 - prev30) / prev30) * 100) : recent30 > 0 ? 100 : 0 });
+      // headcount growth over the last 30 days: people added in that time, against the team size before them
+      setStats({ depts: depts.length || 0, emps: emps.length || 0, pendingEmps: pending.length || 0, candidates: (candidates.data ? candidates.data.length : candidates.length) || 0, empGrowth: (emps.length - recent30) > 0 ? Math.round((recent30 / (emps.length - recent30)) * 100) : 0 });
       setCandidateList(Array.isArray(candidates) ? candidates : Array.isArray(candidates.data) ? candidates.data : []);
       setAttendanceSummaries(Array.isArray(attData.summary) ? attData.summary : []);
     } catch (err) { console.error(err); }
@@ -130,6 +149,16 @@ function Dashboard() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  liveRef.current = fetchData;
+
+  // cards this person chose to hide (My Preferences > Dashboard)
+  const [hiddenW, setHiddenW] = useState([]);
+  useEffect(() => {
+    fetch('/api/preferences', { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && d.prefs) setHiddenW(d.prefs.dashboard_hidden || []); })
+      .catch(() => {});
+  }, []);
 
   const refresh = () => { setRefreshing(true); fetchData(); };
 
@@ -185,12 +214,13 @@ function Dashboard() {
   })();
   const pipelineMax = Math.max(1, ...pipeline.map(p => p[1]));
   const depMax = Math.max(1, ...((ov.departments || []).map(d => Number(d.count))));
+  const ltMax = Math.max(1, ...((ov.leaveTrends ? Object.values(ov.leaveTrends.series).flat() : []).map(Number)));
   const hireMax = Math.max(1, ...((ov.hiring || []).map(h => h.count)));
 
   // Attention list: only the items this user can actually act on.
   const attention = [
     { key: 'emp', icon: 'edit', label: 'Employee approvals', value: stats.pendingEmps, to: '/employees/pending', color: '#f59e0b', show: true },
-    { key: 'leave', icon: 'calendar', label: 'Leave requests', value: ov.leave ? ov.leave.pending : null, to: '/leave/manage', color: '#6366f1', show: ov.leave != null },
+    { key: 'leave', icon: 'calendar', label: 'Leave requests', value: ov.leave ? ov.leave.pending : null, to: '/leave/manage', color: '#2563eb', show: ov.leave != null },
     { key: 'wfh', icon: 'home', label: 'WFH requests', value: ov.wfh ? ov.wfh.pending : null, to: '/wfh/manage', color: '#0ea5e9', show: ov.wfh != null },
     { key: 'doc', icon: 'file', label: 'Document approvals', value: ov.pending ? ov.pending.documents : null, to: '/document-approvals', color: '#ec4899', show: ov.pending && ov.pending.documents != null },
   ].filter(a => a.show);
@@ -234,14 +264,14 @@ function Dashboard() {
         .db-sk-3 { display:grid; grid-template-columns:7fr 5fr; gap:16px; }
         .db-sk-card-lg { background:#fff; border-radius:16px; padding:20px; border:1px solid #f1f5f9; display:flex; flex-direction:column; gap:14px; min-height:260px; }
 
-        .db-page { animation:dbf .4s ease both; max-width:1600px; margin:0 auto; width:100%; }
+        .db-page { max-width:1600px; margin:0 auto; width:100%; }
 
         /* ── Hero ── */
         .db-hero {
           display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
           padding:22px 26px; border-radius:20px; margin-bottom:16px; color:#fff;
-          background:linear-gradient(120deg,#4338ca 0%,#6366f1 55%,#8b5cf6 100%);
-          box-shadow:0 10px 30px rgba(99,102,241,.28); position:relative; overflow:hidden;
+          background:linear-gradient(120deg,#1e40af 0%,#2563eb 55%,#3b82f6 100%);
+          box-shadow:0 10px 30px rgba(37,99,235,.28); position:relative; overflow:hidden;
         }
         .db-hero::after { content:''; position:absolute; right:-40px; top:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.1); }
         .db-hero::before { content:''; position:absolute; right:120px; bottom:-90px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.07); }
@@ -261,8 +291,8 @@ function Dashboard() {
           background:#fff; border:1px solid #e8ecf3; color:#334155; font-size:.84rem; font-weight:600; text-decoration:none;
           box-shadow:0 1px 2px rgba(15,23,42,.04); transition:all .2s; position:relative;
         }
-        .db-q:hover { border-color:#c7d2fe; color:#4338ca; transform:translateY(-2px); box-shadow:0 8px 18px rgba(99,102,241,.14); }
-        .db-q-ic { width:28px; height:28px; border-radius:8px; background:#eef2ff; color:#6366f1; display:flex; align-items:center; justify-content:center; }
+        .db-q:hover { border-color:#bfdbfe; color:#1e40af; transform:translateY(-2px); box-shadow:0 8px 18px rgba(37,99,235,.14); }
+        .db-q-ic { width:28px; height:28px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; }
         .db-q-bd { background:#f59e0b; color:#fff; font-size:.68rem; font-weight:700; border-radius:20px; padding:1px 7px; min-width:18px; text-align:center; }
 
         /* ── KPI Row ── */
@@ -273,7 +303,7 @@ function Dashboard() {
           border:1px solid #f1f5f9; display:flex; flex-direction:column;
           transition:all .3s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden; cursor:default;
         }
-        .db-kpi-c::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#6366f1); }
+        .db-kpi-c::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#2563eb); }
         .db-kpi-c:hover { box-shadow:0 12px 32px rgba(0,0,0,.1), 0 4px 12px rgba(0,0,0,.06); transform:translateY(-2px); }
         .db-kpi-r1 { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
         .db-kpi-ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform .3s ease; }
@@ -286,106 +316,131 @@ function Dashboard() {
         .db-kpi-gr.up { background:#ecfdf5; color:#065f46; }
         .db-kpi-gr.down { background:#fef2f2; color:#991b1b; }
         .db-kpi-d { font-size:.7rem; color:#94a3b8; }
-        .db-kpi-lk { font-size:.7rem; font-weight:700; color:#6366f1; text-decoration:none; margin-left:auto; white-space:nowrap; opacity:0; transform:translateX(-4px); transition:all .25s; }
+        .db-kpi-lk { font-size:.7rem; font-weight:700; color:#2563eb; text-decoration:none; margin-left:auto; white-space:nowrap; opacity:0; transform:translateX(-4px); transition:all .25s; }
         .db-kpi-c:hover .db-kpi-lk { opacity:1; transform:translateX(0); }
 
         /* ── 12-column grid ── */
-        .db-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-bottom:16px; }
+        .db-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:12px; margin-bottom:12px; }
         .s4 { grid-column:span 4; } .s5 { grid-column:span 5; } .s6 { grid-column:span 6; } .s7 { grid-column:span 7; } .s8 { grid-column:span 8; }
 
         .db-card {
-          background:#fff; border-radius:18px; border:1px solid #f1f5f9; overflow:hidden;
-          box-shadow:0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+          background:#fff; border-radius:12px; border:1px solid #e8edf6; overflow:hidden;
+          box-shadow:0 1px 2px rgba(15,26,58,.04);
           transition:box-shadow .3s ease, transform .3s ease; display:flex; flex-direction:column; min-width:0;
         }
-        .db-card:hover { box-shadow:0 10px 28px rgba(0,0,0,.08); transform:translateY(-2px); }
-        .db-card-hdr { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:20px 22px 0; flex-shrink:0; }
-        .db-card-ttl { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.05rem; color:#0f172a; display:flex; align-items:center; gap:9px; }
-        .db-card-ttl i { width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-style:normal; }
-        .db-card-lnk { font-size:.8rem; font-weight:700; color:#6366f1; text-decoration:none; white-space:nowrap; }
-        .db-card-lnk:hover { color:#4338ca; text-decoration:underline; }
-        .db-card-bd { padding:16px 22px 22px; flex:1; display:flex; flex-direction:column; min-height:0; }
-        .db-emp { text-align:center; padding:26px 12px; color:#94a3b8; font-size:.9rem; margin:auto; }
-        .db-tag { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#eef2ff; color:#4338ca; white-space:nowrap; }
+        .db-card:hover { box-shadow:0 6px 18px rgba(15,26,58,.07); }
+        .db-card-hdr { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px 0; flex-shrink:0; }
+        .db-card-ttl { font-family:'Outfit',sans-serif; font-weight:700; font-size:.88rem; color:#0f172a; display:flex; align-items:center; gap:8px; }
+        .db-card-ttl i { width:24px; height:24px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-style:normal; }
+        .db-card-lnk { font-size:.72rem; font-weight:700; color:#2563eb; text-decoration:none; white-space:nowrap; }
+        .db-card-lnk:hover { color:#1e40af; text-decoration:underline; }
+        .db-card-bd { padding:10px 14px 14px; flex:1; display:flex; flex-direction:column; min-height:0; }
+        .db-emp { text-align:center; padding:12px 10px; color:#94a3b8; font-size:.8rem; margin:auto; }
+        .db-tag { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#eff6ff; color:#1e40af; white-space:nowrap; }
 
         /* ── Today's attendance ── */
-        .db-today { display:flex; gap:22px; align-items:center; flex-wrap:wrap; }
+        .db-today { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
         .db-today-ring { position:relative; flex-shrink:0; }
         .db-today-ctr { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
         .db-today-pct { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.35rem; color:#0f172a; line-height:1; }
         .db-today-sub { font-size:.66rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
         .db-today-tiles { flex:1; min-width:220px; display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-        .db-tile { border-radius:12px; padding:11px 14px; background:var(--bg); border:1px solid var(--bd); }
-        .db-tile b { display:block; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.25rem; color:var(--fg); line-height:1.1; }
-        .db-tile span { font-size:.72rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.3px; }
+        .db-tile { border-radius:10px; padding:8px 11px; background:var(--bg); border:1px solid var(--bd); }
+        .db-tile b { display:block; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.05rem; color:var(--fg); line-height:1.1; }
+        .db-tile span { font-size:.64rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.3px; }
 
         /* ── Needs attention ── */
-        .db-att-list { display:flex; flex-direction:column; gap:8px; }
-        .db-att-item { display:flex; align-items:center; gap:12px; padding:11px 13px; border-radius:12px; border:1px solid #f1f5f9; text-decoration:none; transition:all .2s; background:#fff; }
+        .db-att-list { display:flex; flex-direction:column; gap:6px; }
+        .db-att-item { display:flex; align-items:center; gap:12px; padding:7px 10px; border-radius:10px; border:1px solid #eef2f7; text-decoration:none; transition:all .2s; background:#fff; }
         .db-att-item:hover { background:#f8fafc; border-color:#e2e8f0; transform:translateX(3px); }
-        .db-att-ic { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .db-att-lb { flex:1; font-size:.9rem; font-weight:600; color:#334155; }
-        .db-att-n { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.2rem; min-width:26px; text-align:right; }
-        .db-clear { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; background:#ecfdf5; color:#065f46; font-weight:600; font-size:.85rem; margin-top:10px; }
+        .db-att-ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .db-att-lb { flex:1; font-size:.8rem; font-weight:600; color:#334155; }
+        .db-att-n { font-family:'Outfit',sans-serif; font-weight:700; font-size:1rem; min-width:22px; text-align:right; }
+        .db-clear { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:#ecfdf5; color:#065f46; font-weight:600; font-size:.85rem; margin-top:10px; }
 
         /* ── Attendance overview (monthly) ── */
         .db-att { display:flex; gap:18px; align-items:center; flex:1; min-height:0; }
         .db-att-cw { flex-shrink:0; position:relative; }
         .db-att-cw svg { filter:drop-shadow(0 2px 4px rgba(0,0,0,.06)); }
         .db-att-cl { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; }
-        .db-att-cp { font-size:1.2rem; font-weight:700; color:#0f172a; font-family:'Outfit',sans-serif; line-height:1; }
+        .db-att-cp { font-size:1rem; font-weight:700; color:#0f172a; font-family:'Outfit',sans-serif; line-height:1; }
         .db-att-cs { font-size:.66rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.3px; margin-top:2px; }
         .db-att-r { flex:1; display:flex; flex-direction:column; min-height:0; }
         .db-att-m { display:flex; flex-direction:column; gap:6px; }
-        .db-att-row { display:flex; align-items:center; gap:10px; height:32px; border-radius:6px; padding:0 8px; margin:0 -8px; transition:background .2s; }
+        .db-att-row { display:flex; align-items:center; gap:8px; height:26px; border-radius:6px; padding:0 8px; margin:0 -8px; transition:background .2s; }
         .db-att-row:hover { background:#f8fafc; }
         .db-att-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
-        .db-att-rl { flex:1; font-size:.9rem; font-weight:500; color:#475569; }
-        .db-att-rc { font-size:.95rem; font-weight:700; color:#0f172a; min-width:34px; text-align:right; }
-        .db-att-rp { font-size:.85rem; font-weight:600; color:#94a3b8; min-width:50px; text-align:right; }
+        .db-att-rl { flex:1; font-size:.8rem; font-weight:500; color:#475569; }
+        .db-att-rc { font-size:.85rem; font-weight:700; color:#0f172a; min-width:34px; text-align:right; }
+        .db-att-rp { font-size:.76rem; font-weight:600; color:#94a3b8; min-width:50px; text-align:right; }
         .db-att-rate { display:flex; align-items:center; justify-content:space-between; padding-top:10px; margin-top:10px; border-top:1px solid #f1f5f9; }
         .db-att-rlbl { font-size:.78rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.3px; }
-        .db-att-rval { font-size:1.15rem; font-weight:700; color:#0f172a; font-family:'Outfit',sans-serif; line-height:1; }
+        .db-att-rval { font-size:1rem; font-weight:700; color:#0f172a; font-family:'Outfit',sans-serif; line-height:1; }
 
         /* ── Lists (interviews, people) ── */
         .db-list { display:flex; flex-direction:column; }
-        .db-li { display:flex; align-items:center; gap:13px; padding:10px 8px; margin:0 -8px; border-radius:10px; border-bottom:1px solid #f8fafc; transition:background .2s; }
+        .db-li { display:flex; align-items:center; gap:10px; padding:7px 6px; margin:0 -8px; border-radius:10px; border-bottom:1px solid #f8fafc; transition:background .2s; }
         .db-li:last-child { border-bottom:none; }
         .db-li:hover { background:#f8fafc; }
-        .db-av { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.82rem; font-weight:700; font-family:'Outfit',sans-serif; background:linear-gradient(135deg,#eef2ff,#e0e7ff); color:#6366f1; }
+        .db-av { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; font-family:'Outfit',sans-serif; background:linear-gradient(135deg,#eff6ff,#dbeafe); color:#2563eb; }
         .db-li-info { flex:1; min-width:0; }
-        .db-li-name { font-size:.92rem; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .db-li-sub { font-size:.8rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .db-li-name { font-size:.82rem; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .db-li-sub { font-size:.72rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .db-li-r { text-align:right; flex-shrink:0; }
-        .db-li-d { font-size:.85rem; font-weight:700; color:#0f172a; }
-        .db-li-t { font-size:.76rem; color:#64748b; }
+        .db-li-d { font-size:.76rem; font-weight:700; color:#0f172a; }
+        .db-li-t { font-size:.68rem; color:#64748b; }
         .db-today-dot { display:inline-flex; align-items:center; gap:5px; }
         .db-today-dot::before { content:''; width:7px; height:7px; border-radius:50%; background:#16a34a; animation:dbPulse 1.5s infinite; }
 
         /* ── Bars ── */
-        .db-bars { display:flex; flex-direction:column; gap:12px; }
-        .db-bar-top { display:flex; justify-content:space-between; font-size:.84rem; margin-bottom:5px; }
+        .db-bars { display:flex; flex-direction:column; gap:9px; }
+        .db-bar-top { display:flex; justify-content:space-between; font-size:.76rem; margin-bottom:4px; }
         .db-bar-top span { font-weight:600; color:#334155; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:75%; }
         .db-bar-top b { color:#0f172a; font-weight:700; }
-        .db-bar-tr { height:9px; background:#f1f5f9; border-radius:9px; overflow:hidden; }
+        .db-bar-tr { height:7px; background:#f1f5f9; border-radius:9px; overflow:hidden; }
         .db-bar-fl { height:100%; border-radius:9px; transform-origin:left; animation:dbGrow .8s cubic-bezier(.22,1,.36,1) both; }
 
         /* ── Column chart ── */
-        .db-cols { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; height:150px; padding-top:8px; }
+        .db-cols { display:flex; align-items:flex-end; justify-content:space-between; gap:8px; height:110px; padding-top:6px; }
         .db-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; height:100%; }
         .db-col-v { font-size:.78rem; font-weight:700; color:#334155; }
-        .db-col-b { width:100%; max-width:38px; border-radius:8px 8px 4px 4px; background:linear-gradient(180deg,#818cf8,#6366f1); transform-origin:bottom; animation:dbRise .7s cubic-bezier(.22,1,.36,1) both; min-height:4px; }
+        .db-col-b { width:100%; max-width:38px; border-radius:8px 8px 4px 4px; background:linear-gradient(180deg,#60a5fa,#2563eb); transform-origin:bottom; animation:dbRise .7s cubic-bezier(.22,1,.36,1) both; min-height:4px; }
         .db-col-b.zero { background:#e2e8f0; }
         .db-col-l { font-size:.72rem; font-weight:600; color:#94a3b8; text-transform:uppercase; }
 
         /* ── Holidays ── */
-        .db-hol { display:flex; align-items:center; gap:13px; padding:9px 0; border-bottom:1px solid #f8fafc; }
+        .db-hol { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f8fafc; }
         .db-hol:last-child { border-bottom:none; }
-        .db-hol-d { width:46px; flex-shrink:0; text-align:center; border-radius:11px; padding:5px 0 6px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
-        .db-hol-d b { display:block; font-family:'Outfit',sans-serif; font-size:1.15rem; line-height:1.1; }
+        .db-hol-d { width:38px; flex-shrink:0; text-align:center; border-radius:11px; padding:5px 0 6px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+        .db-hol-d b { display:block; font-family:'Outfit',sans-serif; font-size:.95rem; line-height:1.1; }
         .db-hol-d span { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
 
         .db-sub { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#94a3b8; margin:2px 0 6px; }
+
+
+        /* ── page header + KPI strip (layout kit) ── */
+        .db-datepill { display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; font-size:.8rem; font-weight:600; color:#475569; }
+        .db-rf.spin svg { animation:dbspin .8s linear infinite; }
+        .db-kpi { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:12px; }
+        .db-kpi-c { background:#fff; border:1px solid #e8edf6; border-radius:12px; padding:12px 14px; box-shadow:0 1px 2px rgba(15,26,58,.04); display:flex; flex-direction:column; gap:6px; }
+        .db-kpi-c::before { display:none; }
+        .db-kpi-c:hover { box-shadow:0 6px 18px rgba(15,26,58,.07); transform:none; }
+        .kc-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .kc-lbl { font-size:.74rem; font-weight:600; color:#64748b; }
+        .kc-ic { width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .kc-val { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.55rem; line-height:1.05; color:#0f172a; }
+        .kc-foot { display:flex; align-items:center; gap:7px; min-height:18px; }
+        /* ── leave trends ── */
+        .db-lt-leg { display:flex; gap:14px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:6px; font-size:.72rem; font-weight:600; color:#64748b; }
+        .db-lt-leg span { display:inline-flex; align-items:center; gap:6px; }
+        .db-lt-leg i { width:9px; height:9px; border-radius:50%; display:inline-block; }
+        .db-lt { display:flex; align-items:flex-end; justify-content:space-between; gap:8px; height:130px; border-bottom:1px solid #eef2f7; padding-bottom:0; }
+        .db-lt-g { flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; min-width:0; }
+        .db-lt-bars { flex:1; width:100%; display:flex; align-items:flex-end; justify-content:center; gap:3px; }
+        .db-lt-b { width:100%; max-width:16px; border-radius:5px 5px 2px 2px; position:relative; transform-origin:bottom; animation:dbRise .7s cubic-bezier(.22,1,.36,1) both; }
+        .db-lt-b em { position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-style:normal; font-size:.62rem; font-weight:700; color:#475569; }
+        .db-lt-l { font-size:.68rem; font-weight:600; color:#94a3b8; text-transform:uppercase; padding-top:4px; }
+        .db-act-pill { display:inline-block; padding:2px 8px; border-radius:20px; font-size:.64rem; font-weight:700; text-transform:capitalize; }
 
         @media (max-width:1180px) {
           .db-kpi { grid-template-columns:repeat(2,1fr); gap:12px; }
@@ -418,21 +473,22 @@ function Dashboard() {
   return (
     <>
       <style>{styles}</style>
+      {hiddenW.length > 0 && <style>{hiddenW.map(k => (k === 'quick_actions' ? '.db-quick{display:none}' : `.db-card[data-w="${String(k).replace(/[^a-z_]/g, '')}"]{display:none}`)).join('\n')}</style>}
 
       <div className="db-page">
-        {/* ── Hero ── */}
-        <div className="db-hero" style={{ animation: ready ? undefined : 'none' }}>
-          <div className="db-hero-l">
-            <h1>{greeting}, {profile?.full_name || profile?.email?.split('@')[0] || 'Admin'}</h1>
-            <div className="db-hero-g">
-              {attentionTotal > 0
-                ? `You have ${attentionTotal} item${attentionTotal === 1 ? '' : 's'} waiting for your review.`
-                : "You're all caught up. Here's how the company looks today."}
-            </div>
+        {/* ── Page header ── */}
+        <div className="ph">
+          <div>
+            <h1>{greeting}, {profile?.full_name || profile?.email?.split('@')[0] || 'Admin'} <span aria-hidden="true">&#128075;</span></h1>
+            <p>
+              Here&apos;s what&apos;s happening in your organization today.
+              {attentionTotal > 0 ? ` ${attentionTotal} item${attentionTotal === 1 ? '' : 's'} waiting for your review.` : ''}
+            </p>
           </div>
-          <div className="db-hero-r">
-            <span className="db-date">{todayLabel}</span>
-            <button className={`db-rfsh ${refreshing ? 'spin' : ''}`} onClick={refresh} title="Refresh"><Icon name="refresh" size={15} /></button>
+          <div className="ph-actions">
+            <span className="db-datepill"><Icon name="calendar" size={14} />{todayLabel}</span>
+            <Link to="/preferences#dashboard" className="btn-o">Customize</Link>
+            <button className={`btn-o db-rf ${refreshing ? 'spin' : ''}`} onClick={refresh} title="Refresh"><Icon name="refresh" size={14} />Refresh</button>
           </div>
         </div>
 
@@ -450,64 +506,49 @@ function Dashboard() {
         )}
 
         {/* ── KPI cards ── */}
-        <div className="db-kpi">
-          <div className="db-kpi-c" style={{ '--accent': '#6366f1' }}>
-            <div className="db-kpi-r1">
-              <div className="db-kpi-ic" style={{ background: '#eef2ff', color: '#6366f1' }}><Icon name="users" /></div>
-              <span className="db-kpi-t">Total Employees</span>
-            </div>
-            <div className="db-kpi-v"><AnimatedValue value={stats.emps} /></div>
-            <div className="db-kpi-r3">
-              <span className={`db-kpi-gr ${stats.empGrowth >= 0 ? 'up' : 'down'}`}>
-                <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor"><path d={stats.empGrowth >= 0 ? 'M12 5l7 7h-5v7h-4v-7H5l7-7z' : 'M12 19l-7-7h5V5h4v7h5l-7 7z'} /></svg>
-                {stats.empGrowth >= 0 ? '+' : ''}{stats.empGrowth}%
-              </span>
-              <span className="db-kpi-d">vs last 30 days</span>
-              <Link to="/employees/manage" className="db-kpi-lk">View &rarr;</Link>
-            </div>
-          </div>
+        <Stagger className="db-kpi">
+          <Item className="db-kpi-c" key="emp">
+            <div className="kc-top"><span className="kc-lbl">Total Employees</span><span className="kc-ic" style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="users" size={16} /></span></div>
+            <div className="kc-val"><AnimatedValue value={stats.emps} /></div>
+            <div className="kc-foot"><span className={`db-kpi-gr ${stats.empGrowth >= 0 ? 'up' : 'down'}`}>{stats.empGrowth >= 0 ? '+' : ''}{stats.empGrowth}%</span><span className="db-kpi-d">vs last 30 days</span><Link to="/employees/manage" className="db-kpi-lk">View &rarr;</Link></div>
+          </Item>
 
-          <div className="db-kpi-c" style={{ '--accent': '#f59e0b' }}>
-            <div className="db-kpi-r1">
-              <div className="db-kpi-ic" style={{ background: '#fffbeb', color: '#f59e0b' }}><Icon name="edit" /></div>
-              <span className="db-kpi-t">Pending Approvals</span>
-            </div>
-            <div className="db-kpi-v"><AnimatedValue value={stats.pendingEmps} /></div>
-            <div className="db-kpi-r3">
-              <span className="db-kpi-d">{stats.pendingEmps > 0 ? 'Awaiting review' : 'All clear'}</span>
-              <Link to="/employees/pending" className="db-kpi-lk">Review &rarr;</Link>
-            </div>
-          </div>
+          <Item className="db-kpi-c" key="present">
+            <div className="kc-top"><span className="kc-lbl">Present Today</span><span className="kc-ic" style={{ background: '#ecfdf5', color: '#16a34a' }}><Icon name="check" size={16} /></span></div>
+            <div className="kc-val">{at ? <AnimatedValue value={present} /> : '–'}</div>
+            <div className="kc-foot"><span className="db-kpi-d">{at ? 'of ' + at.totalActive + ' employees' : 'Attendance not available'}</span><Link to="/attendance/daily" className="db-kpi-lk">View &rarr;</Link></div>
+          </Item>
 
-          <div className="db-kpi-c" style={{ '--accent': '#10b981' }}>
-            <div className="db-kpi-r1">
-              <div className="db-kpi-ic" style={{ background: '#ecfdf5', color: '#10b981' }}><Icon name="briefcase" /></div>
-              <span className="db-kpi-t">Total Candidates</span>
-            </div>
-            <div className="db-kpi-v"><AnimatedValue value={stats.candidates} /></div>
-            <div className="db-kpi-r3">
-              <span className="db-kpi-d">All registered candidates</span>
-              <Link to="/candidates/data" className="db-kpi-lk">View &rarr;</Link>
-            </div>
-          </div>
+          <Item className="db-kpi-c" key="leave">
+            <div className="kc-top"><span className="kc-lbl">On Leave</span><span className="kc-ic" style={{ background: '#fff1f2', color: '#e11d48' }}><Icon name="calendar" size={16} /></span></div>
+            <div className="kc-val">{ov.leave ? <AnimatedValue value={onLeaveToday.length} /> : '–'}</div>
+            <div className="kc-foot"><span className="db-kpi-d">Approved leave today</span><Link to="/leave/manage" className="db-kpi-lk">View &rarr;</Link></div>
+          </Item>
 
-          <div className="db-kpi-c" style={{ '--accent': '#0284c7' }}>
-            <div className="db-kpi-r1">
-              <div className="db-kpi-ic" style={{ background: '#eff6ff', color: '#0284c7' }}><Icon name="grid" /></div>
-              <span className="db-kpi-t">Departments</span>
-            </div>
-            <div className="db-kpi-v"><AnimatedValue value={stats.depts} /></div>
-            <div className="db-kpi-r3">
-              <span className="db-kpi-d">Active departments</span>
-              <Link to="/masters/departments" className="db-kpi-lk">Manage &rarr;</Link>
-            </div>
-          </div>
-        </div>
+          <Item className="db-kpi-c" key="open">
+            <div className="kc-top"><span className="kc-lbl">Open Requests</span><span className="kc-ic" style={{ background: '#fffbeb', color: '#d97706' }}><Icon name="edit" size={16} /></span></div>
+            <div className="kc-val"><AnimatedValue value={attentionTotal} /></div>
+            <div className="kc-foot"><span className="db-kpi-d">Awaiting your review</span><Link to="/employees/pending" className="db-kpi-lk">View &rarr;</Link></div>
+          </Item>
 
-        {/* ── Row: today's attendance + needs attention ── */}
-        <div className="db-grid">
+          <Item className="db-kpi-c" key="cand">
+            <div className="kc-top"><span className="kc-lbl">Total Candidates</span><span className="kc-ic" style={{ background: '#f0fdf4', color: '#10b981' }}><Icon name="briefcase" size={16} /></span></div>
+            <div className="kc-val"><AnimatedValue value={stats.candidates} /></div>
+            <div className="kc-foot"><span className="db-kpi-d">All registered candidates</span><Link to="/candidates/data" className="db-kpi-lk">View &rarr;</Link></div>
+          </Item>
+
+          <Item className="db-kpi-c" key="dept">
+            <div className="kc-top"><span className="kc-lbl">Departments</span><span className="kc-ic" style={{ background: '#f5f3ff', color: '#7c3aed' }}><Icon name="grid" size={16} /></span></div>
+            <div className="kc-val"><AnimatedValue value={stats.depts} /></div>
+            <div className="kc-foot"><span className="db-kpi-d">Active departments</span><Link to="/masters/departments" className="db-kpi-lk">View &rarr;</Link></div>
+          </Item>
+
+        </Stagger>
+
+        {/* ── Row: attendance + leave trends ── */}
+        <Stagger className="db-grid">
           {at && (
-            <div className="db-card s7">
+            <Item data-w="today_attendance" className="db-card s6">
               <div className="db-card-hdr">
                 <span className="db-card-ttl"><i style={{ background: '#ecfdf5', color: '#10b981' }}><Icon name="clock" size={15} /></i>Today's Attendance</span>
                 <Link to="/attendance/daily" className="db-card-lnk">Details &rarr;</Link>
@@ -518,7 +559,7 @@ function Dashboard() {
                 ) : (
                   <div className="db-today">
                     <div className="db-today-ring">
-                      <DonutChart size={150} sw={24} segments={[
+                      <DonutChart size={112} sw={18} segments={[
                         { value: at.present, color: '#16a34a' },
                         { value: at.wfh, color: '#0ea5e9' },
                         { value: onLeaveToday.length, color: '#f59e0b' },
@@ -538,14 +579,113 @@ function Dashboard() {
                   </div>
                 )}
                 {at.recorded === 0 && at.totalActive > 0 && (
-                  <div className="db-kpi-d" style={{ marginTop: 12 }}>No attendance has been synced for today yet. Open <Link to="/attendance/daily" style={{ color: '#6366f1', fontWeight: 700 }}>Daily Attendance</Link> to pull today's punches.</div>
+                  <div className="db-kpi-d" style={{ marginTop: 12 }}>No attendance has been synced for today yet. Open <Link to="/attendance/daily" style={{ color: '#2563eb', fontWeight: 700 }}>Daily Attendance</Link> to pull today's punches.</div>
                 )}
                 {at.offOrHoliday > 0 && <div className="db-kpi-d" style={{ marginTop: 12 }}>{at.offOrHoliday} employee(s) are on a weekly off / holiday today.</div>}
               </div>
-            </div>
+            </Item>
           )}
+          {ov.leaveTrends && (
+            <Item data-w="leave_trends" className="db-card s6">
+              <div className="db-card-hdr">
+                <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="calendar" size={15} /></i>Leave Trends</span>
+                <Link to="/leave/manage" className="db-card-lnk">Manage &rarr;</Link>
+              </div>
+              <div className="db-card-bd">
+                {ov.leaveTrends.types.length === 0 ? (
+                  <div className="db-emp">No leave requests in the last 6 months.</div>
+                ) : (
+                  <>
+                    <div className="db-lt-leg">
+                      {ov.leaveTrends.types.map((t, ti) => <span key={t}><i style={{ background: LT_COLORS[ti % LT_COLORS.length] }} />{t}</span>)}
+                    </div>
+                    <div className="db-lt">
+                      {ov.leaveTrends.months.map((m, mi) => (
+                        <div className="db-lt-g" key={m.ym}>
+                          <div className="db-lt-bars">
+                            {ov.leaveTrends.types.map((t, ti) => {
+                              const v = ov.leaveTrends.series[t][mi];
+                              return <div key={t} className="db-lt-b" title={t + ': ' + v} style={{ height: (v / ltMax) * 100 + '%', minHeight: v ? 4 : 2, background: v ? LT_COLORS[ti % LT_COLORS.length] : '#e2e8f0' }}>{v ? <em>{v}</em> : null}</div>;
+                            })}
+                          </div>
+                          <span className="db-lt-l">{m.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </Item>
+          )}
+        </Stagger>
 
-          <div className={`db-card ${at ? 's5' : 's12'}`} style={!at ? { gridColumn: 'span 12' } : undefined}>
+        {/* ── Row: recent activities + birthdays ── */}
+        <Stagger className="db-grid">
+          {ov.activities && (
+            <Item data-w="recent_activities" className="db-card s6">
+              <div className="db-card-hdr">
+                <span className="db-card-ttl"><i style={{ background: '#ecfdf5', color: '#10b981' }}><Icon name="clock" size={15} /></i>Recent Activities</span>
+              </div>
+              <div className="db-card-bd">
+                {ov.activities.length === 0 ? (
+                  <div className="db-emp">Nothing has happened yet.</div>
+                ) : (
+                  <div className="db-list">
+                    {ov.activities.map((a, i) => {
+                      const sc = ACT_COLORS[String(a.status || '').toLowerCase()] || ACT_COLORS.default;
+                      return (
+                        <div className="db-li" key={i}>
+                          <div className="db-av" style={{ background: '#eff6ff', color: '#2563eb' }}>{initialsOf(a.name)}</div>
+                          <div className="db-li-info">
+                            <div className="db-li-name">{a.name}</div>
+                            <div className="db-li-sub">{a.text}</div>
+                          </div>
+                          <div className="db-li-r">
+                            <span className="db-act-pill" style={{ background: sc.bg, color: sc.fg }}>{String(a.status || '').replace(/_/g, ' ') || a.kind}</span>
+                            <div className="db-li-t">{timeAgo(a.at)}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </Item>
+          )}
+            {ov.celebrations && (
+              <Item data-w="birthdays" className="db-card s6">
+                <div className="db-card-hdr">
+                  <span className="db-card-ttl"><i style={{ background: '#fdf2f8', color: '#ec4899' }}><Icon name="cake" size={15} /></i>Birthdays</span>
+                  <span className="db-tag" style={{ background: '#fdf2f8', color: '#be185d' }}>Next 30 days</span>
+                </div>
+                <div className="db-card-bd">
+                  {ov.celebrations.birthdays.length === 0 ? (
+                    <div className="db-emp">No birthdays coming up.</div>
+                  ) : (
+                    <div className="db-list">
+                      {ov.celebrations.birthdays.map((b, i) => (
+                        <div className="db-li" key={i}>
+                          <div className="db-av" style={{ background: '#fdf2f8', color: '#db2777' }}>{initialsOf(b.full_name)}</div>
+                          <div className="db-li-info">
+                            <div className="db-li-name">{b.full_name}</div>
+                            <div className="db-li-sub">{b.designation || ''}</div>
+                          </div>
+                          <div className="db-li-r">
+                            <div className="db-li-d">{b.days === 0 ? <span className="db-today-dot">Today</span> : shortDate(b.date)}</div>
+                            <div className="db-li-t">{b.days === 0 ? '🎂' : inDays(b.days)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Item>
+            )}
+        </Stagger>
+
+        {/* ── Row: needs attention + interviews ── */}
+        <Stagger className="db-grid">
+          <Item data-w="needs_attention" className={`db-card s6`}>
             <div className="db-card-hdr">
               <span className="db-card-ttl"><i style={{ background: '#fffbeb', color: '#f59e0b' }}><Icon name="check" size={15} /></i>Needs Your Attention</span>
               {attentionTotal > 0 && <span className="db-tag" style={{ background: '#fffbeb', color: '#b45309' }}>{attentionTotal} open</span>}
@@ -562,14 +702,44 @@ function Dashboard() {
               </div>
               {attentionTotal === 0 && <div className="db-clear"><Icon name="check" size={16} />Nothing is waiting for you right now.</div>}
             </div>
-          </div>
-        </div>
+          </Item>
+          <Item data-w="interviews" className="db-card s6">
+            <div className="db-card-hdr">
+              <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#0284c7' }}><Icon name="calendar" size={15} /></i>Upcoming Interviews</span>
+              <Link to="/candidates/data" className="db-card-lnk">View all</Link>
+            </div>
+            <div className="db-card-bd">
+              {upcomingInterviews.length === 0 ? (
+                <div className="db-emp">No upcoming interviews scheduled.</div>
+              ) : (
+                <div className="db-list">
+                  {upcomingInterviews.map((iv, i) => {
+                    const fmt = fmtInterview(iv.interview_date);
+                    return (
+                      <div className="db-li" key={iv.id || i} style={{ animation: `dbSlUp .3s ease both ${i * 0.05}s` }}>
+                        <div className="db-av">{initialsOf(iv.candidate_name)}</div>
+                        <div className="db-li-info">
+                          <div className="db-li-name">{iv.candidate_name || 'Unknown'}</div>
+                          <div className="db-li-sub">{iv.apply_post || 'No role'}</div>
+                        </div>
+                        <div className="db-li-r">
+                          {fmt && <div className="db-li-d">{fmt.isToday ? <span className="db-today-dot">{fmt.date}</span> : fmt.date}</div>}
+                          {fmt && <div className="db-li-t">{fmt.time}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Item>
+        </Stagger>
 
         {/* ── Row: monthly attendance, interviews, hiring pipeline ── */}
-        <div className="db-grid">
-          <div className="db-card s4">
+        <Stagger className="db-grid">
+          <Item data-w="attendance_overview" className="db-card s6">
             <div className="db-card-hdr">
-              <span className="db-card-ttl"><i style={{ background: '#eef2ff', color: '#6366f1' }}><Icon name="clock" size={15} /></i>Attendance Overview</span>
+              <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="clock" size={15} /></i>Attendance Overview</span>
             </div>
             <div className="db-card-bd">
               {attendanceSummaries.length === 0 ? (
@@ -612,40 +782,10 @@ function Dashboard() {
                 </div>
               )}
             </div>
-          </div>
+          </Item>
 
-          <div className="db-card s4">
-            <div className="db-card-hdr">
-              <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#0284c7' }}><Icon name="calendar" size={15} /></i>Upcoming Interviews</span>
-              <Link to="/candidates/data" className="db-card-lnk">View all</Link>
-            </div>
-            <div className="db-card-bd">
-              {upcomingInterviews.length === 0 ? (
-                <div className="db-emp">No upcoming interviews scheduled.</div>
-              ) : (
-                <div className="db-list">
-                  {upcomingInterviews.map((iv, i) => {
-                    const fmt = fmtInterview(iv.interview_date);
-                    return (
-                      <div className="db-li" key={iv.id || i} style={{ animation: `dbSlUp .3s ease both ${i * 0.05}s` }}>
-                        <div className="db-av">{initialsOf(iv.candidate_name)}</div>
-                        <div className="db-li-info">
-                          <div className="db-li-name">{iv.candidate_name || 'Unknown'}</div>
-                          <div className="db-li-sub">{iv.apply_post || 'No role'}</div>
-                        </div>
-                        <div className="db-li-r">
-                          {fmt && <div className="db-li-d">{fmt.isToday ? <span className="db-today-dot">{fmt.date}</span> : fmt.date}</div>}
-                          {fmt && <div className="db-li-t">{fmt.time}</div>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
 
-          <div className="db-card s4">
+          <Item data-w="hiring_pipeline" className="db-card s6">
             <div className="db-card-hdr">
               <span className="db-card-ttl"><i style={{ background: '#ecfdf5', color: '#10b981' }}><Icon name="briefcase" size={15} /></i>Hiring Pipeline</span>
               <Link to="/candidates/data" className="db-card-lnk">View all</Link>
@@ -664,14 +804,14 @@ function Dashboard() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </Item>
+        </Stagger>
 
         {/* ── Row: people widgets ── */}
         {(ov.departments || ov.hiring || ov.leave || ov.wfh) && (
-          <div className="db-grid">
+          <Stagger className="db-grid">
             {ov.departments && (
-              <div className="db-card s4">
+              <Item data-w="headcount" className="db-card s4">
                 <div className="db-card-hdr">
                   <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#0284c7' }}><Icon name="grid" size={15} /></i>Headcount by Department</span>
                 </div>
@@ -689,13 +829,13 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Item>
             )}
 
             {ov.hiring && (
-              <div className="db-card s4">
+              <Item data-w="new_hires" className="db-card s4">
                 <div className="db-card-hdr">
-                  <span className="db-card-ttl"><i style={{ background: '#eef2ff', color: '#6366f1' }}><Icon name="userPlus" size={15} /></i>New Hires</span>
+                  <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="userPlus" size={15} /></i>New Hires</span>
                   <span className="db-tag">Last 6 months</span>
                 </div>
                 <div className="db-card-bd">
@@ -726,11 +866,11 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Item>
             )}
 
             {(ov.leave || ov.wfh) && (
-              <div className="db-card s4">
+              <Item data-w="out_of_office" className="db-card s4">
                 <div className="db-card-hdr">
                   <span className="db-card-ttl"><i style={{ background: '#fffbeb', color: '#f59e0b' }}><Icon name="home" size={15} /></i>Out of Office Today</span>
                   <span className="db-tag" style={{ background: '#fffbeb', color: '#b45309' }}>{onLeaveToday.length + wfhToday.length}</span>
@@ -763,49 +903,20 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Item>
             )}
-          </div>
+          </Stagger>
         )}
 
         {/* ── Row: celebrations + holidays ── */}
         {(ov.celebrations || (ov.holidays && ov.holidays.length >= 0)) && (
-          <div className="db-grid">
-            {ov.celebrations && (
-              <div className="db-card s4">
-                <div className="db-card-hdr">
-                  <span className="db-card-ttl"><i style={{ background: '#fdf2f8', color: '#ec4899' }}><Icon name="cake" size={15} /></i>Birthdays</span>
-                  <span className="db-tag" style={{ background: '#fdf2f8', color: '#be185d' }}>Next 30 days</span>
-                </div>
-                <div className="db-card-bd">
-                  {ov.celebrations.birthdays.length === 0 ? (
-                    <div className="db-emp">No birthdays coming up.</div>
-                  ) : (
-                    <div className="db-list">
-                      {ov.celebrations.birthdays.map((b, i) => (
-                        <div className="db-li" key={i}>
-                          <div className="db-av" style={{ background: '#fdf2f8', color: '#db2777' }}>{initialsOf(b.full_name)}</div>
-                          <div className="db-li-info">
-                            <div className="db-li-name">{b.full_name}</div>
-                            <div className="db-li-sub">{b.designation || ''}</div>
-                          </div>
-                          <div className="db-li-r">
-                            <div className="db-li-d">{b.days === 0 ? <span className="db-today-dot">Today</span> : shortDate(b.date)}</div>
-                            <div className="db-li-t">{b.days === 0 ? '🎂' : inDays(b.days)}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          <Stagger className="db-grid">
 
             {ov.celebrations && (
-              <div className="db-card s4">
+              <Item data-w="anniversaries" className="db-card s6">
                 <div className="db-card-hdr">
-                  <span className="db-card-ttl"><i style={{ background: '#f5f3ff', color: '#8b5cf6' }}><Icon name="award" size={15} /></i>Work Anniversaries</span>
-                  <span className="db-tag" style={{ background: '#f5f3ff', color: '#6d28d9' }}>Next 30 days</span>
+                  <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#3b82f6' }}><Icon name="award" size={15} /></i>Work Anniversaries</span>
+                  <span className="db-tag" style={{ background: '#eff6ff', color: '#6d28d9' }}>Next 30 days</span>
                 </div>
                 <div className="db-card-bd">
                   {ov.celebrations.anniversaries.length === 0 ? (
@@ -814,7 +925,7 @@ function Dashboard() {
                     <div className="db-list">
                       {ov.celebrations.anniversaries.map((a, i) => (
                         <div className="db-li" key={i}>
-                          <div className="db-av" style={{ background: '#f5f3ff', color: '#7c3aed' }}>{initialsOf(a.full_name)}</div>
+                          <div className="db-av" style={{ background: '#eff6ff', color: '#2563eb' }}>{initialsOf(a.full_name)}</div>
                           <div className="db-li-info">
                             <div className="db-li-name">{a.full_name}</div>
                             <div className="db-li-sub">{a.years} year{a.years === 1 ? '' : 's'} with us</div>
@@ -828,11 +939,11 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Item>
             )}
 
             {ov.holidays && (
-              <div className="db-card s4">
+              <Item data-w="holidays" className="db-card s6">
                 <div className="db-card-hdr">
                   <span className="db-card-ttl"><i style={{ background: '#fff7ed', color: '#ea580c' }}><Icon name="sun" size={15} /></i>Upcoming Holidays</span>
                   <Link to="/settings/holidays" className="db-card-lnk">Calendar</Link>
@@ -854,9 +965,9 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Item>
             )}
-          </div>
+          </Stagger>
         )}
       </div>
     </>

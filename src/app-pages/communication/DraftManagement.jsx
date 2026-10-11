@@ -76,7 +76,7 @@ const DraftManagement = () => {
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Continue to Send',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: '#2563eb',
         preConfirm: () => {
           const values = {};
           for (const v of customVarsFound) {
@@ -119,7 +119,7 @@ const DraftManagement = () => {
       showCancelButton: true,
       confirmButtonText: '📤 Send',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#4338ca',
+      confirmButtonColor: '#1e40af',
       preConfirm: () => {
         return {};
       },
@@ -243,7 +243,7 @@ const formatEmailBody = (body) => {
         .el-view-field.full { grid-column:1 / -1; }
         .el-view-field-label { font-size:.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
         .el-view-field-value { font-size:.88rem; color:#0f172a; line-height:1.4; word-break:break-word; }
-        .el-view-body-box { background:#fff; border-radius:10px; padding:20px 24px; font-size:.88rem; color:#334155; line-height:1.8; border:1px solid #e2e8f0; font-family:'Segoe UI',Arial,sans-serif; }
+        .el-view-body-box { background:#fff; border-radius:10px; padding:15px 18px; font-size:.88rem; color:#334155; line-height:1.8; border:1px solid #e2e8f0; font-family:'Segoe UI',Arial,sans-serif; }
         .el-view-body-box p { margin:0 0 12px; }
         .el-view-body-box p:last-child { margin-bottom:0; }
         .el-view-body-box br { display:block; content:''; margin:8px 0; }
@@ -256,7 +256,7 @@ const formatEmailBody = (body) => {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             Back to Drafts
           </button>
-          <div style={{ background:'#fff', borderRadius:14, border:'1px solid #f1f5f9', padding:24 }}>
+          <div style={{ background:'#fff', borderRadius:14, border:'1px solid #f1f5f9', padding:18 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, paddingBottom:16, borderBottom:'1px solid #f1f5f9' }}>
               <h3 style={{ margin:0, fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.15rem', color:'#0f172a' }}>{viewingDraft.candidate_name || 'Draft'} — Email Details</h3>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -276,7 +276,7 @@ const formatEmailBody = (body) => {
                 {isEditing ? (
                     <input className="premium-input" style={{ width: '100%', padding: '6px 10px', fontSize: '0.85rem' }} value={viewingDraft.to_email || ''} onChange={e => setViewingDraft({...viewingDraft, to_email: e.target.value})} />
                 ) : (
-                    <div className="el-view-field-value" style={{color:'#4338ca'}}>{viewingDraft.to_email}</div>
+                    <div className="el-view-field-value" style={{color:'#1e40af'}}>{viewingDraft.to_email}</div>
                 )}
               </div>
               {viewingDraft.cc && (
@@ -348,7 +348,7 @@ const formatEmailBody = (body) => {
         </div>
       ) : (
         <>
-      <h2 className="page-title">📧 Draft Emails</h2>
+      <h2 className="page-title">Draft Emails</h2>
       <p className="page-subtitle">Manage and send your saved email drafts</p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
@@ -401,7 +401,7 @@ const formatEmailBody = (body) => {
                   <td style={{ fontSize: '0.85rem' }}>{formatDate(d.created_at)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="draft-icon-btn" style={{ color: '#6366f1' }} title="View" onClick={() => setViewingDraft(d)}>
+                      <button className="draft-icon-btn" style={{ color: '#2563eb' }} title="View" onClick={() => setViewingDraft(d)}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       </button>
                       {(d.status || '').toUpperCase() !== 'SENT' && (

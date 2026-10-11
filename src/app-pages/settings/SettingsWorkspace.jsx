@@ -15,6 +15,7 @@ const GoogleDriveSettings = lazy(() => import('./GoogleDriveSettings'));
 const PayslipSettings = lazy(() => import('./PayslipSettings'));
 const HolidaySettings = lazy(() => import('./HolidaySettings'));
 const StatusMaster = lazy(() => import('./StatusMaster'));
+const RequestMails = lazy(() => import('./RequestMails'));
 
 export default function SettingsWorkspace() {
   const { section } = useParams();
@@ -60,6 +61,8 @@ function renderSection(key, saving, setSaving) {
       return <HolidaySettings />;
     case 'payslip':
       return <PayslipSettings saving={saving} setSaving={setSaving} />;
+    case 'request-mails':
+      return <RequestMails saving={saving} setSaving={setSaving} />;
     case 'google-drive':
       return <GoogleDriveSettings />;
     default:
@@ -71,7 +74,7 @@ function PlaceholderSection() {
   return (
     <div style={{
       background: '#fff', borderRadius: 16, border: '1.5px solid #e2e8f0',
-      padding: '48px 32px', textAlign: 'center', color: '#94a3b8'
+      padding: '36px 24px', textAlign: 'center', color: '#94a3b8'
     }}>
       <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🚧</div>
       <h4 style={{ fontFamily: "'Outfit', sans-serif", color: '#64748b', marginBottom: 6 }}>Coming Soon</h4>

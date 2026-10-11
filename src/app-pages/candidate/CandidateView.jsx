@@ -53,18 +53,18 @@ const CandidateView = () => {
     };
 
     if (loading) {
-        return <div style={{ padding: '20px' }}>Loading...</div>;
+        return <div style={{ padding: '15px' }}>Loading...</div>;
     }
 
     if (!candidate) {
-        return <div style={{ padding: '20px' }}>Candidate not found</div>;
+        return <div style={{ padding: '15px' }}>Candidate not found</div>;
     }
 
     return (
         <React.Fragment>
             <style>{`
                 .candidate-page {
-                    padding: 20px;
+                    padding: 15px;
                     background: #f5f6fa;
                     min-height: calc(100vh - 40px);
                 }
@@ -77,7 +77,7 @@ const CandidateView = () => {
                 .candidate-content {
                     background: #fff;
                     border-radius: 14px;
-                    padding: 30px;
+                    padding: 23px;
                 }
                 .section-title {
                     color: #0d6efd;

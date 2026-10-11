@@ -3,9 +3,11 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { sendEmail } from '@/lib/email';
 import { getStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
+import { sendRequestMail, ymd } from '@/lib/request-mail';
 import { logAudit } from '@/lib/audit';
+
+const fd = ymd;
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -50,23 +52,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       String(lr.employee_id)
     );
 
-    sendEmail(
-      lr.email_id,
-      'Leave Rejected — ' + lr.leave_type,
-      `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#dc2626">Leave Request Rejected</h2>
-        <p style="color:#334155">Dear ${lr.full_name || 'Employee'},</p>
-        <p style="color:#475569">Your leave request has been <strong style="color:#dc2626">rejected</strong>.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">Leave Type</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;color:#0f172a">${lr.leave_type}</td></tr>
-          <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">Start Date</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;color:#0f172a">${new Date(lr.start_date).toLocaleDateString('en-IN')}</td></tr>
-          <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">End Date</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;color:#0f172a">${new Date(lr.end_date).toLocaleDateString('en-IN')}</td></tr>
-          <tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">Reason</td><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#0f172a">${reason || 'Not specified'}</td></tr>
-        </table>
-        <p style="color:#475569;margin-top:20px">Best regards,<br/>HR Team</p>
-      </div>`,
-      { asUser: { id: user.id, type: user.type } }
-    );
+    sendRequestMail({
+      kind: 'leave', event: 'rejected', to: lr.email_id, asUser: { id: user.id, type: user.type },
+      vars: { employee_name: lr.full_name, request_type: lr.leave_type, from_date: fd(lr.start_date), to_date: fd(lr.end_date), duration: lr.duration, reason: lr.reason || '-', remarks: reason || 'Not specified' },
+    });
 
     await logAudit({
       action: 'leave_rejected',

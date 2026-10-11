@@ -23,7 +23,7 @@ const CandidateTable = ({
     return (
     <div className="candidate-card">
         <div className="header">
-            <h2>📁 Candidate Pool {!loadingCandidates && !fetchError && <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#64748b', marginLeft: 6 }}>({candidates.length} records)</span>}</h2>
+            <h2>Candidate Pool {!loadingCandidates && !fetchError && <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#64748b', marginLeft: 6 }}>({candidates.length} records)</span>}</h2>
             <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={onRefresh} title="Refresh" style={{ background: 'transparent', border: '1.5px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '.82rem', fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
                 <button className="btn" onClick={onAdd}>➕ Add Candidate</button>
@@ -84,26 +84,26 @@ const CandidateTable = ({
                         );
                     })}
                     {loadingCandidates && (
-                        <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: '#94a3b8' }}>
+                        <tr><td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                                <div style={{ width: 22, height: 22, border: '3px solid #e0e7ff', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                <div style={{ width: 22, height: 22, border: '3px solid #dbeafe', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                                 <span style={{ fontWeight: 600 }}>Loading candidates…</span>
                             </div>
                         </td></tr>
                     )}
                     {!loadingCandidates && fetchError && (
                         <tr><td colSpan={11}>
-                            <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                            <div style={{ textAlign: 'center', padding: '36px 15px' }}>
                                 <div style={{ fontSize: '2.8rem', marginBottom: '12px' }}>⚠️</div>
                                 <div style={{ color: '#991b1b', fontWeight: 700, fontSize: '1rem', marginBottom: '8px' }}>Failed to load candidates</div>
                                 <div style={{ color: '#64748b', fontSize: '.88rem', marginBottom: '20px', maxWidth: 480, margin: '0 auto 20px' }}>{fetchError}</div>
-                                <button onClick={onRefresh} style={{ background: 'linear-gradient(135deg,#4338ca,#7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 26px', fontWeight: 700, cursor: 'pointer', fontSize: '.9rem' }}>🔄 Retry</button>
+                                <button onClick={onRefresh} style={{ background: 'linear-gradient(135deg,#1e40af,#2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '.9rem' }}>🔄 Retry</button>
                             </div>
                         </td></tr>
                     )}
                     {!loadingCandidates && !fetchError && candidates.length === 0 && (
                         <tr><td colSpan={11}>
-                            <div style={{ textAlign: 'center', padding: '48px 20px', color: '#94a3b8' }}>
+                            <div style={{ textAlign: 'center', padding: '36px 15px', color: '#94a3b8' }}>
                                 <div style={{ fontSize: '2.8rem', marginBottom: '10px' }}>📬</div>
                                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#475569' }}>No candidates found.</div>
                                 <div style={{ fontSize: '.85rem', marginTop: '6px' }}>Add a new candidate using the button above.</div>

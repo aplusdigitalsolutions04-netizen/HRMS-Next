@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
+import { mutedCategories } from '@/lib/preferences';
 import { getAuthUser, jsonError, jsonSuccess, parsePagination } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
@@ -20,6 +21,9 @@ export async function GET(req: NextRequest) {
     const conditions: string[] = ['(is_company_wide = 1 OR user_id = ?)'];
     const params: any[] = [userId || ''];
     if (category) { conditions.push('category = ?'); params.push(category); }
+    // notification groups this person switched off in My Preferences
+    const muted = await mutedCategories(user);
+    if (muted.length) { conditions.push(`(category IS NULL OR category NOT IN (${muted.map(() => '?').join(',')}))`); params.push(...muted); }
 
     const where = ' WHERE ' + conditions.join(' AND ');
 

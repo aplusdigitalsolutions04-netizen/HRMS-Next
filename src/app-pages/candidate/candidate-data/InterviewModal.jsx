@@ -11,7 +11,7 @@ const InterviewModal = ({
         <div className="modal-content">
             <h3 className="modal-title" style={{ marginBottom: 16 }}>
                 📋 Interview Details —&nbsp;
-                <span style={{ color: '#4338ca' }}>{candidateName}</span>
+                <span style={{ color: '#1e40af' }}>{candidateName}</span>
             </h3>
             {formError && (
                 <div style={{ color: '#e53935', fontWeight: 500, marginBottom: 10 }}>{formError}</div>

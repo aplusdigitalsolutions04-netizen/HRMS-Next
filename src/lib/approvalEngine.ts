@@ -16,6 +16,18 @@ export interface WorkflowStep extends RowDataPacket {
   label: string | null;
 }
 
+// Creates the "Reporting Manager, then HR" workflow for a module the first time it is needed.
+export async function ensureManagerHrWorkflow(moduleKey: string, name: string): Promise<void> {
+  try {
+    const ex = await query<RowDataPacket[]>('SELECT id FROM approval_workflows WHERE module_key=?', [moduleKey]);
+    if (ex.length > 0) return;
+    const id = uuidv4();
+    await execute('INSERT INTO approval_workflows (id, module_key, name, is_active) VALUES (?,?,?,1)', [id, moduleKey, name]);
+    await execute('INSERT INTO approval_workflow_steps (id, workflow_id, step_order, approver_type, label) VALUES (?,?,1,?,?)', [uuidv4(), id, 'MANAGER', 'Reporting Manager']);
+    await execute('INSERT INTO approval_workflow_steps (id, workflow_id, step_order, approver_type, label) VALUES (?,?,2,?,?)', [uuidv4(), id, 'HR', 'HR Approval']);
+  } catch (e: any) { console.error('[approval] could not create workflow', moduleKey, e?.message); }
+}
+
 export async function getWorkflowSteps(moduleKey: string): Promise<{ workflowId: string; steps: WorkflowStep[] } | null> {
   const wf = await query<RowDataPacket[]>('SELECT * FROM approval_workflows WHERE module_key=? AND is_active=1', [moduleKey]);
   if (wf.length === 0) return null;

@@ -19,6 +19,7 @@ export async function GET(req, { params }) {
     if (rows.length === 0) return jsonError('Payslip not found', 404);
     if (user.type === 'employee') {
       if (rows[0].emp_code !== user.emp_code) return jsonError('Not authorized to access this payslip', 403);
+      if (String(rows[0].status || 'APPROVED').toUpperCase() !== 'APPROVED') return jsonError('Payslip not found', 404);
     } else if (!checkPermission(user, 'view_payroll')) {
       return jsonError('Insufficient permissions', 403);
     }

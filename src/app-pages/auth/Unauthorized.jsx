@@ -4,14 +4,14 @@ import { Link } from 'react-router-dom';
 const Unauthorized = () => (
   <>
     <style>{`
-      .ua-page { display:flex; align-items:center; justify-content:center; min-height:100vh; background:linear-gradient(135deg,#f5f4ff 0%,#efeafe 50%,#f8f7ff 100%); }
-      .ua-card { text-align:center; background:#fff; border-radius:20px; padding:48px 56px; max-width:480px; width:100%; box-shadow:0 8px 32px rgba(99,102,241,0.1); border:1px solid #f1f0ff; animation:uaFade .4s ease; }
+      .ua-page { display:flex; align-items:center; justify-content:center; min-height:100vh; background:linear-gradient(135deg,#f1f6ff 0%,#eff6ff 50%,#f8f7ff 100%); }
+      .ua-card { text-align:center; background:#fff; border-radius:14px; padding:36px 42px; max-width:480px; width:100%; box-shadow:0 8px 32px rgba(37,99,235,0.1); border:1px solid #e8f0ff; animation:uaFade .4s ease; }
       @keyframes uaFade { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
       .ua-icon { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,#fef2f2,#fde8e8); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; color:#ef4444; }
       .ua-card h1 { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.25rem; color:#0f172a; margin:0 0 8px; letter-spacing:-0.3px; }
       .ua-card p { color:#6b7280; font-size:.9rem; margin:0 0 24px; line-height:1.5; }
-      .ua-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 24px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:10px; font-weight:600; font-size:.85rem; text-decoration:none; transition:all .2s; }
-      .ua-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(99,102,241,0.35); color:#fff; }
+      .ua-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:linear-gradient(135deg,#2563eb,#3b82f6); color:#fff; border:none; border-radius:10px; font-weight:600; font-size:.85rem; text-decoration:none; transition:all .2s; }
+      .ua-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(37,99,235,0.35); color:#fff; }
     `}</style>
     <div className="ua-page">
       <div className="ua-card">

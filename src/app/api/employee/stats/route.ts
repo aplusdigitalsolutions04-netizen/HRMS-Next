@@ -21,9 +21,9 @@ export async function GET(req: NextRequest) {
     const dropped = by_status['dropped'] || 0;
     const newThis = await query<RowDataPacket[]>("SELECT COUNT(*) as cnt FROM employees WHERE is_deleted = 0 AND created_on >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
     const newThisMonth = newThis[0].cnt;
-    const prev = await query<RowDataPacket[]>("SELECT COUNT(*) as cnt FROM employees WHERE is_deleted = 0 AND created_on >= DATE_SUB(CURDATE(), INTERVAL 60 DAY) AND created_on < DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
-    const prevCount = prev[0].cnt || 1;
-    const growthPct = ((newThisMonth - prevCount) / prevCount * 100).toFixed(1);
+    // growth of the team over the last 30 days: people added, against the team size before them
+    const before = Number(total) - Number(newThisMonth);
+    const growthPct = before > 0 ? (Number(newThisMonth) / before * 100).toFixed(1) : '0.0';
     return jsonSuccess({ total, by_status, active, pending, dropped, new_this_month: newThisMonth, growth_pct: growthPct });
   } catch (e: any) {
     return jsonError(e, 500);

@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import dynamic from 'next/dynamic';
+import { motion } from '@/lib/ui-motion';
 
 const SettingsSidebar = dynamic(() => import('@/app-pages/settings/SettingsSidebar'), { ssr: false });
 
@@ -27,7 +28,8 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
   }, []);
 
   const toggleMenu = (menu) => {
-    setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
+    // accordion: opening one menu closes the others
+    setOpenMenus(prev => (prev[menu] ? {} : { [menu]: true }));
   };
 
   const navLink = (to, icon, label, perm = null, isSubmenu = false) => {
@@ -35,6 +37,7 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
     const active = pathname === to || (to !== '/' && pathname.startsWith(to));
     return (
       <Link to={to} className={`nav-link ${active ? 'active' : ''} ${isSubmenu ? 'submenu-link' : ''}`}>
+        {active && <motion.span layoutId={isSubmenu ? 'nav-active-sub' : 'nav-active'} className="nav-active-bg" transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }} />}
         {icon && <span className="nav-icon" dangerouslySetInnerHTML={{ __html: icon }} />}
         <span className="nav-label">{label}</span>
       </Link>
@@ -80,7 +83,7 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
                   <rect width="32" height="32" rx="8" fill="url(#brand-grad)"/>
                   <path d="M8 20V12l8-4 8 4v8l-8 4-8-4z" fill="rgba(255,255,255,.2)"/>
                   <circle cx="16" cy="16" r="4" fill="#fff"/>
-                  <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#6366f1"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
+                  <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#2563eb"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs>
                 </svg>
               )}
             </div>
@@ -138,6 +141,7 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
                 {navLink('/attendance/upload', null, 'Upload Attendance', 'upload_attendance', true)}
                 {navLink('/attendance/result', null, 'Attendance Summary', 'view_attendance', true)}
                 {navLink('/attendance/daily', null, 'Daily Records', 'view_attendance', true)}
+                {navLink('/attendance/corrections', null, 'Corrections', 'view_attendance', true)}
                 {navLink('/attendance/templates', null, 'Templates', 'upload_attendance', true)}
               </>,
               ['upload_attendance', 'view_attendance']
@@ -154,6 +158,14 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
               ['manage_salary_structures', 'generate_payslips', 'view_payroll']
             )}
 
+            {navLink('/assets',
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="12" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/><line x1="8" y1="16" x2="8" y2="20"/><line x1="16" y1="16" x2="16" y2="20"/></svg>',
+              'Assets', 'view_assets')}
+
+            {navLink('/reports',
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+              'Reports', 'view_reports')}
+
             {navDropdown('communications', 'Communications',
               '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
               <>
@@ -164,13 +176,31 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
               ['view_email_logs', 'view_drafts', 'approve_employee']
             )}
 
-            {navDropdown('system-masters', 'System Masters',
+            {navLink('/mail',
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>',
+              'My Mail', null)}
+
+            <div className="nav-section-title" style={{ marginTop: '8px' }}>Admin</div>
+
+            {navDropdown('system-masters', 'Masters',
               '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>',
               <>
                 {navLink('/masters/departments', null, 'Departments', 'view_departments', true)}
                 {navLink('/masters/designations', null, 'Designations', 'view_departments', true)}
+                {navLink('/masters/asset-types', null, 'Asset Types', 'view_assets', true)}
+                {navLink('/masters/leave-types', null, 'Leave Types', 'view_leave', true)}
+                {navLink('/masters/template-categories', null, 'Template Categories', 'settings_templates', true)}
               </>,
-              ['view_departments']
+              ['view_departments', 'view_assets', 'view_leave', 'settings_templates']
+            )}
+
+            {(hasPerm('view_audit_log') || sessionStorage.getItem('role') === 'ADMIN') && navDropdown('system-tools', 'Administration',
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+              <>
+                {navLink('/audit-log', null, 'Audit Log', 'view_audit_log', true)}
+                {sessionStorage.getItem('role') === 'ADMIN' && navLink('/backup', null, 'Backup & Export', null, true)}
+              </>,
+              ['view_audit_log']
             )}
           </nav>
         </aside>

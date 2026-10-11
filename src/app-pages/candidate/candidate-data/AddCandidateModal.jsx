@@ -126,7 +126,7 @@ const AddCandidateModal = ({ isOpen, onClose, onSaved }) => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
                       <button onClick={handleGetDetails} disabled={getDisabled}
-                        style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: getDisabled ? '#f1f5f9' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: getDisabled ? '#94a3b8' : '#fff', fontSize: 13, fontWeight: 600, cursor: getDisabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                        style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: getDisabled ? '#f1f5f9' : 'linear-gradient(135deg,#2563eb,#3b82f6)', color: getDisabled ? '#94a3b8' : '#fff', fontSize: 13, fontWeight: 600, cursor: getDisabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
                         Get Details
                       </button>
                     </div>
@@ -134,7 +134,7 @@ const AddCandidateModal = ({ isOpen, onClose, onSaved }) => {
 
                   <div style={{ marginBottom: 20 }}>
                     <button onClick={handleUploadParse} disabled={uploadDisabled}
-                      style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: uploadDisabled ? '#f1f5f9' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: uploadDisabled ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 600, cursor: uploadDisabled ? 'not-allowed' : 'pointer' }}>
+                      style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: uploadDisabled ? '#f1f5f9' : 'linear-gradient(135deg,#2563eb,#3b82f6)', color: uploadDisabled ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 600, cursor: uploadDisabled ? 'not-allowed' : 'pointer' }}>
                       Upload &amp; Parse Resume
                     </button>
                   </div>
@@ -190,7 +190,7 @@ const AddCandidateModal = ({ isOpen, onClose, onSaved }) => {
 
             {loader && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(255,255,255,0.7)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 40, height: 40, border: '4px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'atmSpin .6s linear infinite' }} />
+                <div style={{ width: 40, height: 40, border: '4px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'atmSpin .6s linear infinite' }} />
                 <p style={{ marginTop: 12, fontWeight: 600, color: '#64748b', fontSize: 14 }}>Please wait...</p>
               </div>
             )}

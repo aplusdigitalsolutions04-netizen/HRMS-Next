@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStatusMaster from '../shared/useStatusMaster';
+import CorrectionsPanel from './employee-dashboard/CorrectionsPanel';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -8,7 +9,7 @@ const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token')
 const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 
-function Donut({ pct, size = 120, sw = 16, color = '#6366f1', bg = '#f1f5f9' }) {
+function Donut({ pct, size = 120, sw = 16, color = '#2563eb', bg = '#f1f5f9' }) {
   const r = (size - sw) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
@@ -35,6 +36,7 @@ export default function EmployeeAttendance() {
   const [records, setRecords] = useState({ records: [], total: 0, page: 1, per_page: 15, total_pages: 1 });
   const [insights, setInsights] = useState(null);
   const [recordsPage, setRecordsPage] = useState(1);
+  const [corrDate, setCorrDate] = useState('');
   const [recordsSort, setRecordsSort] = useState('date');
   const [recordsOrder, setRecordsOrder] = useState('desc');
 
@@ -138,6 +140,7 @@ export default function EmployeeAttendance() {
     { key: 'overview', label: 'Overview' },
     { key: 'records', label: 'Monthly Records' },
     { key: 'punch', label: 'Punch History' },
+    { key: 'corrections', label: 'Corrections' },
   ];
 
   const punchRecords = ((records?.records) || []).filter(r => r.in_time || r.out_time);
@@ -182,7 +185,7 @@ export default function EmployeeAttendance() {
   const avgOut = outMins.length > 0 ? _fmtMins(outMins.reduce((s, v) => s + v, 0) / outMins.length) : null;
 
   return (
-    <div style={{ maxWidth: '100%', padding: '0 24px' }}>
+    <div style={{ maxWidth: '100%', padding: '0 18px' }}>
       <style>{`
         .ea-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
         .ea-header-left { display: flex; align-items: center; gap: 14px; }
@@ -192,18 +195,18 @@ export default function EmployeeAttendance() {
         .ea-header-right { display: flex; align-items: center; gap: 10px; }
 
         .ea-month-btn { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; color: #64748b; font-size: 14px; display: flex; align-items: center; gap: 6px; font-family: inherit; }
-        .ea-month-btn:hover { border-color: #6366f1; color: #6366f1; }
+        .ea-month-btn:hover { border-color: #2563eb; color: #2563eb; }
         .ea-month-label { font-size: 16px; font-weight: 600; color: #0f172a; min-width: 120px; text-align: center; }
-        .ea-export-btn { padding: 8px 18px; border: none; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
-        .ea-export-btn:hover { box-shadow: 0 4px 12px rgba(99,102,241,0.3); transform: translateY(-1px); }
+        .ea-export-btn { padding: 8px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+        .ea-export-btn:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.3); transform: translateY(-1px); }
 
         .ea-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #f1f5f9; border-radius: 10px; padding: 4px; overflow-x: auto; }
-        .ea-tab { padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; background: none; color: #64748b; font-family: inherit; }
+        .ea-tab { padding: 8px 15px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; background: none; color: #64748b; font-family: inherit; }
         .ea-tab:hover { color: #0f172a; }
-        .ea-tab.active { background: #fff; color: #6366f1; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-weight: 600; }
+        .ea-tab.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-weight: 600; }
 
         .ea-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
-        .ea-card { background: #fff; border-radius: 14px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .ea-card { background: #fff; border-radius: 14px; padding: 15px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .ea-card:hover { transform: none; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
         .ea-card-label { font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
         .ea-card-value { font-size: 28px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif; margin: 6px 0 4px; }
@@ -212,7 +215,7 @@ export default function EmployeeAttendance() {
         .ea-analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
         .ea-donut-wrap { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
         .ea-donut-label { font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 8px; font-family: 'Outfit', sans-serif; }
-        .ea-donut-sub { font-size: 22px; font-weight: 700; color: #6366f1; font-family: 'Outfit', sans-serif; }
+        .ea-donut-sub { font-size: 22px; font-weight: 700; color: #2563eb; font-family: 'Outfit', sans-serif; }
         .ea-donut-legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
         .ea-donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
         .ea-donut-dot { width: 9px; height: 9px; border-radius: 4px; }
@@ -228,24 +231,24 @@ export default function EmployeeAttendance() {
         .ea-table-wrap { overflow-x: auto; }
         .ea-records .ea-table, .ea-punch .ea-table { width: 100%; border-collapse: collapse; }
         .ea-records .ea-table th, .ea-punch .ea-table th { text-align: left; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #f1f5f9; cursor: pointer; white-space: nowrap; }
-        .ea-records .ea-table th:hover, .ea-punch .ea-table th:hover { color: #6366f1; }
+        .ea-records .ea-table th:hover, .ea-punch .ea-table th:hover { color: #2563eb; }
         .ea-records .ea-table td, .ea-punch .ea-table td { padding: 10px 14px; font-size: 14px; color: #334155; border-bottom: 1px solid #f8fafc; }
         .ea-records .ea-table tr:hover td, .ea-punch .ea-table tr:hover td { background: #fafaff; }
         .ea-records .ea-status, .ea-punch .ea-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block; }
         .ea-records .ea-pagination, .ea-punch .ea-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 14px; }
         .ea-records .ea-page-btn, .ea-punch .ea-page-btn { padding: 6px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; color: #64748b; font-family: inherit; }
-        .ea-records .ea-page-btn:hover, .ea-punch .ea-page-btn:hover { border-color: #6366f1; color: #6366f1; }
-        .ea-records .ea-page-btn.active, .ea-punch .ea-page-btn.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+        .ea-records .ea-page-btn:hover, .ea-punch .ea-page-btn:hover { border-color: #2563eb; color: #2563eb; }
+        .ea-records .ea-page-btn.active, .ea-punch .ea-page-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
         .ea-records .ea-page-btn:disabled, .ea-punch .ea-page-btn:disabled { opacity: 0.4; cursor: default; }
         .ea-punch .ea-grid-4 { gap: 14px; margin-bottom: 20px; }
-        .ea-punch .ea-insight-card { background: #f8fafc; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; }
+        .ea-punch .ea-insight-card { background: #f8fafc; border-radius: 12px; padding: 14px 15px; display: flex; flex-direction: column; gap: 4px; }
         .ea-punch .ea-insight-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
         .ea-punch .ea-insight-value { font-size: 20px; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif; }
 
         .ea-skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        .ea-empty { text-align: center; padding: 20px 16px; color: #94a3b8; }
+        .ea-empty { text-align: center; padding: 15px 16px; color: #94a3b8; }
         .ea-empty svg { margin-bottom: 6px; opacity: 0.4; }
         .ea-empty h3 { font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 4px; font-family: 'Outfit', sans-serif; }
         .ea-empty p { font-size: 11px; }
@@ -260,7 +263,7 @@ export default function EmployeeAttendance() {
       <div className="ea-header">
         <div className="ea-header-left">
           <div className="ea-header-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </div>
           <div>
             <h1>My Attendance</h1>
@@ -398,6 +401,7 @@ export default function EmployeeAttendance() {
                       <th>Check In</th>
                       <th>Check Out</th>
                       <th>Working Hours</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -417,10 +421,11 @@ export default function EmployeeAttendance() {
                           <td>{r.in_time || '—'}</td>
                           <td>{r.out_time || '—'}</td>
                           <td>{hrsStr}</td>
+                          <td><button className="ea-page-btn" style={{ whiteSpace: 'nowrap' }} onClick={() => { setCorrDate(r.date_str || (r.date ? String(r.date).slice(0, 10) : '')); setActiveTab('corrections'); }}>Request correction</button></td>
                         </tr>
                       );
                     }) : (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', color: '#94a3b8', padding: 24 }}>No attendance records for this month</td></tr>
+                      <tr><td colSpan={8} style={{ textAlign: 'center', color: '#94a3b8', padding: 18 }}>No attendance records for this month</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -436,6 +441,9 @@ export default function EmployeeAttendance() {
               )}
             </div>
           )}
+
+          {/* CORRECTION REQUESTS TAB */}
+          {activeTab === 'corrections' && <CorrectionsPanel prefillDate={corrDate} />}
 
           {/* PUNCH HISTORY TAB */}
           {activeTab === 'punch' && (

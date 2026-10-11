@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     const month = searchParams.get('month') || String(new Date().getMonth() + 1);
     const year = searchParams.get('year') || String(new Date().getFullYear());
     const rows = await query<RowDataPacket[]>(
-      `SELECT lr.*, e.full_name as emp_full_name, e.profile_photo FROM leave_requests lr LEFT JOIN employees e ON lr.employee_id=e.id WHERE MONTH(lr.start_date)=? AND YEAR(lr.start_date)=? AND lr.status IN ('Approved','Pending') ORDER BY lr.start_date`,
-      [parseInt(month), parseInt(year)]
+      `SELECT lr.*, e.full_name as emp_full_name, e.profile_photo FROM leave_requests lr LEFT JOIN employees e ON lr.employee_id=e.id WHERE lr.start_date <= LAST_DAY(STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d')) AND lr.end_date >= STR_TO_DATE(CONCAT(?, '-', ?, '-01'), '%Y-%m-%d') AND lr.status IN ('Approved','Pending') ORDER BY lr.start_date`,
+      [parseInt(year), parseInt(month), parseInt(year), parseInt(month)]
     );
     // Employees see who is away and when - not the private reason, supporting
     // document or rejection note of somebody else's request.

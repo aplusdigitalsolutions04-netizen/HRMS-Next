@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { computeSalarySheet, saveAdjustment, getMonthDaysMode } from '@/lib/salary-sheet';
+import { auditFrom } from '@/lib/audit';
 
 function period(searchParams: URLSearchParams) {
   const now = new Date();
@@ -45,6 +46,7 @@ export async function PUT(req: NextRequest) {
       patch[key] = v;
     }
     await saveAdjustment(empCode, month, year, patch, user.email);
+    await auditFrom(user, 'salary_adjustment_changed', 'salary', empCode, { month, year, ...patch });
     const [row] = await computeSalarySheet(month, year, empCode);
     return jsonSuccess({ message: 'Saved', row });
   } catch (e: any) { return jsonError(e, 500); }

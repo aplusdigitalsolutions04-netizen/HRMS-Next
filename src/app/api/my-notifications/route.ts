@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
+import { mutedCategories } from '@/lib/preferences';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
@@ -17,13 +18,17 @@ export async function GET(req: NextRequest) {
     if (emp.length === 0) return jsonError('Employee not found', 404);
 
     const empId = String(emp[0].id);
+    const muted = await mutedCategories(user);
+    // requests / drafts meant for HR are never shown in the employee portal
+    const extra = ` AND (category IS NULL OR category NOT IN ('regularization_request','payroll_draft','document_request'))`
+      + (muted.length ? ` AND (category IS NULL OR category NOT IN (${muted.map(() => '?').join(',')}))` : '');
     const cnt = await query<RowDataPacket[]>(
-      'SELECT COUNT(*) as cnt FROM notifications WHERE is_company_wide=1 OR user_id=?',
-      [empId]
+      `SELECT COUNT(*) as cnt FROM notifications WHERE (is_company_wide=1 OR user_id=?)${extra}`,
+      [empId, ...muted]
     );
     const rows = await query<RowDataPacket[]>(
-      'SELECT * FROM notifications WHERE is_company_wide=1 OR user_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [empId, perPage, offset]
+      `SELECT * FROM notifications WHERE (is_company_wide=1 OR user_id=?)${extra} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [empId, ...muted, perPage, offset]
     );
     return jsonSuccess({ notifications: rows, total: cnt[0].cnt, page, per_page: perPage });
   } catch (e: any) { return jsonError(e, 500); }

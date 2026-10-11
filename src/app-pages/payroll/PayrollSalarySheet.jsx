@@ -124,22 +124,33 @@ export default function PayrollSalarySheet() {
   return (
     <div className="ss-page">
       <style>{styles}</style>
-      <div className="ss-header">
+      <div className="ph">
         <div>
-          <h2 className="ss-title">Salary Sheet</h2>
-          <p className="ss-sub">Month days: {modeLabel || '-'}. Paid/Unpaid days come from TeamOffice attendance, which is pulled automatically{syncedAt ? ` (last at ${new Date(syncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})` : ''}. Fix any day by hand if needed. Edit a day in <Link to="/attendance/daily">Daily Attendance</Link> and this sheet updates.</p>
+          <h1>Payroll</h1>
+          <p>Month days: {modeLabel || '-'}. Paid/Unpaid days come from TeamOffice attendance, pulled automatically{syncedAt ? ` (last at ${new Date(syncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})` : ''}. Fix any day in <Link to="/attendance/daily">Daily Attendance</Link> and this sheet updates.</p>
         </div>
-        <div className="ss-ctrls">
-          <select className="ss-input" value={month} onChange={e => setMonth(Number(e.target.value))}>
+        <div className="ph-actions">
+          <select className="ss-input" value={month} onChange={e => setMonth(Number(e.target.value))} aria-label="Month">
             {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
-          <select className="ss-input" value={year} onChange={e => setYear(Number(e.target.value))}>
+          <select className="ss-input" value={year} onChange={e => setYear(Number(e.target.value))} aria-label="Year">
             {[now.getFullYear() - 2, now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <button className="ss-btn ss-btn-alt" onClick={syncAttendance} disabled={syncing || loading}>{syncing ? 'Syncing...' : '⟳ Refresh now'}</button>
-          <button className="ss-btn" onClick={exportExcel} disabled={exporting || loading}>{exporting ? 'Exporting...' : '⬇ Export Excel'}</button>
+          <button className="btn-o" onClick={syncAttendance} disabled={syncing || loading}>{syncing ? 'Syncing...' : '⟳ Refresh now'}</button>
+          <button className="btn-o" onClick={exportExcel} disabled={exporting || loading}>{exporting ? 'Exporting...' : '⬇ Export Excel'}</button>
+          <Link to="/payroll/generate" className="btn-p">Generate Payroll</Link>
         </div>
       </div>
+
+      {!loading && (
+        <div className="ss-kpis">
+          <div className="ss-kpi"><span>Total Employees</span><b>{filtered.length}</b></div>
+          <div className="ss-kpi"><span>Total Payroll</span><b>₹{money(total('final_salary'))}</b></div>
+          <div className="ss-kpi"><span>Average Salary</span><b>₹{money(filtered.length ? total('final_salary') / filtered.length : 0)}</b></div>
+          <div className="ss-kpi"><span>Total Deductions</span><b>₹{money(total('insurance') + total('other_deductions'))}</b></div>
+          <div className="ss-kpi"><span>Variable + Incentive</span><b>₹{money(total('variable_pay') + total('incentive'))}</b></div>
+        </div>
+      )}
 
       {missingAttendance > 0 && !loading && (
         <div className="ss-warn">{missingAttendance} employee(s) have no attendance for {MONTHS[month - 1]} {year}, so they are treated as fully paid. Sync attendance first if that is not right.</div>
@@ -154,6 +165,7 @@ export default function PayrollSalarySheet() {
           <table className="ss-table">
             <thead>
               <tr>
+                <th className="sn">#</th>
                 <th>Employee</th>
                 <th className="n">Month Days</th>
                 <th className="n">Paid Days</th>
@@ -173,11 +185,12 @@ export default function PayrollSalarySheet() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={15} className="ss-empty">Loading...</td></tr>
+                <tr><td colSpan={16} className="ss-empty">Loading...</td></tr>
               ) : pageRows.length === 0 ? (
-                <tr><td colSpan={15} className="ss-empty">No employees with a salary structure found.</td></tr>
-              ) : pageRows.map(r => (
+                <tr><td colSpan={16} className="ss-empty">No employees with a salary structure found.</td></tr>
+              ) : pageRows.map((r, idx) => (
                 <tr key={r.emp_code}>
+                  <td className="sn">{(page - 1) * pageSize + idx + 1}</td>
                   <td><div className="nm">{r.full_name}</div><div className="cd">{r.emp_code}{!r.has_attendance ? ' · no attendance' : ''}</div></td>
                   <td className="n">{r.month_days}</td>
                   <td className="n">{days(r.paid_days)}</td>
@@ -199,6 +212,7 @@ export default function PayrollSalarySheet() {
             {!loading && filtered.length > 0 && (
               <tfoot>
                 <tr>
+                  <td></td>
                   <td>Total ({filtered.length})</td>
                   <td></td><td></td><td></td><td></td>
                   <td className="n">{money(total('net_payable'))}</td>
@@ -226,14 +240,19 @@ export default function PayrollSalarySheet() {
 
 const styles = `
 .ss-page { padding: 0; }
+.ss-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.ss-kpi { background: #fff; border: 1px solid #e8edf6; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.ss-kpi span { font-size: .74rem; font-weight: 600; color: #64748b; }
+.ss-kpi b { font-family: 'Outfit', sans-serif; font-size: 1.3rem; color: #0f172a; line-height: 1.1; }
+.ss-table th.sn, .ss-table td.sn { width: 44px; text-align: center; color: #94a3b8; font-size: .78rem; font-weight: 600; }
 .ss-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .ss-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .ss-sub { margin: 4px 0 0; font-size: .86rem; color: #64748b; max-width: 720px; }
-.ss-sub a { color: #4338ca; font-weight: 600; }
+.ss-sub a { color: #1e40af; font-weight: 600; }
 .ss-ctrls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .ss-input { padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .88rem; background: #fff; }
-.ss-btn { padding: 10px 18px; border: none; border-radius: 10px; background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; font-weight: 600; font-size: .88rem; cursor: pointer; }
-.ss-btn-alt { background: #fff; color: #4338ca; border: 1.5px solid #c7d2fe; }
+.ss-btn { padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; font-weight: 600; font-size: .88rem; cursor: pointer; }
+.ss-btn-alt { background: #fff; color: #1e40af; border: 1.5px solid #bfdbfe; }
 .ss-btn:disabled { opacity: .6; cursor: not-allowed; }
 .ss-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 10px 14px; font-size: .84rem; margin-bottom: 14px; }
 .ss-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
@@ -249,6 +268,6 @@ const styles = `
 .ss-table .cd { font-size: .75rem; color: #94a3b8; }
 .ss-table .final { font-weight: 700; color: #166534; background: #f0fdf4; }
 .ss-table tfoot td { font-weight: 700; background: #f8fafc; border-top: 1.5px solid #cbd5e1; border-bottom: 0; }
-.ss-empty { text-align: center; color: #94a3b8; padding: 36px 0 !important; }
+.ss-empty { text-align: center; color: #94a3b8; padding: 27px 0 !important; }
 .ss-foot { margin: 12px 2px 0; font-size: .78rem; color: #94a3b8; }
 `;

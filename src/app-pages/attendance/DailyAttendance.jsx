@@ -12,17 +12,17 @@ const s = {
   title: { fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 },
   sub: { fontSize: 14, color: '#64748b', margin: '4px 0 0 0' },
   ctrls: { display: 'flex', gap: 12, alignItems: 'center' },
-  sel: { padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 14, color: '#334155', background: '#fff', outline: 'none' },
-  card: { background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' },
+  sel: { height: 36, padding: '0 28px 0 11px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 13, color: '#334155', background: '#fff', outline: 'none', cursor: 'pointer' },
+  card: { background: '#fff', borderRadius: 12, border: '1px solid #e8edf6', overflow: 'hidden' },
   tableWrap: { width: '100%', overflowX: 'auto' },
-  th: { padding: '12px 16px', background: '#f8fafc', fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 },
-  td: { padding: '12px 16px', fontSize: 14, color: '#334155', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' },
+  th: { padding: '9px 12px', background: '#f8fafc', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: '1px solid #e8edf6', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 },
+  td: { padding: '8px 12px', fontSize: 13, color: '#334155', borderBottom: '1px solid #f4f6fa', whiteSpace: 'nowrap' },
   tr: { transition: 'background 0.2s', cursor: 'pointer' },
-  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  empHdr: { display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' },
-  empAvatar: { width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 },
+  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 13px', borderRadius: 9, border: '1px solid #bfdbfe', background: '#fff', color: '#2563eb', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' },
+  empHdr: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' },
+  empAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 },
   countPill: (color, bg) => ({
-    padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: bg, color
+    padding: '2px 9px', borderRadius: 14, fontSize: 11.5, fontWeight: 600, background: bg, color
   }),
 };
 
@@ -32,6 +32,7 @@ const initials = (name) => {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 };
+
 
 export default function DailyAttendance() {
   // Every attendance status (label, colour, meaning, how it counts) comes from Settings > Status Master.
@@ -211,18 +212,27 @@ export default function DailyAttendance() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [employees.length]);
-  const pageEmployees = paginate(employees, page, pageSize);
+  const [mq, setMq] = useState('');
+  const [mDept, setMDept] = useState('');
+  const mDepts = useMemo(() => [...new Set(employees.map(e => e.department).filter(Boolean))].sort(), [employees]);
+  const shownEmployees = employees.filter(e => {
+    const t = mq.trim().toLowerCase();
+    if (t && !((e.name || '') + ' ' + e.emp_code).toLowerCase().includes(t)) return false;
+    if (mDept && e.department !== mDept) return false;
+    return true;
+  });
+  useEffect(() => { setPage(1); }, [employees.length, mq, mDept]);
+  const pageEmployees = paginate(shownEmployees, page, pageSize);
 
   return (
     <div style={s.wrap}>
-      <div style={s.header}>
+      <div className="ph">
         <div>
-          <h2 style={s.title}>Daily Attendance Records</h2>
-          <p style={s.sub}>
+          <h1>Daily Attendance Records</h1>
+          <p>
             {selectedEmployee
               ? `Day-by-day IN/OUT punches for ${selectedEmployee.name || selectedEmployee.emp_code}.`
-              : 'Select an employee to view their day-by-day IN/OUT punches.'}
+              : 'Each employee\'s month at a glance. Click an employee to see their day-by-day punches.'}
           </p>
         </div>
         <div style={s.ctrls}>
@@ -255,8 +265,24 @@ export default function DailyAttendance() {
           {sm.attendance.map(st => (
             <span key={st.code} style={pillStyle(st.color)} title={st.description + (st.used_for ? ' - ' + st.used_for : '')}>{st.code} = {st.label}</span>
           ))}
-          <Link to="/settings/statuses" style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>What do these mean?</Link>
+          <Link to="/settings/statuses" style={{ fontSize: 12, color: '#2563eb', fontWeight: 600 }}>What do these mean?</Link>
         </div>
+      )}
+
+      {!selectedEmployee && (
+        <>
+          <div className="filters">
+            <div className="f-search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <input type="text" placeholder="Search by employee name or code..." value={mq} onChange={e => setMq(e.target.value)} />
+            </div>
+            <select value={mDept} onChange={e => setMDept(e.target.value)} aria-label="Department">
+              <option value="">All Departments</option>
+              {mDepts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <button className="btn-reset" onClick={() => { setMq(''); setMDept(''); }}>Reset</button>
+          </div>
+        </>
       )}
 
       <div style={s.card}>
@@ -342,9 +368,9 @@ export default function DailyAttendance() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="9" style={{ ...s.td, textAlign: 'center', padding: '40px 0' }}>Loading records...</td></tr>
-                ) : employees.length === 0 ? (
-                  <tr><td colSpan="9" style={{ ...s.td, textAlign: 'center', padding: '40px 0' }}>No attendance records found for this month.</td></tr>
+                  <tr><td colSpan="9" style={{ ...s.td, textAlign: 'center', padding: '30px 0' }}>Loading records...</td></tr>
+                ) : shownEmployees.length === 0 ? (
+                  <tr><td colSpan="9" style={{ ...s.td, textAlign: 'center', padding: '30px 0' }}>No attendance records found for this month.</td></tr>
                 ) : (
                   pageEmployees.map((emp, idx) => (
                     <tr
@@ -355,9 +381,11 @@ export default function DailyAttendance() {
                       onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <td style={s.td}>{(page - 1) * pageSize + idx + 1}</td>
-                      <td style={{ ...s.td, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ ...s.empAvatar, width: 32, height: 32, fontSize: 12 }}>{initials(emp.name)}</div>
-                        {emp.name || '-'}
+                      <td style={{ ...s.td, fontWeight: 500 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ ...s.empAvatar, width: 28, height: 28, fontSize: 11 }}>{initials(emp.name)}</div>
+                          {emp.name || '-'}
+                        </div>
                       </td>
                       <td style={s.td}>{emp.emp_code}</td>
                       <td style={s.td}>{emp.department || '-'}</td>
@@ -371,7 +399,7 @@ export default function DailyAttendance() {
                 )}
               </tbody>
             </table>
-            {!loading && <Pagination page={page} totalItems={employees.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="employees" />}
+            {!loading && <Pagination page={page} totalItems={shownEmployees.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="employees" />}
           </div>
         )}
       </div>

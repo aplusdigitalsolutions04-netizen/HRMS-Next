@@ -59,7 +59,7 @@ export default function ChangePasswordTab() {
             <label style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>Confirm New Password</label>
             <input type="password" value={cpConfirm} onChange={e => setCpConfirm(e.target.value)} required placeholder="Re-enter new password" style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 14, outline: 'none' }} />
           </div>
-          <button type="submit" disabled={cpSending} style={{ padding: '10px 28px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>{cpSending ? 'Updating...' : 'Update Password'}</button>
+          <button type="submit" disabled={cpSending} style={{ padding: '10px 28px', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>{cpSending ? 'Updating...' : 'Update Password'}</button>
         </form>
       </div>
     </div>

@@ -70,6 +70,14 @@ export function isOAuthClientConfigured(): boolean {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
+// A readable message when Google Drive refuses us (most often the saved sign-in expired), else null.
+export function driveErrorMessage(e: any): string | null {
+  const m = String(e?.message || e?.response?.data?.error || e || '');
+  if (/invalid_grant|invalid_client|unauthorized_client|Token has been expired or revoked/i.test(m)) return 'The Google Drive connection has expired, so documents cannot be saved or opened right now. Please ask HR to reconnect Google Drive (Settings > Google Drive).';
+  if (/Drive|googleapis|ECONNRESET|ETIMEDOUT/i.test(m) && /not configured|quota|rate|ECONN|ETIMEDOUT/i.test(m)) return 'Google Drive is not reachable right now. Please try again in a little while.';
+  return null;
+}
+
 export async function isDriveConfigured(): Promise<boolean> {
   if (!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
     console.error('[googleDrive] isDriveConfigured: false - GOOGLE_DRIVE_ROOT_FOLDER_ID is not set');

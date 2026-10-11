@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import Pagination from '../shared/Pagination';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -11,11 +12,11 @@ const initials = (name) => {
 };
 
 const avatarColors = [
-  'linear-gradient(135deg,#6366f1,#8b5cf6)',
-  'linear-gradient(135deg,#a78bfa,#c084fc)',
-  'linear-gradient(135deg,#818cf8,#6366f1)',
+  'linear-gradient(135deg,#2563eb,#3b82f6)',
+  'linear-gradient(135deg,#60a5fa,#c084fc)',
+  'linear-gradient(135deg,#60a5fa,#2563eb)',
   'linear-gradient(135deg,#c084fc,#e879f9)',
-  'linear-gradient(135deg,#7c3aed,#6d28d9)',
+  'linear-gradient(135deg,#2563eb,#6d28d9)',
 ];
 
 const PendingEmployees = () => {
@@ -25,7 +26,7 @@ const PendingEmployees = () => {
   const [search, setSearch] = useState('');
   const [approvingId, setApprovingId] = useState(null);
   const [page, setPage] = useState(1);
-  const perPage = 10;
+  const [perPage, setPerPage] = useState(10);
 
   useEffect(() => {
     fetch(`${API}/employee/pending`, { headers: auth() })
@@ -98,7 +99,7 @@ const PendingEmployees = () => {
       confirmButtonText: 'Send Email',
       denyButtonText: 'Activate Directly',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#4338ca',
+      confirmButtonColor: '#1e40af',
       denyButtonColor: '#64748b',
     }).then(choice => {
       if (choice.isDenied) {
@@ -124,7 +125,7 @@ const PendingEmployees = () => {
         showCancelButton: true,
         confirmButtonText: 'Approve & Send',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#4338ca',
+        confirmButtonColor: '#1e40af',
         preConfirm: () => {
           const val = document.getElementById('swal-template-select').value;
           if (!val) { Swal.showValidationMessage('Please select a template'); return false; }
@@ -189,20 +190,20 @@ const PendingEmployees = () => {
         @keyframes peShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
         @keyframes pePulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
-        .pe-bg-lavender { background: linear-gradient(135deg, #f5f4ff 0%, #efeafe 50%, #f8f7ff 100%); }
+        .pe-bg-lavender { background: linear-gradient(135deg, #f1f6ff 0%, #eff6ff 50%, #f8f7ff 100%); }
 
         .pe-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
         .pe-hdr-l { display:flex; align-items:center; gap:14px; }
-        .pe-hdr-icon { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#6366f1,#8b5cf6); display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; box-shadow:0 4px 12px rgba(99,102,241,.3); }
+        .pe-hdr-icon { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#2563eb,#3b82f6); display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; box-shadow:0 4px 12px rgba(37,99,235,.3); }
         .pe-hdr-txt h1 { margin:0; font-family:'Outfit',sans-serif; font-weight:700; font-size:1.2rem; color:#0f172a; letter-spacing:-0.3px; }
         .pe-hdr-txt p { margin:2px 0 0; font-size:.82rem; color:#6b7280; }
 
-        .pe-back-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; background:#fff; color:#6b7280; border:1.5px solid #e5e7eb; border-radius:10px; font-weight:600; font-size:.82rem; text-decoration:none; transition:all .2s; cursor:pointer; }
-        .pe-back-btn:hover { border-color:#6366f1; color:#6366f1; transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.06); }
+        .pe-back-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:#fff; color:#6b7280; border:1.5px solid #e5e7eb; border-radius:10px; font-weight:600; font-size:.82rem; text-decoration:none; transition:all .2s; cursor:pointer; }
+        .pe-back-btn:hover { border-color:#2563eb; color:#2563eb; transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.06); }
 
-        .pe-stat-card { background:#fff; border-radius:14px; padding:16px 20px; border:1px solid #efeafe; margin-bottom:16px; display:flex; align-items:center; gap:16px; box-shadow:0 2px 8px rgba(99,102,241,.06); transition:all .2s; }
-        .pe-stat-card:hover { border-color:#ddd6fe; box-shadow:0 4px 16px rgba(99,102,241,.1); }
-        .pe-stat-icon { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#eef2ff,#f5f4ff); display:flex; align-items:center; justify-content:center; color:#6366f1; flex-shrink:0; }
+        .pe-stat-card { background:#fff; border-radius:14px; padding:16px 15px; border:1px solid #eff6ff; margin-bottom:16px; display:flex; align-items:center; gap:16px; box-shadow:0 2px 8px rgba(37,99,235,.06); transition:all .2s; }
+        .pe-stat-card:hover { border-color:#bfdbfe; box-shadow:0 4px 16px rgba(37,99,235,.1); }
+        .pe-stat-icon { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#eff6ff,#f1f6ff); display:flex; align-items:center; justify-content:center; color:#2563eb; flex-shrink:0; }
         .pe-stat-info { flex:1; }
         .pe-stat-label { font-size:.75rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
         .pe-stat-count { font-family:'Outfit',sans-serif; font-weight:700; font-size:1.4rem; color:#0f172a; line-height:1.1; }
@@ -210,20 +211,20 @@ const PendingEmployees = () => {
 
         .pe-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
         .pe-search { flex:1; min-width:200px; position:relative; }
-        .pe-search input { width:100%; padding:9px 14px 9px 38px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:.82rem; outline:none; background:#fff; color:#1f2937; transition:all .2s; }
-        .pe-search input:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+        .pe-search input { width:100%; padding:9px 14px 9px 29px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:.82rem; outline:none; background:#fff; color:#1f2937; transition:all .2s; }
+        .pe-search input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
         .pe-search .pe-si { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; pointer-events:none; }
 
-        .pe-table-wrap { background:#fff; border-radius:14px; border:1px solid #efeafe; overflow:hidden; box-shadow:0 2px 8px rgba(99,102,241,.04); }
+        .pe-table-wrap { background:#fff; border-radius:14px; border:1px solid #eff6ff; overflow:hidden; box-shadow:0 2px 8px rgba(37,99,235,.04); }
         .pe-table { width:100%; border-collapse:collapse; }
         .pe-table thead { position:sticky; top:0; z-index:2; }
-        .pe-table th { padding:12px 16px; font-size:.72rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; text-align:left; background:#f5f4ff; border-bottom:1.5px solid #efeafe; }
+        .pe-table th { padding:12px 16px; font-size:.72rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; text-align:left; background:#f1f6ff; border-bottom:1.5px solid #eff6ff; }
         .pe-table td { padding:12px 16px; font-size:.82rem; color:#1f2937; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
         .pe-table tr:last-child td { border-bottom:none; }
         .pe-table tbody tr { transition:all .15s; cursor:pointer; }
-        .pe-table tbody tr:hover { background:#faf9ff; box-shadow:0 2px 8px rgba(99,102,241,.04); }
+        .pe-table tbody tr:hover { background:#f8fbff; box-shadow:0 2px 8px rgba(37,99,235,.04); }
         .pe-table tbody tr:nth-child(even) { background:#fcfcff; }
-        .pe-table tbody tr:nth-child(even):hover { background:#faf9ff; }
+        .pe-table tbody tr:nth-child(even):hover { background:#f8fbff; }
 
         .pe-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.8rem; color:#fff; flex-shrink:0; }
         .pe-name-cell { display:flex; align-items:center; gap:12px; }
@@ -233,25 +234,25 @@ const PendingEmployees = () => {
         .pe-mobile { color:#6b7280; font-size:.82rem; font-weight:500; }
 
         .pe-actions { display:flex; gap:4px; flex-wrap:nowrap; }
-        .pe-btn-view { display:inline-flex; align-items:center; gap:3px; padding:3px 7px; background:#fff; color:#6366f1; border:1px solid #ddd6fe; border-radius:6px; font-weight:600; font-size:.65rem; text-decoration:none; transition:all .2s; white-space:nowrap; }
-        .pe-btn-view:hover { background:#f5f4ff; border-color:#6366f1; transform:translateY(-1px); }
-        .pe-btn-approve { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:6px; font-weight:600; font-size:.65rem; cursor:pointer; transition:all .2s; white-space:nowrap; position:relative; overflow:hidden; }
-        .pe-btn-approve:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(99,102,241,.35); }
+        .pe-btn-view { display:inline-flex; align-items:center; gap:3px; padding:3px 7px; background:#fff; color:#2563eb; border:1px solid #bfdbfe; border-radius:6px; font-weight:600; font-size:.65rem; text-decoration:none; transition:all .2s; white-space:nowrap; }
+        .pe-btn-view:hover { background:#f1f6ff; border-color:#2563eb; transform:translateY(-1px); }
+        .pe-btn-approve { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; background:linear-gradient(135deg,#2563eb,#3b82f6); color:#fff; border:none; border-radius:6px; font-weight:600; font-size:.65rem; cursor:pointer; transition:all .2s; white-space:nowrap; position:relative; overflow:hidden; }
+        .pe-btn-approve:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(37,99,235,.35); }
         .pe-btn-approve:disabled { opacity:.7; cursor:default; }
 
         .pe-pagination { display:flex; align-items:center; justify-content:flex-end; gap:6px; padding:12px 16px; border-top:1px solid #f3f4f6; }
         .pe-page-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; border-radius:9px; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; font-size:.78rem; font-weight:600; cursor:pointer; transition:all .15s; padding:0 10px; }
-        .pe-page-btn:hover:not(:disabled):not(.active) { border-color:#6366f1; color:#6366f1; }
-        .pe-page-btn.active { background:#6366f1; border-color:#6366f1; color:#fff; }
+        .pe-page-btn:hover:not(:disabled):not(.active) { border-color:#2563eb; color:#2563eb; }
+        .pe-page-btn.active { background:#2563eb; border-color:#2563eb; color:#fff; }
         .pe-page-btn:disabled { opacity:.4; cursor:default; }
         .pe-page-info { font-size:.78rem; color:#9ca3af; margin-right:12px; }
 
-        .pe-empty { text-align:center; padding:56px 20px; }
+        .pe-empty { text-align:center; padding:42px 15px; }
         .pe-empty svg { width:64px; height:64px; margin-bottom:14px; opacity:.3; }
         .pe-empty h3 { font-size:1.05rem; font-weight:600; color:#6b7280; margin:0 0 4px; }
         .pe-empty p { font-size:.82rem; color:#9ca3af; margin:0 0 16px; }
-        .pe-empty-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; background:#f5f4ff; color:#6366f1; border:1.5px solid #ddd6fe; border-radius:9px; font-weight:600; font-size:.8rem; cursor:pointer; transition:all .2s; }
-        .pe-empty-btn:hover { background:#eef2ff; border-color:#6366f1; }
+        .pe-empty-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:#f1f6ff; color:#2563eb; border:1.5px solid #bfdbfe; border-radius:9px; font-weight:600; font-size:.8rem; cursor:pointer; transition:all .2s; }
+        .pe-empty-btn:hover { background:#eff6ff; border-color:#2563eb; }
 
         .pe-skeleton { display:flex; flex-direction:column; gap:8px; padding:12px 16px; }
         .pe-sk-row { display:flex; align-items:center; gap:12px; }
@@ -418,27 +419,7 @@ const PendingEmployees = () => {
               )}
             </tbody>
           </table>
-          {!loading && totalPages > 1 && (
-            <div className="pe-pagination">
-              <span className="pe-page-info">Page {page} of {totalPages}</span>
-              <button className="pe-page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                let p;
-                if (totalPages <= 5) p = i + 1;
-                else if (page <= 3) p = i + 1;
-                else if (page >= totalPages - 2) p = totalPages - 4 + i;
-                else p = page - 2 + i;
-                return (
-                  <button key={p} className={`pe-page-btn ${p === page ? 'active' : ''}`} onClick={() => setPage(p)}>{p}</button>
-                );
-              })}
-              <button className="pe-page-btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          )}
+          {!loading && <Pagination onPageSizeChange={n => { setPerPage(n); setPage(1); }} page={page} totalItems={filtered.length} pageSize={perPage} itemLabel="employees" onPageChange={setPage} />}
         </div>
       </div>
     </>

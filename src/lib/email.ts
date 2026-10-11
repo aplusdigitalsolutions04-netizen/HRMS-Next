@@ -2,6 +2,7 @@
 import nodemailer from 'nodemailer';
 import { query } from './db';
 import { RowDataPacket } from 'mysql2';
+import { decryptSecret } from './mailbox';
 
 interface SmtpRow extends RowDataPacket {
   smtp_host: string;
@@ -25,13 +26,14 @@ function toHtmlBody(content: string): string {
   return `<div style="white-space:pre-line;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6">${content}</div>`;
 }
 
-async function resolveSmtpConfig(asUser?: { id: string; type: string }): Promise<SmtpRow | null> {
+async function resolveSmtpConfig(asUser?: { id: string; type: string; accountId?: string }): Promise<SmtpRow | null> {
   if (asUser?.id) {
+    // the account the person picked, otherwise their default one
     const personal = await query<SmtpRow[]>(
-      'SELECT * FROM user_email_accounts WHERE user_id=? AND user_type=?',
-      [asUser.id, asUser.type]
+      'SELECT * FROM user_email_accounts WHERE user_id=? AND user_type=?' + (asUser.accountId ? ' AND id=?' : '') + ' ORDER BY is_default DESC, created_at ASC LIMIT 1',
+      asUser.accountId ? [asUser.id, asUser.type, asUser.accountId] : [asUser.id, asUser.type]
     );
-    if (personal.length > 0) return personal[0];
+    if (personal.length > 0) return { ...personal[0], app_password: decryptSecret(personal[0].app_password) };
   }
 
   const rows = await query<SmtpRow[]>('SELECT * FROM smtp_settings LIMIT 1');
@@ -81,13 +83,14 @@ export async function verifyEmailConnection(
 }
 
 interface SendEmailOptions {
+  replyTo?: string;
   cc?: string;
   bcc?: string;
   attachments?: any;
   // If the acting user has connected their own webmail account (see
   // user_email_accounts / Profile > "My Email Account"), send through it
   // instead of the shared company SMTP account.
-  asUser?: { id: string; type: string };
+  asUser?: { id: string; type: string; accountId?: string };
 }
 
 // Same as sendEmail, but returns the actual SMTP error instead of a bare
@@ -125,6 +128,7 @@ export async function sendEmailDetailed(
       html: toHtmlBody(html),
     };
 
+    if (options?.replyTo) mailOptions.replyTo = options.replyTo;
     if (options?.cc) mailOptions.cc = options.cc;
     if (options?.bcc) mailOptions.bcc = options.bcc;
 

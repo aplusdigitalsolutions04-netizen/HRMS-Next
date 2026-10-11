@@ -18,7 +18,7 @@ export const empDashboardStyles = `
   .emp-sidebar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
   .emp-sidebar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
   .emp-sidebar-brand {
-    padding: 20px 16px 12px;
+    padding: 15px 16px 12px;
     border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
@@ -34,7 +34,7 @@ export const empDashboardStyles = `
   }
   .emp-sidebar-brand-text span:first-child {
     font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.2rem;
-    background: linear-gradient(135deg, #4338ca, #8b5cf6);
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     line-height: 1.2;
@@ -60,8 +60,8 @@ export const empDashboardStyles = `
     color: #334155;
   }
   .emp-sidebar-item.active {
-    background: #eef2ff;
-    color: #4f46e5;
+    background: #eff6ff;
+    color: #1d4ed8;
     font-weight: 600;
   }
   .emp-sidebar-item.active::before {
@@ -72,7 +72,7 @@ export const empDashboardStyles = `
     transform: translateY(-50%);
     width: 4px;
     height: 20px;
-    background: #6366f1;
+    background: #2563eb;
     border-radius: 0 4px 4px 0;
   }
   .emp-sidebar-support {
@@ -88,13 +88,13 @@ export const empDashboardStyles = `
     color: #94a3b8; font-size: 11px; line-height: 1.4; margin-bottom: 10px;
   }
   .emp-sidebar-support button {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
     color: #fff; border: none; padding: 8px 16px; border-radius: 8px;
     font-size: 12px; font-weight: 600; cursor: pointer;
     font-family: inherit; transition: all 0.2s ease;
   }
   .emp-sidebar-support button:hover {
-    transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+    transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3);
   }
 
   .emp-main {
@@ -107,7 +107,7 @@ export const empDashboardStyles = `
   .emp-header {
     height: 68px; background: #fff; border-bottom: 1px solid #e2e8f0;
     display: flex; align-items: center;
-    padding: 0 32px; position: sticky; top: 0; z-index: 50;
+    padding: 0 24px; position: sticky; top: 0; z-index: 50;
   }
   .emp-header-left {
     flex: 1; display: flex; align-items: center; gap: 16px;
@@ -152,7 +152,7 @@ export const empDashboardStyles = `
   .emp-header-profile:hover { background: #f1f5f9; }
   .emp-avatar {
     width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700; font-family: 'Outfit', sans-serif;
     flex-shrink: 0;
@@ -166,12 +166,12 @@ export const empDashboardStyles = `
   }
 
   .emp-content {
-    flex: 1; padding: 28px 32px; max-width: 1400px;
+    flex: 1; padding: 21px 24px; max-width: 1400px;
   }
 
   .emp-banner {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
-    border-radius: 20px; padding: 32px 40px;
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+    border-radius: 14px; padding: 24px 30px;
     position: relative; overflow: hidden; margin-bottom: 28px;
   }
   .emp-banner-content {
@@ -217,7 +217,7 @@ export const empDashboardStyles = `
     margin-bottom: 28px;
   }
   .emp-stat-card {
-    background: #fff; border-radius: 16px; padding: 22px 24px;
+    background: #fff; border-radius: 16px; padding: 17px 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
     transition: all 0.3s ease; cursor: default;
   }
@@ -246,7 +246,7 @@ export const empDashboardStyles = `
     margin-bottom: 28px;
   }
   .emp-card {
-    background: #fff; border-radius: 16px; padding: 24px;
+    background: #fff; border-radius: 16px; padding: 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
   }
   .emp-card-header {
@@ -263,10 +263,10 @@ export const empDashboardStyles = `
     cursor: pointer; outline: none; font-family: inherit;
   }
   .emp-card-link {
-    font-size: 13px; color: #6366f1; font-weight: 500;
+    font-size: 13px; color: #2563eb; font-weight: 500;
     cursor: pointer; text-decoration: none; transition: color 0.2s;
   }
-  .emp-card-link:hover { color: #4338ca; }
+  .emp-card-link:hover { color: #1e40af; }
 
   .att-chart {
     display: flex; align-items: flex-end; gap: 8px; height: 140px;
@@ -323,11 +323,11 @@ export const empDashboardStyles = `
     border: 1px solid #f1f5f9; transition: all 0.2s ease;
   }
   .doc-card:hover {
-    border-color: #e0e7ff; background: #fafaff;
+    border-color: #dbeafe; background: #fafaff;
   }
   .doc-icon {
     width: 36px; height: 36px; border-radius: 10px;
-    background: #eef2ff; color: #6366f1;
+    background: #eff6ff; color: #2563eb;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
@@ -343,9 +343,9 @@ export const empDashboardStyles = `
     width: 30px; height: 30px; border-radius: 8px;
     border: none; background: #f1f5f9; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    color: #6366f1; transition: all 0.2s; flex-shrink: 0;
+    color: #2563eb; transition: all 0.2s; flex-shrink: 0;
   }
-  .doc-btn:hover { background: #6366f1; color: #fff; }
+  .doc-btn:hover { background: #2563eb; color: #fff; }
 
   .emp-right-col {
     display: flex; flex-direction: column; gap: 24px;
@@ -362,10 +362,10 @@ export const empDashboardStyles = `
     font-family: 'Outfit', sans-serif;
   }
   .profile-card-det .pcd-designation {
-    font-size: 13px; color: #6366f1; font-weight: 500; margin: 2px 0 8px;
+    font-size: 13px; color: #2563eb; font-weight: 500; margin: 2px 0 8px;
   }
   .pcd-status {
-    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    display: inline-block; padding: 3px 12px; border-radius: 14px;
     font-size: 11px; font-weight: 600; margin-bottom: 16px;
   }
   .pcd-details {
@@ -419,7 +419,7 @@ export const empDashboardStyles = `
     display: flex; justify-content: space-between; align-items: center;
   }
   .leave-overall div:first-child { font-size: 13px; color: #64748b; }
-  .leave-overall div:last-child { font-size: 18px; font-weight: 700; color: #6366f1; font-family: 'Outfit', sans-serif; }
+  .leave-overall div:last-child { font-size: 18px; font-weight: 700; color: #2563eb; font-family: 'Outfit', sans-serif; }
 
   .emp-btn {
     display: block; width: 100%; padding: 10px;
@@ -428,24 +428,24 @@ export const empDashboardStyles = `
     font-family: inherit; text-align: center;
   }
   .emp-btn-primary {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
     color: #fff; border: none;
   }
   .emp-btn-primary:hover {
-    box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+    box-shadow: 0 4px 15px rgba(37,99,235,0.3);
     transform: translateY(-1px);
   }
   .emp-btn-outline {
-    background: none; color: #6366f1;
-    border: 1.5px solid #e0e7ff;
+    background: none; color: #2563eb;
+    border: 1.5px solid #dbeafe;
   }
   .emp-btn-outline:hover {
-    background: #eef2ff; border-color: #6366f1;
+    background: #eff6ff; border-color: #2563eb;
   }
 
   .emp-footer {
     border-top: 1px solid #e2e8f0;
-    padding: 16px 32px;
+    padding: 16px 24px;
     display: flex; justify-content: space-between; align-items: center;
     font-size: 12px; color: #94a3b8;
   }
@@ -473,15 +473,42 @@ export const empDashboardStyles = `
   }
   @media (max-width: 768px) {
     .emp-sidebar { display: none; }
-    .emp-content { padding: 20px 16px; }
+    .emp-content { padding: 15px 16px; }
     .emp-header { padding: 0 16px; }
     .emp-search-bar { width: 200px; }
     .emp-stats { grid-template-columns: repeat(2, 1fr); }
-    .emp-banner { padding: 24px; }
+    .emp-banner { padding: 18px; }
     .emp-banner h1 { font-size: 20px; }
   }
   @media (max-width: 480px) {
     .emp-stats { grid-template-columns: 1fr; }
     .emp-search-bar { width: 140px; }
   }
+
+  /* ── Employee portal: same navy sidebar + compact look as the HR side ── */
+  .emp-sidebar { background: #0f1a3a; border-right: none; width: 240px; min-width: 240px; }
+  .emp-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); }
+  .emp-sidebar .sidebar-brand { border-bottom: 1px solid rgba(255,255,255,.1) !important; }
+  .emp-sidebar .brand-logo { background: #fff; border-radius: 10px; padding: 4px 10px; }
+  .emp-sidebar .brand-name { color: #fff; }
+  .emp-sidebar .brand-sub { color: #8da2d6; }
+  .emp-sidebar-nav { padding: 6px 10px 16px; gap: 1px; }
+  .emp-sidebar-item { height: 40px; border-radius: 10px; color: #b9c6e8; font-size: .85rem; transition: background-color .15s, color .15s; }
+  .emp-sidebar-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .emp-sidebar-item.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 6px 16px rgba(37,99,235,.38); }
+  .emp-sidebar-item.active::before { display: none; }
+  .emp-sidebar-item svg { flex-shrink: 0; }
+  .emp-sidebar-support { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); }
+  .emp-sidebar-support h4 { color: #fff; }
+  .emp-sidebar-support p { color: #8da2d6; }
+  .emp-main { margin-left: 240px; background: #f3f5fb; }
+  .emp-header { height: 60px; border-bottom: 1px solid #e8edf6; padding: 0 20px; }
+  .emp-header-btn { width: 36px; height: 36px; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; }
+  .emp-header-btn:hover { background: #f1f6ff; border-color: #bfdbfe; }
+  .emp-content { padding: 16px 20px; max-width: 1400px; }
+  .emp-banner { padding: 16px 22px; border-radius: 12px; margin-bottom: 16px; }
+  .emp-banner h1 { font-size: 20px; margin-bottom: 3px; }
+  .emp-banner p { font-size: 13px; }
+  .emp-card, .ea-card { border-radius: 12px; border: 1px solid #e8edf6; box-shadow: none; }
+  @media (max-width: 900px) { .emp-sidebar { position: static; width: 100%; min-width: 0; height: auto; } .emp-main { margin-left: 0; height: auto; } }
 `;

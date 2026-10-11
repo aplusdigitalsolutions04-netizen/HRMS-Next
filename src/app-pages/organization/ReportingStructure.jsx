@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
+import Pagination from '../shared/Pagination';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -11,13 +12,14 @@ export default function ReportingStructure() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
-  const perPage = 25;
+  const [perPage, setPerPage] = useState(25);
+  const perPageRef = useRef(25);
 
   const [savingId, setSavingId] = useState(null);
 
   const fetchPage = (p = page, s = search) => {
     setLoading(true);
-    const params = new URLSearchParams({ page: p, per_page: perPage });
+    const params = new URLSearchParams({ page: p, per_page: perPageRef.current });
     if (s.trim()) params.set('search', s.trim());
 
     fetch(`${API}/reporting-structure?${params}`, { headers: auth() })
@@ -168,26 +170,7 @@ export default function ReportingStructure() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
-          <div style={{ fontSize: 13, color: '#64748b' }}>
-            Showing {Math.min((page - 1) * perPage + 1, total)} to {Math.min(page * perPage, total)} of {total} entries
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button 
-              disabled={page === 1} onClick={() => fetchPage(page - 1, search)}
-              style={{ padding: '6px 12px', border: '1px solid #cbd5e1', background: page === 1 ? '#f1f5f9' : '#fff', color: page === 1 ? '#94a3b8' : '#334155', borderRadius: 6, cursor: page === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500 }}
-            >
-              Previous
-            </button>
-            <button 
-              disabled={page === totalPages} onClick={() => fetchPage(page + 1, search)}
-              style={{ padding: '6px 12px', border: '1px solid #cbd5e1', background: page === totalPages ? '#f1f5f9' : '#fff', color: page === totalPages ? '#94a3b8' : '#334155', borderRadius: 6, cursor: page === totalPages ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500 }}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <Pagination onPageSizeChange={n => { perPageRef.current = n; setPerPage(n); setPage(1); fetchPage(1, search); }} page={page} totalItems={total} pageSize={perPage} itemLabel="entries" onPageChange={p => fetchPage(p, search)} />
 
       </div>
     </div>

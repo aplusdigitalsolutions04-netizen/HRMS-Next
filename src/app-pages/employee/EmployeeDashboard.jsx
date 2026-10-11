@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import useLiveRefresh from '@/lib/live';
 import { useNavigate } from 'react-router-dom';
 import { empDashboardStyles } from './employee-dashboard/styles';
 import EmpIcon from './employee-dashboard/EmpIcon';
@@ -13,10 +14,13 @@ const DocumentsPanel = lazy(() => import('./employee-dashboard/DocumentsPanel'))
 const ChangePasswordTab = lazy(() => import('./employee-dashboard/ChangePasswordTab'));
 const ProfileTab = lazy(() => import('./employee-dashboard/ProfileTab'));
 const ContactHRTab = lazy(() => import('./employee-dashboard/ContactHRTab'));
+const Preferences = lazy(() => import('../settings/Preferences'));
+const MyMail = lazy(() => import('../mail/MyMail'));
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
+const SHOW_CONTACT_HR = false;
 const menuItems = [
   { key: 'dashboard', label: 'Dashboard', icon: 'home' },
   { key: 'attendance', label: 'Attendance', icon: 'calendar' },
@@ -24,9 +28,11 @@ const menuItems = [
   { key: 'documents', label: 'Documents', icon: 'file' },
   { key: 'leave', label: 'Leave Requests', icon: 'briefcase' },
   { key: 'wfh', label: 'Work From Home', icon: 'monitor' },
+  { key: 'mail', label: 'My Mail', icon: 'mail' },
   { key: 'contact-hr', label: 'Contact HR', icon: 'mail' },
   { key: 'notifications', label: 'Notifications', icon: 'bell' },
-];
+  { key: 'preferences', label: 'Preferences', icon: 'settings' },
+].filter(m => SHOW_CONTACT_HR || m.key !== 'contact-hr');
 
 const TabFallback = () => <div className="p-4 text-center">Loading...</div>;
 
@@ -46,6 +52,14 @@ export default function EmployeeDashboard() {
   const [attSummary, setAttSummary] = useState(null);
   const [monthlyAtt, setMonthlyAtt] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [docSlots, setDocSlots] = useState([]);
+  const [docOnboarding, setDocOnboarding] = useState([]);
+  // the Documents screen picks up HR's permission (or a new approval) by itself
+  useLiveRefresh(() => {
+    if (activeMenu !== 'documents') return;
+    fetch(`${API}/my-documents`, { headers: auth() }).then(r => r.json()).then(d => applyDocs(d)).catch(() => {});
+  });
+  const applyDocs = (d) => { setDocuments(d?.documents || []); setDocSlots(d?.slots || []); setDocOnboarding(d?.onboarding || []); };
   const [loading, setLoading] = useState(true);
   const [uploadingDoc, setUploadingDoc] = useState(null);
   const [uploadMsg, setUploadMsg] = useState('');
@@ -69,7 +83,7 @@ export default function EmployeeDashboard() {
       setUploadMsg(data.message || 'Document submitted for HR approval');
       setUploadError(false);
       const h = auth();
-      fetch(`${API}/my-documents`, { headers: h }).then(r => r.json()).then(d => setDocuments(d?.documents || [])).catch(() => {});
+      fetch(`${API}/my-documents`, { headers: h }).then(r => r.json()).then(applyDocs).catch(() => {});
     } catch (err) {
       setUploadMsg(err.message);
       setUploadError(true);
@@ -77,6 +91,20 @@ export default function EmployeeDashboard() {
       setUploadingDoc(null);
     }
   };
+  // the employee asks HR to allow uploading a document that is already in
+  const requestReupload = async (key, label) => {
+    const Swal = (await import('sweetalert2')).default;
+    const x = await Swal.fire({ title: `Upload ${label} again?`, input: 'textarea', inputPlaceholder: 'Why do you need to upload it again?', showCancelButton: true, confirmButtonText: 'Ask HR', inputValidator: v => (!v || !v.trim() ? 'Please write the reason' : null) });
+    if (!x.isConfirmed) return;
+    try {
+      const res = await fetch(`${API}/my-documents/request-reupload`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ document_type: key, note: x.value }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Could not send');
+      Swal.fire({ icon: 'success', title: 'Sent to HR', text: d.message, timer: 2200, showConfirmButton: false });
+      fetch(`${API}/my-documents`, { headers: auth() }).then(r => r.json()).then(applyDocs).catch(() => {});
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
+  };
+
   const handleMultiUploadDoc = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -99,7 +127,7 @@ export default function EmployeeDashboard() {
       setUploadMsg(`${files.length} document(s) submitted for HR approval`);
       setUploadError(false);
       const h = auth();
-      fetch(`${API}/my-documents`, { headers: h }).then(r => r.json()).then(d => setDocuments(d?.documents || [])).catch(() => {});
+      fetch(`${API}/my-documents`, { headers: h }).then(r => r.json()).then(applyDocs).catch(() => {});
     } catch (err) {
       setUploadMsg(err.message);
       setUploadError(true);
@@ -131,7 +159,7 @@ export default function EmployeeDashboard() {
       setUnreadCount(unread.unread_count || 0);
       setAttSummary(attSumm);
       setMonthlyAtt(monthly?.months || []);
-      setDocuments(docs?.documents || []);
+      applyDocs(docs);
       if (comp && comp.company_name !== undefined) setCompanySettings(comp);
       setLoading(false);
     });
@@ -212,7 +240,7 @@ export default function EmployeeDashboard() {
                 <rect width="32" height="32" rx="8" fill="url(#brand-grad)"/>
                 <path d="M8 20V12l8-4 8 4v8l-8 4-8-4z" fill="rgba(255,255,255,.2)"/>
                 <circle cx="16" cy="16" r="4" fill="#fff"/>
-                <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#6366f1"/><stop offset="1" stopColor="#8b5cf6"/></linearGradient></defs>
+                <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#2563eb"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs>
               </svg>
             )}
           </div>
@@ -254,7 +282,7 @@ export default function EmployeeDashboard() {
                 <div className="emp-dropdown" style={{ width: 320, right: 0, left: 'auto' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Notifications {unreadCount > 0 && `(${unreadCount})`}</span>
-                    {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Mark All Read</button>}
+                    {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Mark All Read</button>}
                   </div>
                   <div style={{ maxHeight: 300, overflowY: 'auto' }}>
                     {notifications.length === 0 ? (
@@ -271,7 +299,7 @@ export default function EmployeeDashboard() {
                     )}
                   </div>
                   <div style={{ padding: '10px 16px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
-                    <button onClick={() => { setNotifOpen(false); setActiveMenu('notifications'); }} style={{ fontSize: 12, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View All Notifications</button>
+                    <button onClick={() => { setNotifOpen(false); setActiveMenu('notifications'); }} style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View All Notifications</button>
                   </div>
                 </div>
               )}
@@ -339,6 +367,9 @@ export default function EmployeeDashboard() {
             {activeMenu === 'documents' && (
               <DocumentsPanel
                 documents={documents}
+                slots={docSlots}
+                onboarding={docOnboarding}
+                onRequestReupload={requestReupload}
                 uploadingDoc={uploadingDoc}
                 handleUploadDoc={handleUploadDoc}
                 handleMultiUploadDoc={handleMultiUploadDoc}
@@ -348,6 +379,8 @@ export default function EmployeeDashboard() {
             )}
 
             {activeMenu === 'contact-hr' && <ContactHRTab />}
+            {activeMenu === 'preferences' && <Preferences />}
+            {activeMenu === 'mail' && <MyMail />}
 
             {activeMenu === 'leave' && <EmployeeLeave />}
 

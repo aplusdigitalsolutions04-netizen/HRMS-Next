@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Pagination from '../shared/Pagination';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const TYPE_COLORS = {
-  INTERVIEW: '#4338ca',
+  INTERVIEW: '#1e40af',
   EMAIL: '#0284c7',
   CANDIDATE: '#10b981',
   EMPLOYEE: '#f59e0b',
-  ATTENDANCE: '#8b5cf6',
+  ATTENDANCE: '#3b82f6',
   TEMPLATE: '#ec4899',
   SETTINGS: '#64748b',
   REMINDER: '#f97316',
@@ -31,7 +32,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [perPage] = useState(15);
+  const [perPage, setPerPage] = useState(15);
   const [typeFilter, setTypeFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
@@ -137,13 +138,7 @@ export default function NotificationsPage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="notif-pagination">
-              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</button>
-              <span>Page {page} of {totalPages}</span>
-              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
-            </div>
-          )}
+          <Pagination onPageSizeChange={n => { setPerPage(n); setPage(1); }} page={page} totalItems={total} pageSize={perPage} itemLabel="notifications" onPageChange={setPage} />
         </>
       )}
     </div>

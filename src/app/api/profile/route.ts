@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseRequiredDocs, DOC_OPTIONS } from '@/lib/documents';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
@@ -29,7 +30,9 @@ export async function GET(req: NextRequest) {
       const rows = await query<RowDataPacket[]>(
         `SELECT id, emp_code, email_id, full_name, status, hr_remarks, profile_photo, last_login, designation, mobile_no,
           dob, present_address, permanent_address, father_spouse_name, college_name, course_name, specialization,
-          course_duration, cgpa, alternate_mobile_no, previous_company, bank_name, account_number, pan, location, date_of_joining
+          course_duration, cgpa, alternate_mobile_no, previous_company, bank_name, account_number, pan, location, date_of_joining,
+          required_documents, identity_proof, address_proof, resume_path, ug_document, marksheet10, marksheet12, offer_letter, pg_document,
+          appointment_letter, internship_certificate, photograph, bank_document
          FROM employees WHERE id = ?`,
         [user.id]
       );
@@ -62,6 +65,8 @@ export async function GET(req: NextRequest) {
         pan: u.pan,
         location: u.location,
         date_of_joining: u.date_of_joining,
+        required_documents: parseRequiredDocs(u.required_documents),
+        uploaded_documents: DOC_OPTIONS.filter(d => !!u[d.column]).map(d => d.key),
         role: 'USER',
       });
     }

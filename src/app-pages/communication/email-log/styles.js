@@ -20,7 +20,7 @@ export const emailLogStyles = `
     /* ── Statistics Cards ── */
     .el-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-bottom:24px; }
     .el-card {
-        background:#fff; border-radius:14px; padding:20px 22px;
+        background:#fff; border-radius:14px; padding:15px 17px;
         box-shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
         border:1px solid #f1f5f9;
         display:flex; align-items:center; gap:16px;
@@ -41,7 +41,7 @@ export const emailLogStyles = `
     .el-toolbar {
         display:flex; gap:12px; align-items:center;
         background:#fff; border-radius:14px;
-        padding:14px 20px; margin-bottom:20px;
+        padding:14px 15px; margin-bottom:20px;
         box-shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
         border:1px solid #f1f5f9;
     }
@@ -51,24 +51,24 @@ export const emailLogStyles = `
         font-size:.88rem; outline:none; transition:all .2s;
         background:#f8fafc; color:#0f172a;
     }
-    .el-search:focus { border-color:#6366f1; background:#fff; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+    .el-search:focus { border-color:#2563eb; background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
     .el-search::placeholder { color:#94a3b8; }
     .el-filter-select {
         padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px;
         font-size:.85rem; outline:none; background:#f8fafc; color:#0f172a; cursor:pointer;
         min-width:120px;
     }
-    .el-filter-select:focus { border-color:#6366f1; background:#fff; }
+    .el-filter-select:focus { border-color:#2563eb; background:#fff; }
     .el-date-input {
         padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px;
         font-size:.85rem; outline:none; background:#f8fafc; color:#0f172a;
         min-width:130px;
     }
-    .el-date-input:focus { border-color:#6366f1; background:#fff; }
+    .el-date-input:focus { border-color:#2563eb; background:#fff; }
     .el-btn-export {
         display:inline-flex; align-items:center; gap:7px;
         background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none;
-        border-radius:10px; padding:10px 18px; font-size:.85rem; font-weight:700;
+        border-radius:10px; padding:10px 14px; font-size:.85rem; font-weight:700;
         cursor:pointer; transition:all .2s; font-family:'Outfit',sans-serif; white-space:nowrap;
         margin-left:auto;
     }
@@ -112,7 +112,7 @@ export const emailLogStyles = `
 
     /* ── Template chip ── */
     .el-tpl-chip {
-        display:inline-block; background:#ede9fe; color:#5b21b6;
+        display:inline-block; background:#dbeafe; color:#5b21b6;
         padding:3px 10px; border-radius:50px;
         font-weight:600; font-size:.74rem;
         max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -140,7 +140,7 @@ export const emailLogStyles = `
         align-items:center; justify-content:center; font-size:.85rem;
         transition:all .15s;
     }
-    .el-btn-view:hover { border-color:#6366f1; color:#6366f1; background:#eef2ff; }
+    .el-btn-view:hover { border-color:#2563eb; color:#2563eb; background:#eff6ff; }
     .el-btn-more {
         width:32px; height:32px; border-radius:8px; border:1.5px solid #e2e8f0;
         background:#fff; color:#64748b; cursor:pointer; display:inline-flex;
@@ -170,16 +170,16 @@ export const emailLogStyles = `
     .el-result-count { font-size:.82rem; color:#64748b; padding:12px 16px; border-top:1px solid #f1f5f9; background:#fafafa; }
 
     /* ── Loading & Empty ── */
-    .el-loading { display:flex; justify-content:center; padding:80px 20px; }
-    .el-spinner { width:34px; height:34px; border-radius:50%; border:3px solid #e2e8f0; border-top-color:#6366f1; animation:elSpin .7s linear infinite; }
-    .el-empty { text-align:center; padding:80px 20px; }
+    .el-loading { display:flex; justify-content:center; padding:60px 15px; }
+    .el-spinner { width:34px; height:34px; border-radius:50%; border:3px solid #e2e8f0; border-top-color:#2563eb; animation:elSpin .7s linear infinite; }
+    .el-empty { text-align:center; padding:60px 15px; }
     .el-empty-icon { font-size:3rem; margin-bottom:16px; display:block; }
     .el-empty-title { font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:6px; }
     .el-empty-desc { font-size:.85rem; color:#94a3b8; margin-bottom:20px; }
     .el-empty-btn {
         display:inline-flex; align-items:center; gap:6px;
         background:#f1f5f9; color:#475569; border:1.5px solid #e2e8f0;
-        border-radius:10px; padding:9px 18px; font-size:.85rem; font-weight:600;
+        border-radius:10px; padding:9px 14px; font-size:.85rem; font-weight:600;
         cursor:pointer; transition:all .2s; font-family:'Outfit',sans-serif;
     }
     .el-empty-btn:hover { background:#e2e8f0; }
@@ -193,8 +193,8 @@ export const emailLogStyles = `
     .el-view-field.full { grid-column:1 / -1; }
     .el-view-field-label { font-size:.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
     .el-view-field-value { font-size:.88rem; color:#0f172a; line-height:1.4; word-break:break-word; }
-    .el-view-field-value.email { color:#4338ca; }
-    .el-view-body-box { background:#fff; border-radius:10px; padding:20px 24px; font-size:.88rem; color:#334155; line-height:1.8; border:1px solid #e2e8f0; font-family:'Segoe UI',Arial,sans-serif; }
+    .el-view-field-value.email { color:#1e40af; }
+    .el-view-body-box { background:#fff; border-radius:10px; padding:15px 18px; font-size:.88rem; color:#334155; line-height:1.8; border:1px solid #e2e8f0; font-family:'Segoe UI',Arial,sans-serif; }
     .el-view-body-box p { margin:0 0 12px; }
     .el-view-body-box p:last-child { margin-bottom:0; }
     .el-view-body-box br { display:block; content:''; margin:8px 0; }

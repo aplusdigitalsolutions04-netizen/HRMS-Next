@@ -14,30 +14,30 @@ const OrgNode = ({ node, childrenMap, searchQuery }) => {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 6px' }}>
       <div style={{
-        padding: '12px 16px',
-        border: `2px solid ${isMatch ? '#3b82f6' : '#e2e8f0'}`,
-        borderRadius: '12px',
+        padding: '8px 10px',
+        border: `1.5px solid ${isMatch ? '#3b82f6' : '#e2e8f0'}`,
+        borderRadius: '10px',
         background: isMatch ? '#eff6ff' : '#fff',
-        minWidth: '160px',
+        minWidth: '124px',
         textAlign: 'center',
         position: 'relative',
         boxShadow: isMatch ? '0 0 0 4px rgba(59, 130, 246, 0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
         transition: 'all 0.2s ease'
       }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#f1f5f9', margin: '0 auto 10px', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#eff6ff', margin: '0 auto 6px', overflow: 'hidden', border: '1.5px solid #dbeafe' }}>
           {node.profile_photo ? (
-             <img src={`${API}/uploads/${node.profile_photo}`} alt={node.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+             <img src={/^(data:|https?:|\/)/.test(node.profile_photo) ? node.profile_photo : `/${node.profile_photo}`} alt={node.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 16, fontWeight: 'bold' }}>
+             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', fontSize: 13, fontWeight: 'bold' }}>
                {(node.full_name||'').charAt(0).toUpperCase()}
              </div>
           )}
         </div>
-        <div style={{ fontWeight: '600', fontSize: '13px', color: '#1e293b' }}>{node.full_name}</div>
-        <div style={{ fontSize: '11px', color: '#64748b', marginTop: 2 }}>{node.designation || 'No Designation'}</div>
-        <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: 4, background: '#f8fafc', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
+        <div style={{ fontWeight: '600', fontSize: '12px', color: '#1e293b' }}>{node.full_name}</div>
+        <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: 1 }}>{node.designation || 'No Designation'}</div>
+        <div style={{ fontSize: '9.5px', color: '#94a3b8', marginTop: 3, background: '#f8fafc', display: 'inline-block', padding: '2px 6px', borderRadius: 4 }}>
           {node.emp_code || 'No ID'}
         </div>
         
@@ -45,10 +45,10 @@ const OrgNode = ({ node, childrenMap, searchQuery }) => {
           <button 
             onClick={() => setExpanded(!expanded)}
             style={{
-              position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)',
-              width: 26, height: 26, borderRadius: '50%', background: '#fff', border: '1px solid #cbd5e1',
+              position: 'absolute', bottom: '-11px', left: '50%', transform: 'translateX(-50%)',
+              width: 22, height: 22, borderRadius: '50%', background: '#fff', border: '1px solid #cbd5e1',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, color: '#475569', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              fontSize: 14, color: '#475569', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           >
             {expanded ? '-' : '+'}
@@ -57,8 +57,8 @@ const OrgNode = ({ node, childrenMap, searchQuery }) => {
       </div>
 
       {hasChildren && expanded && (
-        <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', marginTop: 26, paddingTop: 16 }}>
-          <div style={{ position: 'absolute', top: 0, left: '50%', width: 2, height: 16, background: '#cbd5e1', transform: 'translateX(-50%)' }} />
+        <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', marginTop: 18, paddingTop: 12 }}>
+          <div style={{ position: 'absolute', top: 0, left: '50%', width: 2, height: 12, background: '#cbd5e1', transform: 'translateX(-50%)' }} />
           
           {children.map((child, index) => {
             const isFirst = index === 0;
@@ -75,7 +75,7 @@ const OrgNode = ({ node, childrenMap, searchQuery }) => {
                     width: isFirst || isLast ? '50%' : '100%'
                   }} />
                 )}
-                <div style={{ width: 2, height: 16, background: '#cbd5e1' }} />
+                <div style={{ width: 2, height: 12, background: '#cbd5e1' }} />
                 
                 <OrgNode node={child} childrenMap={childrenMap} searchQuery={searchQuery} />
               </div>
@@ -140,11 +140,11 @@ export default function OrgChart() {
   const deptNames = Object.keys(departments).sort((a, b) => a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b));
 
   return (
-    <div style={{ padding: 24, minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, background: '#fff', padding: '16px 24px', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+    <div style={{ padding: 0, background: 'transparent', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, background: '#fff', padding: '12px 16px', borderRadius: 12, border: '1px solid #e8edf6' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, color: '#0f172a' }}>Organization Chart</h2>
-          <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#64748b' }}>Visual reporting hierarchy</p>
+          <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'Outfit, sans-serif', color: '#0f172a' }}>Organization Chart</h2>
+          <p style={{ margin: '2px 0 0 0', fontSize: 12.5, color: '#64748b' }}>Visual reporting hierarchy</p>
         </div>
         <div>
           <input 
@@ -152,7 +152,7 @@ export default function OrgChart() {
             placeholder="Search name or ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #cbd5e1', outline: 'none', width: 250, fontSize: 14 }}
+            style={{ padding: '0 12px', height: 34, borderRadius: 9, border: '1px solid #e2e8f0', outline: 'none', width: 230, fontSize: 13 }}
           />
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function OrgChart() {
           No employees found.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {deptNames.map(dept => {
             const { childrenMap, roots } = buildTree(departments[dept]);
             return (
@@ -178,19 +178,19 @@ export default function OrgChart() {
 const DeptSection = ({ dept, count, roots, childrenMap, searchQuery }) => {
   const [open, setOpen] = useState(true);
   return (
-    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e8edf6', overflow: 'hidden' }}>
       <button
         onClick={() => setOpen(!open)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', background: '#f8fafc', border: 'none', borderBottom: open ? '1px solid #e2e8f0' : 'none', cursor: 'pointer', textAlign: 'left' }}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: '#f8fafc', border: 'none', borderBottom: open ? '1px solid #e2e8f0' : 'none', cursor: 'pointer', textAlign: 'left' }}
       >
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>
-          🏢 {dept} <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>({count})</span>
+        <span style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>
+          {dept} <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>({count})</span>
         </span>
         <span style={{ color: '#64748b', fontSize: 18, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>⌄</span>
       </button>
       {open && (
-        <div style={{ overflow: 'auto', padding: 32 }}>
-          <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start', width: 'fit-content', margin: '0 auto' }}>
+        <div style={{ overflow: 'auto', padding: 16 }}>
+          <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', width: 'fit-content', margin: '0 auto' }}>
             {roots.map(root => (
               <OrgNode key={root.id} node={root} childrenMap={childrenMap} searchQuery={searchQuery} />
             ))}

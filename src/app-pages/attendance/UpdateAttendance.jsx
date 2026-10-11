@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import Pagination, { paginate } from '../shared/Pagination';
+import useStatusMaster from '../shared/useStatusMaster';
+
+const hoursToHM = (v) => {
+    if (typeof v === 'string' && v.includes(':')) return v;
+    const n = Number(v);
+    if (!n || isNaN(n)) return '00:00';
+    const m = Math.round(n * 60);
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+};
 
 const UpdateAttendance = () => {
     const navigate = useNavigate();
+    const sm = useStatusMaster();
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(31);
     const [searchParams, setSearchParams] = useSearchParams();
     
     const [searchInput, setSearchInput] = useState(searchParams.get('emp_code') || searchParams.get('empCode') || '');
@@ -42,7 +55,7 @@ const UpdateAttendance = () => {
                         dayName: d.day || '',
                         inTime: (d.in_time === '--:--') ? '' : (d.in_time || ''),
                         outTime: (d.out_time === '--:--') ? '' : (d.out_time || ''),
-                        workingHours: d.working_hours || '00:00',
+                        workingHours: hoursToHM(d.working_hours),
                         status: d.status || 'P'
                     }));
                     setDays(mappedDays);
@@ -101,15 +114,14 @@ const UpdateAttendance = () => {
         }));
     };
 
+    const behaviorOf = (code) => sm.find('attendance', code).behavior;
+    const noPunch = (code) => ['absent', 'week_off', 'holiday'].includes(behaviorOf(code));
+
     const handleStatusChange = (id, value) => {
         setDays(prevDays => prevDays.map(d => {
             if (d.id === id) {
                 let updated = { ...d, status: value };
-                if (value === 'A' || value === 'WO') {
-                    updated.inTime = '';
-                    updated.outTime = '';
-                    updated.workingHours = '00:00';
-                } else if (value === 'P') {
+                if (noPunch(value) || behaviorOf(value) === 'present') {
                     updated.inTime = '';
                     updated.outTime = '';
                     updated.workingHours = '00:00';
@@ -123,7 +135,7 @@ const UpdateAttendance = () => {
     const saveRow = (dayData) => {
         setLoadingMap(prev => ({ ...prev, [dayData.id]: true }));
 
-        if (dayData.status === 'P') {
+        if (behaviorOf(dayData.status) === 'present') {
             if (!dayData.inTime || !dayData.outTime || dayData.inTime === '--:--' || dayData.outTime === '--:--') {
                 Swal.fire('Required', 'IN & OUT time mandatory for Present', 'warning');
                 setLoadingMap(prev => ({ ...prev, [dayData.id]: false }));
@@ -147,7 +159,9 @@ const UpdateAttendance = () => {
         })
         .then(res => res.json())
         .then(res => {
-            if (res.success) {
+            if (!res.success) {
+                Swal.fire('Error', res.detail || 'Update failed', 'error');
+            } else {
                 setEditedMap(prev => ({ ...prev, [dayData.id]: true }));
                 Swal.fire({
                     icon: 'success',
@@ -166,275 +180,103 @@ const UpdateAttendance = () => {
         });
     };
 
+    const pageDays = paginate(days, page, pageSize);
+    useEffect(() => { setPage(1); }, [days.length]);
+
     return (
-        <div className="attendance-update-page container-fluid mt-4">
-            <style>
-                {`
-                /* Basic Page Setup */
-                .attendance-update-page {
-                    padding-bottom: 40px;
-                }
-                
-                /* Main Card */
-                .update-card {
-                    background: #fff;
-                    border-radius: 16px;
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-                    overflow: hidden;
-                    border: 1px solid #edf2f7;
-                }
+        <div className="attendance-update-page">
+            <style>{`
+                .ua-card { background:#fff; border:1px solid #e8edf6; border-radius:12px; overflow:hidden; }
+                .ua-search { display:flex; max-width:440px; border:1px solid #e2e8f0; border-radius:9px; overflow:hidden; background:#fff; }
+                .ua-search input { flex:1; border:none; outline:none; height:36px; padding:0 12px; font-size:.84rem; color:#0f172a; background:transparent; }
+                .ua-search:focus-within { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+                .ua-search button { border:none; background:#2563eb; color:#fff; font-weight:600; font-size:.82rem; padding:0 16px; cursor:pointer; }
+                .ua-search button:disabled { opacity:.6; }
+                .ua-head { padding:12px 14px; border-bottom:1px solid #eef2f7; }
+                .ua-info { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid #eef2f7; }
+                .ua-chips { display:flex; gap:8px; flex-wrap:wrap; }
+                .ua-chip { background:#f1f5f9; border-radius:7px; padding:5px 10px; font-size:.78rem; color:#475569; }
+                .ua-chip b { color:#0f172a; }
+                .ua-wrap { overflow-x:auto; }
+                .ua-t { width:100%; border-collapse:collapse; }
+                .ua-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; white-space:nowrap; }
+                .ua-t td { padding:7px 12px; vertical-align:middle; color:#334155; font-size:.82rem; border-bottom:1px solid #f4f6fa; white-space:nowrap; }
+                .ua-t tbody tr:hover td { background:#f8fbff; }
+                .ua-t .num { width:36px; color:#94a3b8; }
+                .ua-day { display:inline-block; padding:2px 8px; border-radius:20px; font-size:.68rem; font-weight:700; background:#eef2f7; color:#475569; }
+                .ua-day.sun { background:#fee2e2; color:#b91c1c; }
+                .ua-time { width:112px; height:30px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:7px; text-align:center; font-family:monospace; font-size:.8rem; padding:0 6px; outline:none; }
+                .ua-time:focus { background:#fff; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+                .ua-time:disabled { background:#f1f5f9; color:#94a3b8; }
+                .ua-hrs { display:inline-block; min-width:56px; text-align:center; padding:3px 9px; border-radius:7px; background:#f1f5f9; font-family:monospace; font-size:.8rem; font-weight:700; color:#0f172a; }
+                .ua-sel { height:30px; min-width:150px; border:1px solid #e2e8f0; border-radius:7px; padding:0 26px 0 9px; font-size:.8rem; font-weight:600; color:#334155; background-color:#f8fafc; cursor:pointer; outline:none; }
+                .ua-save { height:30px; padding:0 14px; border:none; border-radius:7px; background:#2563eb; color:#fff; font-weight:600; font-size:.78rem; cursor:pointer; transition:background-color .15s; }
+                .ua-save:hover:not(:disabled) { background:#1d4ed8; }
+                .ua-save:disabled { opacity:.6; cursor:not-allowed; }
+                .ua-t tr.edited-row td { background:#f0fdf4 !important; }
+                .ua-t tr.sun-row td { background:#fffbeb; }
+                .ua-empty { text-align:center; padding:40px 16px; color:#94a3b8; }
+                .ua-empty b { display:block; color:#64748b; font-size:.95rem; margin-top:6px; }
+            `}</style>
 
-                /* Search Header */
-                .search-header {
-                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                    padding: 24px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
+            <div className="ph">
+                <div>
+                    <h1>Update Employee Attendance</h1>
+                    <p>Search an employee code, then correct in/out times or status for any day.</p>
+                </div>
+            </div>
 
-                .search-input-group {
-                    max-width: 500px;
-                    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-                    border-radius: 10px;
-                    overflow: hidden;
-                }
-                .search-input-group input {
-                    border: none;
-                    padding: 12px 20px;
-                    font-size: 1rem;
-                }
-                .search-input-group input:focus {
-                    box-shadow: none;
-                    outline: none;
-                }
-                .search-input-group button {
-                    background: var(--primary);
-                    color: white;
-                    border: none;
-                    padding: 0 24px;
-                    font-weight: 600;
-                    transition: all 0.3s ease;
-                }
-                .search-input-group button:hover {
-                    background: var(--primary-hover);
-                }
-
-                /* Info Strip */
-                .info-strip {
-                    background: white;
-                    padding: 16px 24px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-bottom: 1px solid #edf2f7;
-                }
-                .info-badge {
-                    background: #f1f5f9;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    font-size: 0.9rem;
-                    color: #475569;
-                    font-weight: 500;
-                }
-                .info-badge b {
-                    color: #0f172a;
-                }
-
-                /* Table Styling */
-                .table-container {
-                    padding: 0;
-                    overflow-x: auto;
-                }
-                
-                .daywise-table {
-                    margin-bottom: 0;
-                    border-color: #edf2f7;
-                }
-                
-                .daywise-table th {
-                    background: #f8fafc;
-                    color: #475569;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    font-size: 0.75rem;
-                    letter-spacing: 0.05em;
-                    padding: 16px;
-                    border-bottom: 2px solid #e2e8f0;
-                }
-                
-                .daywise-table td {
-                    padding: 12px 16px;
-                    vertical-align: middle;
-                    color: #334155;
-                    font-weight: 500;
-                }
-
-                /* Input & Select Controls */
-                .time-input {
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    text-align: center;
-                    font-family: monospace;
-                    font-size: 0.9rem;
-                    padding: 6px 12px;
-                    transition: all 0.2s;
-                }
-                .time-input:focus {
-                    background: #fff;
-                    border-color: var(--primary);
-                    box-shadow: 0 0 0 3px var(--primary-light);
-                    outline: none;
-                }
-                .time-input:disabled {
-                    background: #f1f5f9;
-                    color: #94a3b8;
-                }
-
-                .status-select {
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    color: #334155;
-                    cursor: pointer;
-                }
-
-                /* Action Button */
-                .update-btn {
-                    background: var(--primary);
-                    color: white;
-                    border: none;
-                    padding: 6px 16px;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    font-size: 0.85rem;
-                    transition: all 0.2s;
-                }
-                .update-btn:hover:not(:disabled) {
-                    background: var(--primary-hover);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
-                }
-                .update-btn:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-
-                /* Row Highlights */
-                .edited-row td {
-                    background-color: #f0fdf4 !important;
-                    border-bottom-color: #bbf7d0 !important;
-                }
-                .sun-row td {
-                    background-color: #fffbeb !important;
-                }
-                .sat-row td {
-                    background-color: #f8fafc !important;
-                }
-                `}
-            </style>
-
-            <div className="update-card">
-                {/* Search Header */}
-                <div className="search-header">
-                    <h4 className="mb-3" style={{ fontWeight: 700, color: '#0f172a' }}>Update Employee Attendance</h4>
-                    <form onSubmit={handleSearch} className="search-input-group d-flex">
-                        <input 
-                            type="text" 
-                            className="form-control" 
-                            placeholder="Enter Employee Code (e.g. EMP-123)"
-                            value={searchInput}
-                            onChange={e => setSearchInput(e.target.value)}
-                        />
-                        <button type="submit" disabled={isFetching}>
-                            {isFetching ? 'Searching...' : 'Search'}
-                        </button>
+            <div className="ua-card">
+                <div className="ua-head">
+                    <form onSubmit={handleSearch} className="ua-search">
+                        <input type="text" placeholder="Enter Employee Code (e.g. EMP-123)" value={searchInput} onChange={e => setSearchInput(e.target.value)} aria-label="Employee code" />
+                        <button type="submit" disabled={isFetching}>{isFetching ? 'Searching...' : 'Search'}</button>
                     </form>
                 </div>
 
-                {/* Data Section */}
                 {days.length > 0 && (
                     <>
-                        <div className="info-strip flex-wrap gap-2">
-                            <div className="d-flex gap-3">
-                                <span className="info-badge"><b>Code:</b> {empCode}</span>
-                                <span className="info-badge"><b>Name:</b> {employeeName}</span>
-                                <span className="info-badge"><b>Dept:</b> {department}</span>
+                        <div className="ua-info">
+                            <div className="ua-chips">
+                                <span className="ua-chip"><b>Code:</b> {empCode}</span>
+                                <span className="ua-chip"><b>Name:</b> {employeeName}</span>
+                                <span className="ua-chip"><b>Dept:</b> {department}</span>
                             </div>
-                            <button className="btn btn-outline-secondary btn-sm rounded-pill px-4 fw-bold" onClick={() => navigate('/attendance/result')}>
-                                Back to Summary
-                            </button>
+                            <button type="button" className="btn-o" onClick={() => navigate('/attendance/result')}>&larr; Back to Summary</button>
                         </div>
 
-                        <div className="table-container">
-                            <table className="table daywise-table table-hover">
+                        <div className="ua-wrap">
+                            <table className="ua-t">
                                 <thead>
                                     <tr>
+                                        <th className="num">#</th>
                                         <th>Date</th>
                                         <th>Day</th>
-                                        <th style={{ width: '120px' }}>IN Time</th>
-                                        <th style={{ width: '120px' }}>OUT Time</th>
+                                        <th>IN Time</th>
+                                        <th>OUT Time</th>
                                         <th>Working Hrs</th>
-                                        <th style={{ width: '130px' }}>Status</th>
-                                        <th style={{ width: '120px' }}>Action</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {days.map(d => (
-                                        <tr key={d.id} className={`${d.dayName === 'Sun' ? 'sun-row' : d.dayName === 'Sat' ? 'sat-row' : ''} ${editedMap[d.id] ? 'edited-row' : ''}`}>
+                                    {pageDays.map((d, idx) => (
+                                        <tr key={d.id} className={`${d.dayName === 'Sun' || d.dayName === 'Sunday' ? 'sun-row' : ''} ${editedMap[d.id] ? 'edited-row' : ''}`}>
+                                            <td className="num">{(page - 1) * pageSize + idx + 1}</td>
                                             <td>{d.date && !isNaN(d.date) ? d.date.toLocaleDateString('en-GB').replace(/\//g, '-') : ''}</td>
+                                            <td><span className={`ua-day${d.dayName === 'Sun' || d.dayName === 'Sunday' ? ' sun' : ''}`}>{d.dayName}</span></td>
+                                            <td><input type="time" value={d.inTime} disabled={noPunch(d.status)} onChange={(e) => handleInputChange(d.id, 'inTime', e.target.value)} className="ua-time" /></td>
+                                            <td><input type="time" value={d.outTime} disabled={noPunch(d.status)} onChange={(e) => handleInputChange(d.id, 'outTime', e.target.value)} className="ua-time" /></td>
+                                            <td><span className="ua-hrs">{d.workingHours}</span></td>
                                             <td>
-                                                <span className={`badge ${d.dayName === 'Sun' ? 'bg-danger' : 'bg-secondary'}`}>
-                                                    {d.dayName}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <input 
-                                                    type="time"
-                                                    value={d.inTime}
-                                                    disabled={d.status === 'A' || d.status === 'WO'}
-                                                    onChange={(e) => handleInputChange(d.id, 'inTime', e.target.value)}
-                                                    className="time-input w-100" 
-                                                />
-                                            </td>
-                                            <td>
-                                                <input 
-                                                    type="time"
-                                                    value={d.outTime}
-                                                    disabled={d.status === 'A' || d.status === 'WO'}
-                                                    onChange={(e) => handleInputChange(d.id, 'outTime', e.target.value)}
-                                                    className="time-input w-100" 
-                                                />
-                                            </td>
-                                            <td className="text-center">
-                                                <span className="badge bg-light text-dark border px-3 py-2 fs-6">
-                                                    {d.workingHours}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <select 
-                                                    value={d.status}
-                                                    onChange={(e) => handleStatusChange(d.id, e.target.value)}
-                                                    className="form-select status-select"
-                                                >
-                                                    <option value="P">P (Present)</option>
-                                                    <option value="A">A (Absent)</option>
-                                                    <option value="WO">WO (Week Off)</option>
-                                                    <option value="CL">CL</option>
-                                                    <option value="CL/2">CL/2</option>
-                                                    <option value="NH">NH</option>
-                                                    <option value="WFH">WFH</option>
-                                                    <option value="UPL">UPL</option>
+                                                <select value={d.status} onChange={(e) => handleStatusChange(d.id, e.target.value)} className="ua-sel">
+                                                    {!sm.attendance.some(st => st.code === d.status) && <option value={d.status}>{d.status}</option>}
+                                                    {sm.attendance.map(st => <option key={st.code} value={st.code}>{st.code} - {st.label}</option>)}
                                                 </select>
                                             </td>
                                             <td>
-                                                <button 
-                                                    type="button" 
-                                                    className="update-btn w-100"
-                                                    disabled={loadingMap[d.id]}
-                                                    onClick={() => saveRow(d)}
-                                                >
-                                                    {loadingMap[d.id] ? 'Saving...' : '💾 Update'}
+                                                <button type="button" className="ua-save" disabled={loadingMap[d.id]} onClick={() => saveRow(d)}>
+                                                    {loadingMap[d.id] ? 'Saving...' : 'Update'}
                                                 </button>
                                             </td>
                                         </tr>
@@ -442,13 +284,16 @@ const UpdateAttendance = () => {
                                 </tbody>
                             </table>
                         </div>
+                        <div style={{ padding: '0 14px 12px' }}>
+                            <Pagination page={page} totalItems={days.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} pageSizeOptions={[10, 31, 50, 100]} itemLabel="days" />
+                        </div>
                     </>
                 )}
-                
+
                 {days.length === 0 && !isFetching && (
-                    <div className="p-5 text-center text-muted">
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📅</div>
-                        <h5>Search for an employee to view and update their attendance</h5>
+                    <div className="ua-empty">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <b>Search for an employee to view and update their attendance</b>
                     </div>
                 )}
             </div>

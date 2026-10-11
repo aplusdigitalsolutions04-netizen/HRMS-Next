@@ -585,7 +585,7 @@ const CandidateData = () => {
                         showCancelButton: true,
                         confirmButtonText: 'Restore Draft',
                         cancelButtonText: 'Start Fresh',
-                        confirmButtonColor: '#4338ca',
+                        confirmButtonColor: '#1e40af',
                         cancelButtonColor: '#64748b',
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -837,13 +837,18 @@ const CandidateData = () => {
                 remarks:      statusRemarks,
                 comments:     statusComments,
             }),
-        }).then(() => {
+        }).then(async (res) => {
+            if (!res.ok) {
+                const j = await res.json().catch(() => ({}));
+                Swal.fire({ icon: 'error', title: 'Could not update status', text: j.detail || j.message || 'Please try again' });
+                return;
+            }
             Swal.fire({ icon: 'success', title: 'Status Updated' }).then(() => {
                 setIsStatusModalOpen(false);
                 setIsCandidateModalOpen(false);
                 fetchCandidates();
             });
-        });
+        }).catch(() => Swal.fire({ icon: 'error', title: 'Network error', text: 'Please try again' }));
     };
 
     const formatDate = (dateStr) => {

@@ -50,7 +50,7 @@ export default function AvailableVariables({ onInsert }) {
             focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: 'Create',
-            confirmButtonColor: '#6366f1',
+            confirmButtonColor: '#2563eb',
             preConfirm: () => {
                 const name = document.getElementById('swal-input-name').value;
                 const desc = document.getElementById('swal-input-desc').value;
@@ -79,13 +79,13 @@ export default function AvailableVariables({ onInsert }) {
     const ALL_VARS = [...VARS, ...customVars.map(cv => ({ var: cv.name, desc: cv.description }))];
 
     return (
-        <div style={{ marginTop: '24px' }}>
-            <div className="section-title" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginTop: '14px' }}>
+            <div className="section-title" style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <span className="step-num" style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}>V</span>
+                    <span className="step-num" style={{ background: 'linear-gradient(135deg,#3b82f6,#2563eb)' }}>V</span>
                     Available Variables
                     <span style={{
-                        background: '#ede9fe', color: '#7c3aed',
+                        background: '#dbeafe', color: '#2563eb',
                         borderRadius: '50px', padding: '3px 12px',
                         fontSize: '.75rem', fontWeight: 700, marginLeft: '8px'
                     }}>
@@ -95,37 +95,35 @@ export default function AvailableVariables({ onInsert }) {
                 <button 
                     type="button" 
                     onClick={handleCreateVariable} 
-                    style={{ background: '#f8fafc', color: '#4338ca', border: '1.5px solid #e0e7ff', padding: '6px 14px', borderRadius: '8px', fontSize: '.8rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseOver={e => e.currentTarget.style.background = '#e0e7ff'}
+                    style={{ background: '#f8fafc', color: '#1e40af', border: '1.5px solid #dbeafe', padding: '4px 11px', borderRadius: '8px', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#dbeafe'}
                     onMouseOut={e => e.currentTarget.style.background = '#f8fafc'}
                 >
                     + Create Variable
                 </button>
             </div>
-            <div style={{ fontSize: '.85rem', color: '#64748b', marginBottom: '14px' }}>
+            <div style={{ fontSize: '.76rem', color: '#64748b', marginBottom: '8px' }}>
                 Use these placeholders in your template subject or body. They will be replaced with actual candidate data when sending emails.
                 {onInsert ? ' Click a variable to insert it into the email body.' : ' Click a variable to copy it.'}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {ALL_VARS.map((item, i) => (
                     <div key={i}
                         onClick={() => handleClick(item)}
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            padding: '7px 14px', borderRadius: '50px',
-                            background: '#f0f4ff', border: '1.5px solid #e0e7ff',
-                            color: '#4338ca', cursor: 'pointer',
-                            fontFamily: "'Outfit', monospace", fontSize: '.82rem',
+                            padding: '3px 10px', borderRadius: '50px',
+                            background: '#f0f4ff', border: '1.5px solid #dbeafe',
+                            color: '#1e40af', cursor: 'pointer',
+                            fontFamily: "'Outfit', monospace", fontSize: '.72rem',
                             fontWeight: 700, transition: 'all .2s',
                             boxShadow: 'none'
                         }}
-                        onMouseOver={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.borderColor = '#a5b4fc'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,.15)'; }}
-                        onMouseOut={e => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.borderColor = '#e0e7ff'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        onMouseOver={e => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,.15)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.borderColor = '#dbeafe'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                         title={item.desc}
                     >
-                        <span style={{ color: '#6366f1', fontSize: '.9rem' }}>📋</span>
                         {item.var}
-                        <span style={{ fontSize: '.68rem', color: '#94a3b8', fontWeight: 500 }}>{item.desc}</span>
                     </div>
                 ))}
             </div>

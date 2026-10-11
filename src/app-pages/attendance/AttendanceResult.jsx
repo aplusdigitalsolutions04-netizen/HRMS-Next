@@ -23,7 +23,7 @@ const cols = {
   wo: { bg: '#e5e7eb', color: '#111827' },
   cl: { bg: '#bfdbfe', color: '#1e3a8a' },
   wfh: { bg: '#fde68a', color: '#78350f' },
-  nh: { bg: '#ddd6fe', color: '#4c1d95' },
+  nh: { bg: '#bfdbfe', color: '#4c1d95' },
   cl2: { bg: '#dfa', color: '#111827' },
   sl: { bg: '#fee2e2', color: '#991b1b' },
   upl: { bg: '#fecaca', color: '#7f1d1d' },
@@ -40,8 +40,21 @@ const AttendanceResult = () => {
   const yearDropdownRef = useRef(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [summary.length]);
-  const pageItems = paginate(summary, page, pageSize);
+  const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [vFilter, setVFilter] = useState('');
+  const isVer = (x) => !!(x.is_verified || x.isVerified || x.IsVerified);
+  const depts = [...new Set(summary.map(x => x.department).filter(Boolean))].sort();
+  const filtered = summary.filter(x => {
+    const q = search.trim().toLowerCase();
+    if (q && !((x.employee_name || x.full_name || '') + ' ' + (x.employee_code || x.emp_code || '')).toLowerCase().includes(q)) return false;
+    if (deptFilter && x.department !== deptFilter) return false;
+    if (vFilter === 'verified' && !isVer(x)) return false;
+    if (vFilter === 'pending' && isVer(x)) return false;
+    return true;
+  });
+  useEffect(() => { setPage(1); }, [summary.length, search, deptFilter, vFilter]);
+  const pageItems = paginate(filtered, page, pageSize);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -53,10 +66,12 @@ const AttendanceResult = () => {
 
   useEffect(() => { fetchAttendanceData(); }, []);
 
-  const fetchAttendanceData = () => {
+  const fetchAttendanceData = (o = {}) => {
+    const month = o && o.month !== undefined ? o.month : selectedMonth;
+    const year = o && o.year !== undefined ? o.year : selectedYear;
     const params = new URLSearchParams();
-    if (selectedMonth) params.set("month", selectedMonth);
-    if (selectedYear) params.set("year", selectedYear);
+    if (month) params.set("month", month);
+    if (year) params.set("year", year);
     const qs = params.toString();
     const url = "/api/attendance/result" + (qs ? "?" + qs : "");
 
@@ -72,7 +87,6 @@ const AttendanceResult = () => {
       .catch(err => console.error("Failed to fetch attendance data", err));
   };
 
-  const handleApply = (e) => { e.preventDefault(); fetchAttendanceData(); };
 
   const verifyAttendance = (id) => {
     Swal.fire({ title: 'Verify Attendance?', text: 'Once verified, data will be locked.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes, Verify' })
@@ -101,10 +115,10 @@ const AttendanceResult = () => {
   };
 
   const s = {
-    card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff', overflow: 'hidden' },
+    card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff', overflow: 'hidden' },
     sel: { padding: '9px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', color: '#0f172a', outline: 'none' },
-    btn: { padding: '9px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-    btnAct: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#efeafe', color: '#6366f1', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
+    btn: { padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+    btnAct: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
     btnVfy: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#f0fdf4', color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
     btnDis: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#f1f5f9', color: '#94a3b8', fontSize: 12, fontWeight: 500, cursor: 'not-allowed', whiteSpace: 'nowrap' },
     btnVer: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#f0fdf4', color: '#15803d', fontSize: 12, fontWeight: 600, cursor: 'not-allowed', whiteSpace: 'nowrap' },
@@ -118,7 +132,7 @@ const AttendanceResult = () => {
         .ar-yd{position:relative;width:150px}
         .ar-yl{display:none;position:absolute;width:100%;max-height:200px;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
         .ar-yi{padding:8px 12px;cursor:pointer;font-size:13px;color:#334155}
-        .ar-yi:hover{background:#6366f1;color:#fff}
+        .ar-yi:hover{background:#2563eb;color:#fff}
         .ar-tw{overflow-x:auto}
         .ar-t{width:100%;border-collapse:collapse;font-size:13px}
         .ar-t th{background:#f8fafc;padding:11px 14px;text-align:left;font-weight:600;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
@@ -126,47 +140,48 @@ const AttendanceResult = () => {
         .ar-t tbody tr:hover td{background:#fafaff}
         .ar-pw{display:flex;flex-wrap:wrap;gap:5px;max-width:280px}
         .ar-pt{display:inline-block;padding:3px 7px;border-radius:5px;font-weight:600;font-size:11px}
-        .ar-ftr{display:flex;justify-content:flex-end;padding:14px 20px;border-top:1px solid #e2e8f0}
-        .ar-nr td{text-align:center;font-weight:600;color:#94a3b8;padding:40px!important}
+        .ar-ftr{display:flex;justify-content:flex-end;padding:14px 15px;border-top:1px solid #e2e8f0}
+        .ar-nr td{text-align:center;font-weight:600;color:#94a3b8;padding:30px!important}
       `}</style>
 
-      <div className="ar-hdr">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
-          </div>
-          <div>
-            <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>
-              Monthly Attendance Summary
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8', marginLeft: 8 }}>({summary.length} record{summary.length === 1 ? '' : 's'})</span>
-            </h4>
-            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#94a3b8' }}>View and verify employee attendance records by month.</p>
-          </div>
+      <div className="ph">
+        <div>
+          <h1>Attendance Summary <span style={{ fontSize: '.8rem', fontWeight: 500, color: '#94a3b8' }}>({filtered.length} record{filtered.length === 1 ? '' : 's'})</span></h1>
+          <p>View and verify employee attendance records by month.</p>
         </div>
-        <form onSubmit={handleApply} className="ar-f">
-          <select style={s.sel} value={selectedMonth} onChange={e => { setSelectedMonth(e.target.value); setTimeout(fetchAttendanceData, 0); }}>
+        <div className="ph-actions">
+          <select value={selectedMonth} onChange={e => { setSelectedMonth(e.target.value); fetchAttendanceData({ month: e.target.value }); }} aria-label="Month" style={s.sel}>
             <option value="">All Months</option>
             {availableMonths.map(m => <option key={m} value={m}>{monthNames[m - 1]}</option>)}
           </select>
-          <div className="ar-yd" ref={yearDropdownRef}>
-            <button type="button" style={{ ...s.sel, width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              onClick={() => setYearListOpen(!yearListOpen)}>
-              {selectedYear === 0 ? 'All Years' : selectedYear}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: yearListOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+          <select value={selectedYear} onChange={e => { const y = Number(e.target.value); setSelectedYear(y); fetchAttendanceData({ year: y }); }} aria-label="Year" style={s.sel}>
+            <option value={0}>All Years</option>
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {summary.some(x => !isVer(x)) && (
+            <button className="btn-p" onClick={verifyAll}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Verify All
             </button>
-            <div className="ar-yl" style={{ display: yearListOpen ? 'block' : 'none' }}>
-              {availableYears.map(y => (
-                <div key={y} className="ar-yi" onClick={() => { setSelectedYear(y); setYearListOpen(false); setTimeout(fetchAttendanceData, 0); }}>{y}</div>
-              ))}
-            </div>
-          </div>
-          <button type="submit" style={s.btn}>Apply</button>
-          {(selectedMonth || selectedYear) ? (
-            <button type="button" style={{ ...s.btn, background: '#64748b' }} onClick={() => { setSelectedMonth(''); setSelectedYear(0); }}>Clear</button>
-          ) : null}
-        </form>
+          )}
+        </div>
+      </div>
+
+      <div className="filters">
+        <div className="f-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Search by employee name or code..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} aria-label="Department">
+          <option value="">All Departments</option>
+          {depts.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={vFilter} onChange={e => setVFilter(e.target.value)} aria-label="Verification">
+          <option value="">All Status</option>
+          <option value="pending">Pending verification</option>
+          <option value="verified">Verified</option>
+        </select>
+        <button className="btn-reset" onClick={() => { setSearch(''); setDeptFilter(''); setVFilter(''); setSelectedMonth(''); setSelectedYear(0); fetchAttendanceData({ month: '', year: 0 }); }}>Reset</button>
       </div>
 
       <div style={s.card}>
@@ -187,7 +202,7 @@ const AttendanceResult = () => {
               </tr>
             </thead>
             <tbody>
-              {summary && summary.length > 0 ? (
+              {filtered.length > 0 ? (
                 pageItems.map((row, i) => (
                   <tr key={i}>
                     <td style={{ fontSize: 13, color: '#94a3b8' }}>{(page - 1) * pageSize + i + 1}</td>
@@ -208,7 +223,7 @@ const AttendanceResult = () => {
                     </td>
                     <td style={{ textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{row.total_present_days ?? 0}</td>
                     <td style={{ textAlign: 'center', fontWeight: 700, color: '#dc2626' }}>{row.total_absent_days ?? 0}</td>
-                    <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, color: '#6366f1' }}>{fmtNum(row.total_working_hours)}</td>
+                    <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, color: '#2563eb' }}>{fmtNum(row.total_working_hours)}</td>
                     <td>
                       {(row.is_verified || row.isVerified || row.IsVerified) ? (
                         <div style={{ display: 'flex', gap: 5 }}>
@@ -230,15 +245,7 @@ const AttendanceResult = () => {
             </tbody>
           </table>
         </div>
-        {summary && summary.some(x => !(x.is_verified || x.isVerified || x.IsVerified)) && (
-          <div className="ar-ftr">
-            <button style={{ ...s.btn, display: 'flex', alignItems: 'center', gap: 6 }} onClick={verifyAll}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              Verify All
-            </button>
-          </div>
-        )}
-        <Pagination page={page} totalItems={summary.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="records" />
+        <Pagination page={page} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="records" />
       </div>
     </div>
   );

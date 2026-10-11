@@ -41,7 +41,7 @@ const EmailComposeModal = ({
 
     return (
         <div className="email-modal-overlay">
-            <div className="email-modal" style={{ width: emailTab === 'history' ? 760 : 680, maxWidth: '92vw' }}>
+            <div className="email-modal" style={{ width: 1400, maxWidth: '97vw' }}>
 
                 <div className="email-modal-header">
                     <div className="email-modal-title">
@@ -56,7 +56,7 @@ const EmailComposeModal = ({
                     <div className="em-tabs">
                         <button className={`em-tab${emailTab === 'compose' ? ' active' : ''}`} onClick={() => setEmailTab('compose')}>✉️ Compose</button>
                         <button className={`em-tab${emailTab === 'history' ? ' active' : ''}`} onClick={() => { setEmailTab('history'); loadEmailHistory(); }}>
-                            📋 Email History {emailHistory.length > 0 && <span style={{ background: '#4338ca', color: '#fff', borderRadius: 50, padding: '1px 7px', fontSize: '.72rem', marginLeft: 5 }}>{emailHistory.length}</span>}
+                            📋 Email History {emailHistory.length > 0 && <span style={{ background: '#1e40af', color: '#fff', borderRadius: 50, padding: '1px 7px', fontSize: '.72rem', marginLeft: 5 }}>{emailHistory.length}</span>}
                         </button>
                     </div>
 
@@ -71,7 +71,7 @@ const EmailComposeModal = ({
                                     </div>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                         {applyPost && <span className="var-chip-small" style={{ background: '#dbeafe', color: '#1d4ed8' }}>Post: {applyPost}</span>}
-                                        {roundSelect && <span className="var-chip-small" style={{ background: '#ede9fe', color: '#7c3aed' }}>Round: {roundSelect}</span>}
+                                        {roundSelect && <span className="var-chip-small" style={{ background: '#dbeafe', color: '#2563eb' }}>Round: {roundSelect}</span>}
                                         {interviewDate && <span className="var-chip-small" style={{ background: '#dcfce7', color: '#166534' }}>Date: {interviewDate}</span>}
                                         {modeSelect && <span className="var-chip-small" style={{ background: '#fef3c7', color: '#b45309' }}>Mode: {modeSelect}</span>}
                                     </div>
@@ -82,7 +82,7 @@ const EmailComposeModal = ({
                                     {emailTemplates.length === 0 ? (
                                         <div className="no-tpl-hint">
                                             No templates saved yet.&nbsp;
-                                            <a href="/templates" target="_blank" style={{ color: '#4338ca', textDecoration: 'underline' }}>
+                                            <a href="/templates" target="_blank" style={{ color: '#1e40af', textDecoration: 'underline' }}>
                                                 Create one here →
                                             </a>
                                         </div>
@@ -100,8 +100,8 @@ const EmailComposeModal = ({
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                         <label className="em-label" style={{ margin: 0 }}>📨 To (Recipient)</label>
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button type="button" onClick={() => setShowCC(!showCC)} style={{ background: 'none', border: 'none', color: showCC ? '#4338ca' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Cc</button>
-                                            <button type="button" onClick={() => setShowBCC(!showBCC)} style={{ background: 'none', border: 'none', color: showBCC ? '#4338ca' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Bcc</button>
+                                            <button type="button" onClick={() => setShowCC(!showCC)} style={{ background: 'none', border: 'none', color: showCC ? '#1e40af' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Cc</button>
+                                            <button type="button" onClick={() => setShowBCC(!showBCC)} style={{ background: 'none', border: 'none', color: showBCC ? '#1e40af' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Bcc</button>
                                         </div>
                                     </div>
                                     <div className="em-to-badge" style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
@@ -166,7 +166,7 @@ const EmailComposeModal = ({
 
                                 {emailSending === 'sending' && (
                                     <div className="status-banner sending">
-                                        <span className="spinner" style={{ borderTopColor: '#7c3aed', borderColor: 'rgba(124,58,237,.3)' }} />
+                                        <span className="spinner" style={{ borderTopColor: '#2563eb', borderColor: 'rgba(37,99,235,.3)' }} />
                                         Sending email via SMTP…
                                     </div>
                                 )}
@@ -174,22 +174,22 @@ const EmailComposeModal = ({
                                 {emailSending === 'error' && <div className="status-banner error">❌ {emailMessage}</div>}
 
                                 <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-                                    <button className="skip-btn" onClick={onClose} style={{ padding: '13px 18px' }}>↩ Skip</button>
-                                    <button className="skip-btn" style={{ background: '#f1f5f9', color: '#1e293b', border: '1.5px solid #cbd5e1', padding: '13px 18px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={onSaveDraft}>💾 Save Draft</button>
+                                    <button className="skip-btn" onClick={onClose} style={{ padding: '13px 14px' }}>↩ Skip</button>
+                                    <button className="skip-btn" style={{ background: '#f1f5f9', color: '#1e293b', border: '1.5px solid #cbd5e1', padding: '13px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={onSaveDraft}>💾 Save Draft</button>
                                     {hasDraftAvailable && (
-                                        <button className="skip-btn" style={{ background: '#fee2e2', color: '#b91c1c', border: '1.5px solid #fecaca', padding: '13px 18px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={onDiscardDraft}>🗑️ Discard Draft</button>
+                                        <button className="skip-btn" style={{ background: '#fee2e2', color: '#b91c1c', border: '1.5px solid #fecaca', padding: '13px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={onDiscardDraft}>🗑️ Discard Draft</button>
                                     )}
                                     <button className="send-btn" style={{ marginLeft: 'auto' }} onClick={goPreview}>👁️ Preview Mail</button>
                                 </div>
                             </>
                         ) : (
                             <>
-                                <div className="gmail-preview-container" style={{ border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#fff', padding: '24px', fontFamily: "'Inter', sans-serif" }}>
+                                <div className="gmail-preview-container" style={{ border: '1.5px solid #e2e8f0', borderRadius: '12px', background: '#fff', padding: '18px', fontFamily: "'Inter', sans-serif" }}>
                                     <h2 style={{ fontSize: '1.2rem', color: '#1e293b', fontWeight: 600, marginTop: 0, marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', fontFamily: "'Outfit', sans-serif" }}>
                                         {emailSubject}
                                     </h2>
                                     <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ede9fe', color: '#5b21b6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem', border: '1.5px solid #c4b5fd' }}>H</div>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#dbeafe', color: '#5b21b6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem', border: '1.5px solid #c4b5fd' }}>H</div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                                                 <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>APDS HR Team</strong>
@@ -205,14 +205,14 @@ const EmailComposeModal = ({
                                             </div>
                                         </div>
                                     </div>
-                                    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '8px', padding: '20px', minHeight: '200px', color: '#334155', fontSize: '0.92rem', lineHeight: '1.65', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                                    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '8px', padding: '15px', minHeight: '200px', color: '#334155', fontSize: '0.92rem', lineHeight: '1.65', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
                                         {emailBody}
                                     </div>
                                 </div>
 
                                 {emailSending === 'sending' && (
                                     <div className="status-banner sending" style={{ marginTop: '16px' }}>
-                                        <span className="spinner" style={{ borderTopColor: '#7c3aed', borderColor: 'rgba(124,58,237,.3)' }} />
+                                        <span className="spinner" style={{ borderTopColor: '#2563eb', borderColor: 'rgba(37,99,235,.3)' }} />
                                         Sending email via SMTP…
                                     </div>
                                 )}
@@ -250,7 +250,7 @@ const EmailComposeModal = ({
                                                     </td>
                                                     <td>{log.to_email}</td>
                                                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.subject}>{log.subject || '—'}</td>
-                                                    <td><span style={{ background: '#ede9fe', color: '#5b21b6', padding: '2px 8px', borderRadius: 50, fontSize: '.75rem', fontWeight: 700 }}>{log.template_name || 'Custom'}</span></td>
+                                                    <td><span style={{ background: '#dbeafe', color: '#5b21b6', padding: '2px 8px', borderRadius: 50, fontSize: '.75rem', fontWeight: 700 }}>{log.template_name || 'Custom'}</span></td>
                                                     <td>{log.job_role || '—'}</td>
                                                     <td>{log.interview_round || '—'}</td>
                                                     <td>

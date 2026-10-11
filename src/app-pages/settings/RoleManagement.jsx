@@ -210,7 +210,7 @@ function RoleForm({ onClose, onSave, edit }) {
                   <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '.9rem', color: '#334155', background: '#f8fafc', padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                     <input 
                       type="checkbox" 
-                      style={{ cursor: 'pointer', width: 16, height: 16, accentColor: '#4338ca' }}
+                      style={{ cursor: 'pointer', width: 16, height: 16, accentColor: '#1e40af' }}
                       checked={form.permissions[p.key] === true}
                       onChange={() => togglePermission(p.key)}
                     />

@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     const W = inList(await employeeCodes('is_working'));
     const attStatuses = await getStatuses('attendance', true);
 
-    const [attendanceToday, leave, wfh, pending, celebrations, holidays, departments, joiners, hiring] = await Promise.all([
+    const [attendanceToday, leave, wfh, pending, celebrations, holidays, departments, joiners, hiring, leaveTrends, activities] = await Promise.all([
       // ---- Today's attendance --------------------------------------------------
       section(can('view_attendance'), async () => {
         const active = await query<RowDataPacket[]>(`SELECT COUNT(*) AS n FROM employees WHERE status IN ${W.sql} AND is_deleted = 0`, W.params);
@@ -188,11 +188,48 @@ export async function GET(req: NextRequest) {
         }
         return out;
       }),
+
+      // ---- Leave requests per month and type (last 6 months) ------------------------
+      section(can('view_leave'), async () => {
+        const rows = await query<RowDataPacket[]>(
+          `SELECT DATE_FORMAT(start_date, '%Y-%m') AS ym, leave_type, COUNT(*) AS count
+           FROM leave_requests
+           WHERE status IN ('Approved', 'Pending')
+             AND start_date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH)
+           GROUP BY ym, leave_type`
+        );
+        const months: { ym: string; label: string }[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          months.push({ ym: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`, label: d.toLocaleDateString('en-US', { month: 'short' }) });
+        }
+        const types = [...new Set(rows.map(r => String(r.leave_type)))].sort();
+        const series: Record<string, number[]> = {};
+        for (const t of types) series[t] = months.map(m => Number(rows.find(r => r.leave_type === t && r.ym === m.ym)?.count) || 0);
+        return { months, types, series };
+      }),
+
+      // ---- Latest things that happened (leave, WFH, new people) ----------------------
+      section(can('view_leave') || can('view_wfh') || can('view_employees'), async () => {
+        const feed: { kind: string; name: string; text: string; at: string; status: string }[] = [];
+        const add = async (allowed: boolean, sql: string) => {
+          if (!allowed) return;
+          try { for (const r of await query<RowDataPacket[]>(sql)) feed.push({ kind: r.kind, name: r.name, text: r.text, at: r.at ? new Date(r.at).toISOString() : '', status: r.status || '' }); } catch { /* one source failing must not hide the others */ }
+        };
+        await add(can('view_leave'),
+          "SELECT 'leave' AS kind, e.full_name AS name, CONCAT('Applied for ', lr.leave_type) AS text, lr.applied_on AS at, lr.status FROM leave_requests lr JOIN employees e ON e.id = lr.employee_id ORDER BY lr.applied_on DESC LIMIT 6");
+        await add(can('view_wfh') || can('approve_wfh'),
+          "SELECT 'wfh' AS kind, e.full_name AS name, 'Applied for Work From Home' AS text, w.applied_on AS at, w.status FROM wfh_requests w JOIN employees e ON e.id = w.employee_id ORDER BY w.applied_on DESC LIMIT 6");
+        await add(can('view_employees'),
+          "SELECT 'employee' AS kind, full_name AS name, 'Added to the system' AS text, created_on AS at, status FROM employees WHERE is_deleted = 0 ORDER BY created_on DESC LIMIT 6");
+        feed.sort((a, b) => b.at.localeCompare(a.at));
+        return feed.slice(0, 6);
+      }),
     ]);
 
     return jsonSuccess({
       today: todayStr,
-      attendanceToday, leave, wfh, pending, celebrations, holidays, departments, joiners, hiring,
+      attendanceToday, leave, wfh, pending, celebrations, holidays, departments, joiners, hiring, leaveTrends, activities,
     });
   } catch (e: any) {
     console.error('[dashboard/overview] failed:', e?.message || e);

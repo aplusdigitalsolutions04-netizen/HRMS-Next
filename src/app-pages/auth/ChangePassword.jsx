@@ -52,10 +52,10 @@ export default function ChangePassword() {
           animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .profile-card {
-          padding: 2.5rem;
+          padding: 1.88rem;
           background: var(--glass-bg);
           border: 1px solid var(--glass-border);
-          border-radius: 24px;
+          border-radius: 14px;
           box-shadow: var(--shadow-lg);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);

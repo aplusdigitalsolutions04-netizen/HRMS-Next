@@ -23,7 +23,7 @@ const BUILTIN_COMPONENTS = [
 const KIND_PANELS = [
   { kind: 'earning', title: 'Earnings', color: '#15803d' },
   { kind: 'deduction', title: 'Deductions', color: '#b91c1c' },
-  { kind: 'adjustment', title: 'Other additions', color: '#4338ca' },
+  { kind: 'adjustment', title: 'Other additions', color: '#1e40af' },
 ];
 const newKey = () => 'x_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 const num = (v) => parseFloat(v) || 0;
@@ -383,7 +383,7 @@ export default function PayrollSalaryStructures() {
                             <span>{fmtPct(splitTotal)}% {splitTotal > 100.0001 ? '- over 100%' : `· ${fmtPct(100 - splitTotal)}% left`}</span>
                           </div>
                           <div style={{ height: 7, background: '#f1f5f9', borderRadius: 7, overflow: 'hidden' }}>
-                            <div style={{ width: Math.min(100, splitTotal) + '%', height: '100%', background: splitTotal > 100.0001 ? '#ef4444' : '#6366f1', transition: 'width .2s' }} />
+                            <div style={{ width: Math.min(100, splitTotal) + '%', height: '100%', background: splitTotal > 100.0001 ? '#ef4444' : '#2563eb', transition: 'width .2s' }} />
                           </div>
                         </div>
                       )}
@@ -425,7 +425,7 @@ const pgStyles = `
 .pr-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; overflow: hidden; }
 .pr-toolbar { padding: 16px 20px; border-bottom: 1.5px solid #e2e8f0; }
 .pr-search { width: 300px; max-width: 100%; padding: 9px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .88rem; outline: none; font-family: 'Inter', sans-serif; }
-.pr-search:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.pr-search:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
 .pr-loading { padding: 40px; text-align: center; color: #94a3b8; }
 .pr-empty { padding: 48px 20px; text-align: center; color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .pr-empty p { margin: 0; font-size: .9rem; }
@@ -437,8 +437,8 @@ const pgStyles = `
 .pr-action-btn { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 14px; }
 .pr-action-btn:hover { background: #f1f5f9; }
 .pr-btn { padding: 10px 22px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; font-family: 'Outfit', sans-serif; border: none; display: inline-flex; align-items: center; gap: 6px; }
-.pr-btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
-.pr-btn-primary:hover { box-shadow: 0 4px 14px rgba(99,102,241,.35); transform: translateY(-1px); }
+.pr-btn-primary { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; }
+.pr-btn-primary:hover { box-shadow: 0 4px 14px rgba(37,99,235,.35); transform: translateY(-1px); }
 .pr-btn-secondary { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
 .pr-btn-secondary:hover { background: #f1f5f9; }
 .pr-modal-wide { width: min(1080px, 96vw) !important; max-width: 96vw !important; }
@@ -463,12 +463,12 @@ const pgStyles = `
 .pr-ctc-box { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
 .pr-label { display: block; font-size: .82rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
 .pr-input { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .88rem; outline: none; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-.pr-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.pr-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
 .pr-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
 .pr-emp-list { max-height: 200px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; margin-top: 4px; }
 .pr-emp-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
 .pr-emp-item:hover { background: #f8fafc; }
-.pr-emp-item.selected { background: #eef2ff; }
+.pr-emp-item.selected { background: #eff6ff; }
 .pr-emp-item.has-ss { opacity: .7; }
 .pr-emp-name { font-size: .88rem; font-weight: 500; color: #0f172a; }
 .pr-emp-desig { font-size: .78rem; color: #94a3b8; margin-top: 2px; }

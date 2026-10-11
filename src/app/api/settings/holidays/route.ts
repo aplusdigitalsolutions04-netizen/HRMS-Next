@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { ensureHolidaySchema } from '@/lib/holidays';
+import { auditFrom } from '@/lib/audit';
 
 // Fixed-date holidays that fall on the same day every year.
 const FIXED = [
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
     const existing = await query('SELECT id FROM holidays WHERE holiday_date = ?', [date]);
     if (existing.length > 0) return jsonError('A holiday already exists on this date', 409);
     await execute('INSERT INTO holidays (holiday_date, name, holiday_type, created_by) VALUES (?,?,?,?)', [date, name, type, user.email]);
+    await auditFrom(user, 'holiday_added', 'holiday', date, { name, type });
     return jsonSuccess({ message: 'Holiday added' });
   } catch (e: any) { return jsonError(e, 500); }
 }
@@ -82,7 +84,9 @@ export async function DELETE(req: NextRequest) {
     await ensureHolidaySchema();
     const id = parseInt(new URL(req.url).searchParams.get('id') || '');
     if (!id) return jsonError('id is required', 422);
+    const was = await query('SELECT name, DATE_FORMAT(holiday_date, \'%Y-%m-%d\') AS d FROM holidays WHERE id = ?', [id]);
     await execute('DELETE FROM holidays WHERE id = ?', [id]);
+    await auditFrom(user, 'holiday_removed', 'holiday', String(id), was[0] || null);
     return jsonSuccess({ message: 'Holiday removed' });
   } catch (e: any) { return jsonError(e, 500); }
 }

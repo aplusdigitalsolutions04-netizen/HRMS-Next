@@ -4,6 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { saveEmployeeDocument } from '@/lib/googleDrive';
+import { parseRequiredDocs, DOC_OPTIONS, docLabels } from '@/lib/documents';
 
 const DOC_COLUMNS = {
   IdentityProof: 'identity_proof', AddressProof: 'address_proof', Resume: 'resume_path',
@@ -34,7 +35,7 @@ export async function PUT(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'employee') return jsonError('Only an invited employee can complete a profile', 403);
 
-    const existing = await query<RowDataPacket[]>('SELECT status, emp_code, full_name FROM employees WHERE id = ?', [user.id]);
+    const existing = await query<RowDataPacket[]>('SELECT * FROM employees WHERE id = ?', [user.id]);
     if (existing.length === 0) return jsonError('Employee not found', 404);
     if (!['invited', 'needs_correction'].includes(existing[0].status)) {
       return jsonError('Your profile has already been submitted', 400);
@@ -61,6 +62,17 @@ export async function PUT(req: NextRequest) {
     );
     if (mobileConflict.length > 0) {
       return jsonError('This mobile number is already registered with another employee', 409);
+    }
+
+    // Compulsory documents set by HR: each one needs a new upload now or a file saved earlier.
+    const required = parseRequiredDocs(existing[0].required_documents);
+    const missing = required.filter(k => {
+      const col = DOC_OPTIONS.find(d => d.key === k)?.column;
+      const hasNew = fileMap[k] instanceof File && fileMap[k].size > 0;
+      return !hasNew && !(col && existing[0][col]);
+    });
+    if (missing.length > 0) {
+      return jsonError(`Please upload the compulsory document(s): ${docLabels(missing).join(', ')}`, 422);
     }
 
     const sets: string[] = [];

@@ -70,8 +70,8 @@ export default function AttendanceTemplateManager() {
 
   const s = {
     btn: { padding: '8px 16px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-    btnP: { padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-    card: { background: '#fff', borderRadius: 16, border: '1px solid #f1f0ff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' },
+    btnP: { padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+    card: { background: '#fff', borderRadius: 16, border: '1px solid #e8f0ff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' },
     badge: { display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 },
   };
 
@@ -81,13 +81,13 @@ export default function AttendanceTemplateManager() {
         .atm-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
         .atm-ac{display:flex;gap:6px}
         .atm-ac button{padding:5px 12px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer}
-        .atm-ac button:hover{border-color:#6366f1;color:#6366f1}
+        .atm-ac button:hover{border-color:#2563eb;color:#2563eb}
         .atm-ac .del:hover{border-color:#ef4444;color:#ef4444;background:#fef2f2}
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,#2563eb,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
               <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
@@ -118,7 +118,7 @@ export default function AttendanceTemplateManager() {
       {loading ? (
         <div style={s.card}>
           <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-            <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'atmSpin .6s linear infinite', marginBottom: 8 }} />
+            <div style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'atmSpin .6s linear infinite', marginBottom: 8 }} />
             <div>Loading templates...</div>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function AttendanceTemplateManager() {
                 <div className="atm-ac">
                   <button onClick={() => { setEditing({ ...tpl }); setShowForm(true); }}>Edit</button>
                   {!tpl.is_active && (
-                    <button style={{ borderColor: '#6366f1', color: '#6366f1' }} onClick={() => handleActivate(tpl.id)}>Activate</button>
+                    <button style={{ borderColor: '#2563eb', color: '#2563eb' }} onClick={() => handleActivate(tpl.id)}>Activate</button>
                   )}
                   <button className="del" onClick={() => handleDelete(tpl)}>Delete</button>
                 </div>
@@ -254,7 +254,7 @@ function TemplateForm({ template, onSave, onCancel }) {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 18 }}>
           <button onClick={onCancel} style={{ padding: '10px 22px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', color: '#475569', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleSave} disabled={saving}
-            style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#a5b4fc' : '#6366f1', color: '#fff', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
+            style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: saving ? '#93c5fd' : '#2563eb', color: '#fff', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Saving...' : 'Save Template'}
           </button>
         </div>

@@ -5,7 +5,7 @@ import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { downloadFileFromDrive, getDriveFileMeta } from '@/lib/googleDrive';
+import { downloadFileFromDrive, getDriveFileMeta, driveErrorMessage } from '@/lib/googleDrive';
 
 const ALLOWED_FIELDS = [
   'identity_proof', 'address_proof', 'resume_path', 'ug_document', 'marksheet10', 'marksheet12',
@@ -51,6 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return new NextResponse(buf, { headers: { 'Content-Type': mime } });
   } catch (e: any) {
     if (e.code === 'ENOENT') return jsonError('File not found on server', 404);
-    return jsonError(e, 500);
+    const friendly = driveErrorMessage(e);
+    return friendly ? jsonError(friendly, 503) : jsonError(e, 500);
   }
 }

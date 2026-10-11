@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     if (!user || user.type !== 'employee') return jsonError('Not authenticated as employee', 401);
 
     const rows = await query<RowDataPacket[]>(
-      'SELECT * FROM wfh_requests WHERE employee_id = ? ORDER BY applied_on DESC',
+      "SELECT wr.*, (NOT EXISTS (SELECT 1 FROM approval_actions aa WHERE aa.request_type='wfh' AND aa.request_id = wr.id) AND LOWER(wr.status) = 'pending') AS can_edit FROM wfh_requests wr WHERE wr.employee_id = ? ORDER BY wr.applied_on DESC",
       [user.id]
     );
 

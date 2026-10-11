@@ -1,16 +1,20 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { employeeManagementStyles } from './employee-management/styles';
 import { AnimatedValue, initials, statusBadge, canDeleteEmployee, formatDT } from './employee-management/helpers';
 import useStatusMaster from '../shared/useStatusMaster';
+import Pagination from '../shared/Pagination';
+import { Menu, Tabs } from '@/lib/ui-motion';
 
 const EmployeeDrawer = lazy(() => import('./employee-management/EmployeeDrawer'));
 
 const API = '/api';
+import useLiveRefresh from '@/lib/live';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const EmployeeManagement = () => {
+  const navigate = useNavigate();
   const statusMaster = useStatusMaster(); // labels / colours of every employee status
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, dropped: 0, new_this_month: 0, growth_pct: 0 });
   const [employees, setEmployees] = useState([]);
@@ -28,7 +32,12 @@ const EmployeeManagement = () => {
   const [drawerError, setDrawerError] = useState('');
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const perPage = 25;
+  const [perPage, setPerPage] = useState(25);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
+  const fileRef = useRef(null);
+  const searchReady = useRef(false);
+  const perPageRef = useRef(25);
 
   const handleExportEmployees = async () => {
     setExporting(true);
@@ -99,9 +108,10 @@ const EmployeeManagement = () => {
       .finally(() => setImporting(false));
   };
 
-  const fetchPage = (p = page, s = search, st = statusFilter, d = deptFilter) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: p, per_page: perPage });
+  useLiveRefresh(() => fetchPage(page, search, statusFilter, deptFilter, true));
+  const fetchPage = (p = page, s = search, st = statusFilter, d = deptFilter, silent = false) => {
+    if (!silent) setLoading(true);
+    const params = new URLSearchParams({ page: p, per_page: perPageRef.current });
     if (s.trim()) params.set('search', s.trim());
     if (st) params.set('status', st);
     if (d) params.set('department', d);
@@ -137,25 +147,30 @@ const EmployeeManagement = () => {
       .catch(() => {});
   }, []);
 
+  // typing in the search box filters after a short pause (Enter still applies it at once)
+  useEffect(() => {
+    if (!searchReady.current) { searchReady.current = true; return; }
+    const t = setTimeout(() => { setPage(1); fetchPage(1, search, statusFilter, deptFilter); }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    const h = (e) => { if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const pickStatus = (st) => { setStatus(st); setPage(1); fetchPage(1, search, st, deptFilter); };
+  const pickDept = (d) => { setDept(d); setPage(1); fetchPage(1, search, statusFilter, d); };
+  const resetFilters = () => { setSearch(''); setStatus(''); setDept(''); setPage(1); fetchPage(1, '', '', ''); };
+
   const applyFilters = () => {
     setPage(1);
     fetchPage(1, search, statusFilter, deptFilter);
   };
 
-  const openDrawer = (emp) => {
-    setDrawerOpen(true);
-    setDrawerError('');
-    setSelectedEmp(null);
-    setDrawerLoading(true);
-    fetch(`${API}/employee/detail/${emp.id}`, { headers: auth() })
-      .then(async r => {
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.detail || 'Failed to load employee details');
-        setSelectedEmp(d);
-        setDrawerLoading(false);
-      })
-      .catch(err => { setDrawerLoading(false); setDrawerError(err.message || 'Failed to load employee details'); });
-  };
+  // View opens the full Employee Profile page (details, documents and upload permission), not the side popup
+  const openDrawer = (emp) => navigate(`/employees/detail/${emp.id}`);
 
   const closeDrawer = () => {
     setDrawerOpen(false);
@@ -202,7 +217,7 @@ const EmployeeManagement = () => {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Restore',
-      confirmButtonColor: '#4338ca',
+      confirmButtonColor: '#1e40af',
     }).then(result => {
       if (!result.isConfirmed) return;
       fetch(`${API}/employee/${emp.id}/restore`, { method: 'POST', headers: auth() })
@@ -233,7 +248,7 @@ const EmployeeManagement = () => {
       showCancelButton: true,
       confirmButtonText: 'Create Draft',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#4338ca',
+      confirmButtonColor: '#1e40af',
       preConfirm: () => {
         const val = document.getElementById('swal-template-select').value;
         if (!val) {
@@ -285,79 +300,51 @@ const EmployeeManagement = () => {
       <style>{employeeManagementStyles}</style>
 
       <div className="emp-page">
-        <div className="emp-hdr">
-          <div className="emp-hdr-l">
-            <div className="emp-breadcrumb" style={{ display: 'none' }}></div>
+        <div className="ph">
+          <div>
             <h1>Employee Management</h1>
-            <div className="emp-hdr-g">{total} employee{total !== 1 ? 's' : ''} registered</div>
+            <p>Manage your team members, view details and update information.</p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href={`${API}/employee/import-template`} onClick={handleDownloadTemplate} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: 'pointer', padding: '6px 14px', fontSize: '.78rem' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Template
-            </a>
-            <label className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: importing ? 'default' : 'pointer', opacity: importing ? 0.6 : 1, padding: '6px 14px', fontSize: '.78rem' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              {importing ? 'Importing...' : 'Import from Excel'}
-              <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importing} onChange={handleImportExcel} />
-            </label>
-            <button onClick={handleExportEmployees} disabled={exporting} className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', cursor: exporting ? 'default' : 'pointer', opacity: exporting ? 0.6 : 1, padding: '6px 14px', fontSize: '.78rem' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              {exporting ? 'Exporting...' : 'Export (with Documents)'}
+          <div className="ph-actions" ref={moreRef}>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importing} onChange={e => { setMoreOpen(false); handleImportExcel(e); }} />
+            <button className="btn-o" onClick={() => setMoreOpen(o => !o)} aria-haspopup="menu" aria-expanded={moreOpen}>
+              More actions
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <Link to="/employees/invite" className="emp-add-btn" style={{ background: '#fff', color: '#4338ca', border: '1.5px solid #e0e7ff', padding: '6px 14px', fontSize: '.78rem' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
-              Invite Employee
-            </Link>
-            <Link to="/employees/add" className="emp-add-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <Menu open={moreOpen} className="menu-pop">
+              <button onClick={e => { setMoreOpen(false); handleDownloadTemplate(e); }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Template</button>
+              <button onClick={() => fileRef.current && fileRef.current.click()} disabled={importing}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> {importing ? 'Importing...' : 'Import from Excel'}</button>
+              <button onClick={() => { setMoreOpen(false); handleExportEmployees(); }} disabled={exporting}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> {exporting ? 'Exporting...' : 'Export (with Documents)'}</button>
+              <Link to="/employees/invite" onClick={() => setMoreOpen(false)}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg> Invite Employee</Link>
+            </Menu>
+            <Link to="/employees/add" className="btn-p">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Employee
             </Link>
           </div>
         </div>
 
-        <div className="emp-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 14 }}>
-          {statusMaster.employee.map(st => {
-            const count = (stats.by_status && stats.by_status[st.code]) || 0;
-            return (
-              <div className="emp-card" key={st.code} title={st.description} style={{ padding: '12px 14px', borderRadius: 14 }}>
-                <div className="emp-card-icon" style={{ background: st.color + '1a', color: st.color, width: 32, height: 32, borderRadius: 9 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </div>
-                <div className="emp-card-lbl" style={{ fontSize: '.68rem', marginBottom: 2, paddingRight: 36 }}>{st.label}</div>
-                <div className="emp-card-val" style={{ fontSize: '1.2rem' }}><AnimatedValue value={count} /></div>
-                <div className="emp-card-sub" style={{ color: st.color, fontSize: '.7rem', marginTop: 1 }}>● {stats.total > 0 ? Math.round(count / stats.total * 100) : 0}% of total</div>
-              </div>
-            );
-          })}
+        <div className="tabs-bar">
+          <Tabs id="emp-status" value={statusFilter === '' || statusMaster.employee.some(x => x.code === statusFilter) ? (statusFilter || 'all') : ''}
+            onChange={v => pickStatus(v === 'all' ? '' : v)}
+            tabs={[{ id: 'all', label: <>All ({stats.total || 0})</> }, ...statusMaster.employee.map(st => ({ id: st.code, label: <>{st.label} ({(stats.by_status && stats.by_status[st.code]) || 0})</> }))]} />
         </div>
 
-        <div className="emp-toolbar">
-          <div className="emp-search">
-            <svg className="s-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input
-              type="text"
-              placeholder="Search name, email, mobile..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && applyFilters()}
-            />
+        <div className="filters">
+          <div className="f-search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Search name, email, mobile..." value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} />
           </div>
-          <select className="emp-select" value={deptFilter} onChange={e => setDept(e.target.value)}>
+          <select value={deptFilter} onChange={e => pickDept(e.target.value)} aria-label="Department">
             <option value="">All Departments</option>
-            {departments.map(d => (
-              <option key={d.id} value={d.name}>{d.name}</option>
-            ))}
+            {departments.map(d => (<option key={d.id} value={d.name}>{d.name}</option>))}
           </select>
-          <select className="emp-select" value={statusFilter} onChange={e => setStatus(e.target.value)}>
+          <select value={statusFilter} onChange={e => pickStatus(e.target.value)} aria-label="Status">
             <option value="">All Status</option>
             {statusMaster.employee.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}
             <option value="deleted">Deleted (removed)</option>
           </select>
-          <button className="emp-filter-btn" onClick={applyFilters}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            Filter
-          </button>
+          <button className="btn-reset" onClick={resetFilters}>Reset</button>
         </div>
 
         <div className="emp-table-wrap">
@@ -365,9 +352,10 @@ const EmployeeManagement = () => {
             <thead>
               <tr>
                 <th style={{width:40, color:'#94a3b8', fontWeight:600}}>#</th>
+                <th className="col-id">Employee ID</th>
                 <th className="col-name">Employee</th>
-                <th className="col-contact">Email</th>
                 <th className="col-dept">Department</th>
+                <th className="col-desig">Designation</th>
                 <th className="col-status">Status</th>
                 <th className="col-joined">Joined</th>
                 <th className="col-actions" style={{textAlign:'right'}}>Actions</th>
@@ -376,7 +364,7 @@ const EmployeeManagement = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     <div className="emp-empty">
                       <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                       <p>Loading employees...</p>
@@ -385,7 +373,7 @@ const EmployeeManagement = () => {
                 </tr>
               ) : employees.length === 0 ? (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     <div className="emp-empty">
                       <svg viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                       <h3>No employees found</h3>
@@ -397,6 +385,7 @@ const EmployeeManagement = () => {
                 employees.map((emp, index) => (
                   <tr key={emp.id} onClick={() => openDrawer(emp)}>
                     <td style={{color: '#64748b', fontSize: '0.85rem', fontWeight: 500}}>{(page - 1) * perPage + index + 1}</td>
+                    <td className="col-id" style={{color:'#475569', fontSize:'.8rem', fontWeight:600}}>{emp.emp_code || '—'}</td>
                     <td>
                       <div className="emp-name-cell">
                         {emp.profile_photo
@@ -405,17 +394,17 @@ const EmployeeManagement = () => {
                         }
                         <div>
                           <div className="name">{emp.full_name}</div>
-                          <div className="code">{emp.emp_code || '—'}</div>
+                          <div className="code">{emp.email_id}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="col-contact" style={{color:'#64748b', fontSize:'.78rem'}}>{emp.email_id}</td>
                     <td className="col-dept">
                       {emp.department
                         ? <span className="emp-badge emp-badge-dept">{emp.department}</span>
                         : <span style={{color:'#cbd5e1'}}>—</span>
                       }
                     </td>
+                    <td className="col-desig" style={{color:'#475569', fontSize:'.8rem'}}>{emp.designation || <span style={{color:'#cbd5e1'}}>—</span>}</td>
                     <td className="col-status">{statusBadge(emp.status)}</td>
                     <td className="col-joined" style={{color:'#64748b', fontSize:'.78rem'}}>{formatDT(emp.created_on)}</td>
                     <td className="col-actions" style={{textAlign:'right'}}>
@@ -426,6 +415,11 @@ const EmployeeManagement = () => {
                         <button className="emp-action-btn email" title="Draft Email" onClick={e => { e.stopPropagation(); handleDraftEmail(emp); }} style={{ color: '#0ea5e9' }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                         </button>
+                        {['invited', 'needs_correction'].includes(emp.status) && (
+                          <Link to={`/employees/detail/${emp.id}?tab=documents`} className="emp-action-btn view" title="Make documents compulsory" onClick={e => e.stopPropagation()} style={{ color: '#d97706' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>
+                          </Link>
+                        )}
                         <Link to={`/employees/edit/${emp.id}`} className="emp-action-btn edit" title="Edit" onClick={e => e.stopPropagation()}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </Link>
@@ -448,42 +442,7 @@ const EmployeeManagement = () => {
               )}
             </tbody>
           </table>
-          {totalPages > 1 && (
-            <div className="emp-pagination">
-              <div className="emp-page-info">
-                Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}
-              </div>
-              <div className="emp-page-btns">
-                <button className="emp-page-btn" disabled={page <= 1} onClick={() => fetchPage(page - 1, search, statusFilter, deptFilter)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  let p;
-                  if (totalPages <= 7) {
-                    p = i + 1;
-                  } else if (page <= 4) {
-                    p = i + 1;
-                  } else if (page >= totalPages - 3) {
-                    p = totalPages - 6 + i;
-                  } else {
-                    p = page - 3 + i;
-                  }
-                  return (
-                    <button
-                      key={p}
-                      className={`emp-page-btn ${p === page ? 'active' : ''}`}
-                      onClick={() => fetchPage(p, search, statusFilter, deptFilter)}
-                    >
-                      {p}
-                    </button>
-                  );
-                })}
-                <button className="emp-page-btn" disabled={page >= totalPages} onClick={() => fetchPage(page + 1, search, statusFilter, deptFilter)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination onPageSizeChange={n => { perPageRef.current = n; setPerPage(n); setPage(1); fetchPage(1, search, statusFilter, deptFilter); }} page={page} totalItems={total} pageSize={perPage} itemLabel="employees" onPageChange={p => fetchPage(p, search, statusFilter, deptFilter)} />
         </div>
       </div>
 

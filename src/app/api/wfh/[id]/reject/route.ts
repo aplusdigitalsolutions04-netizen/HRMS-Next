@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { sendEmail } from '@/lib/email';
+import { sendRequestMail, ymd } from '@/lib/request-mail';
 import { getStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { logAudit } from '@/lib/audit';
 
@@ -52,17 +52,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       String(lr.employee_id)
     );
 
-    sendEmail(
-      lr.email_id,
-      'WFH Request Rejected',
-      `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#ef4444">WFH Rejected</h2>
-        <p style="color:#334155">Dear ${lr.full_name || 'Employee'},</p>
-        <p style="color:#334155">Your Work From Home request has been rejected.</p>
-        <p style="color:#334155"><strong>Reason:</strong> ${reason}</p>
-      </div>`,
-      { asUser: { id: user.id, type: user.type } }
-    );
+    const fd = ymd;
+    sendRequestMail({
+      kind: 'wfh', event: 'rejected', to: lr.email_id, asUser: { id: user.id, type: user.type },
+      vars: { employee_name: lr.full_name, request_type: 'Work From Home', from_date: fd(lr.start_date), to_date: fd(lr.end_date), reason: lr.reason || '-', remarks: reason },
+    });
 
     await logAudit({
       action: 'wfh_rejected',

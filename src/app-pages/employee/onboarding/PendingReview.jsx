@@ -14,8 +14,8 @@ export default function PendingReview() {
     };
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: 20 }}>
-            <div style={{ maxWidth: 460, textAlign: 'center', background: '#fff', borderRadius: 16, padding: '40px 36px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #f1f0ff' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: 15 }}>
+            <div style={{ maxWidth: 460, textAlign: 'center', background: '#fff', borderRadius: 16, padding: '30px 27px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' }}>
                 <div style={{ fontSize: 44, marginBottom: 16 }}>⏳</div>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 10px', fontFamily: "'Outfit', sans-serif" }}>
                     Your profile is under review
@@ -26,7 +26,7 @@ export default function PendingReview() {
                 </p>
                 <button
                     onClick={handleLogout}
-                    style={{ padding: '10px 24px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13.5, fontWeight: 600 }}
+                    style={{ padding: '10px 18px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13.5, fontWeight: 600 }}
                 >
                     Log Out
                 </button>

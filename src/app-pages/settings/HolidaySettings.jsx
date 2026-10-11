@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { API, auth, SettingsCard, FormField } from './shared';
+import Pagination, { paginate } from '../shared/Pagination';
 
 const fmt = (d) => {
   const [y, m, dd] = d.split('-').map(Number);
@@ -12,6 +13,10 @@ export default function HolidaySettings() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  // keep the page valid when the year changes or a holiday is removed
+  useEffect(() => { setPage(p => Math.min(p, Math.max(1, Math.ceil(holidays.length / pageSize)))); }, [holidays.length, pageSize]);
   const [form, setForm] = useState({ date: '', name: '', holiday_type: 'Government' });
 
   const load = useCallback(() => {
@@ -71,16 +76,17 @@ export default function HolidaySettings() {
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 18 }}>
         <thead>
           <tr style={{ textAlign: 'left', color: '#64748b', fontSize: 12, textTransform: 'uppercase' }}>
-            <th style={{ padding: '8px 10px' }}>Date</th><th>Holiday</th><th>Type</th><th></th>
+            <th style={{ padding: '8px 10px', width: 44 }}>#</th><th style={{ padding: '8px 10px' }}>Date</th><th>Holiday</th><th>Type</th><th></th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center' }}>Loading...</td></tr>
+            <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center' }}>Loading...</td></tr>
           ) : holidays.length === 0 ? (
-            <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No holidays added for {year}.</td></tr>
-          ) : holidays.map(h => (
+            <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No holidays added for {year}.</td></tr>
+          ) : paginate(holidays, page, pageSize).map((h, idx) => (
             <tr key={h.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+              <td style={{ padding: '10px', color: '#94a3b8', fontSize: 13 }}>{(page - 1) * pageSize + idx + 1}</td>
               <td style={{ padding: '10px' }}>{fmt(h.holiday_date)}</td>
               <td style={{ fontWeight: 600 }}>{h.name}</td>
               <td>{h.holiday_type}</td>
@@ -89,6 +95,7 @@ export default function HolidaySettings() {
           ))}
         </tbody>
       </table>
+      <Pagination page={page} totalItems={holidays.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} pageSizeOptions={[10, 25, 50]} itemLabel="holidays" />
     </SettingsCard>
   );
 }

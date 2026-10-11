@@ -40,6 +40,14 @@ const parsePunchTime = (raw: any) => {
 };
 
 // Half-day threshold (hours) from Attendance Settings; default 4.
+// Company weekly-off days (0 = Sunday ... 6 = Saturday), set in Settings > Attendance Settings.
+// Saturday and Sunday unless HR changes it; an empty value means no fixed weekly off.
+export async function getWeeklyOffDays(): Promise<number[]> {
+  const rows = await query<RowDataPacket[]>("SELECT setting_value FROM system_settings WHERE setting_key = 'attendance_weekly_off_days'");
+  if (rows.length === 0 || rows[0].setting_value === null) return [0, 6];
+  return String(rows[0].setting_value).split(',').map(x => parseInt(x.trim())).filter(n => n >= 0 && n <= 6);
+}
+
 export async function getHalfDayThreshold(): Promise<number> {
   const rows = await query<RowDataPacket[]>("SELECT setting_value FROM system_settings WHERE setting_key = 'half_day_threshold'");
   const v = parseFloat(rows[0]?.setting_value);
@@ -61,6 +69,7 @@ export async function getHalfDayThreshold(): Promise<number> {
 export async function resolveAttendanceStatus(o: {
   rawStatus?: string; inTime: string; outTime: string; hours: number; threshold: number;
   isHoliday: boolean; existingStatus?: string; live?: boolean;
+  date?: string; // YYYY-MM-DD, lets the company weekly-off days apply
 }): Promise<{ status: string; recognized: boolean }> {
   const code = async (behavior: string, fallback: string) => (await attendanceByBehavior(behavior))?.code || fallback;
   const raw = (o.rawStatus || '').trim();
@@ -74,9 +83,16 @@ export async function resolveAttendanceStatus(o: {
   if (!raw || !row) behavior = (o.live ? punched : complete) ? 'present' : 'absent'; // nothing usable from TeamOffice
   if (o.live && behavior === 'absent' && punched) behavior = 'present';
 
-  const offDay = o.isHoliday || behavior === 'week_off' || behavior === 'holiday'
+  // The company's weekly-off days decide this - not each person's own TeamOffice roster - so a
+  // Saturday can no longer be Absent for one employee and Week Off for another. Nobody in: Week Off.
+  // Somebody came in: Extra Work.
+  let weeklyOff = false;
+  if (o.date && /^\d{4}-\d{2}-\d{2}$/.test(o.date)) weeklyOff = (await getWeeklyOffDays()).includes(new Date(o.date + 'T00:00:00Z').getUTCDay());
+
+  const offDay = weeklyOff || o.isHoliday || behavior === 'week_off' || behavior === 'holiday'
     || existing?.behavior === 'week_off' || existing?.behavior === 'extra_work';
   if (offDay && punched) return { status: await code('extra_work', 'EW'), recognized };
+  if (weeklyOff && !o.isHoliday) return { status: await code('week_off', 'WO'), recognized };
   if (o.isHoliday && behavior === 'absent') return { status: await code('holiday', 'HOL'), recognized };
   if (behavior === 'present') {
     const half = complete && o.hours > 0 && o.hours < o.threshold;
@@ -124,7 +140,7 @@ export async function syncTodayPunches(empCode: string, createdBy: string, date:
     if (existing[0]?.remark?.startsWith('Manual entry')) continue;
     const { status } = await resolveAttendanceStatus({
       rawStatus: String(rec.Status || ''), inTime, outTime, hours, threshold,
-      isHoliday: todayIsHoliday, existingStatus: existing[0]?.status, live: true,
+      isHoliday: todayIsHoliday, existingStatus: existing[0]?.status, live: true, date: dateStr,
     });
     if (existing.length > 0) {
       await execute(

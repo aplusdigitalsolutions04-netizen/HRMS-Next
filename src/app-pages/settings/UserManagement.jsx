@@ -71,7 +71,7 @@ export default function UserManagement() {
 
   const roleBadge = (role) => {
     const styles = {
-      ADMIN: { bg: '#e0e7ff', c: '#3730a3', label: 'Admin' },
+      ADMIN: { bg: '#dbeafe', c: '#1e3a8a', label: 'Admin' },
     };
     const customRole = rolesList.find(r => r.id === role);
     const s = styles[role] || (customRole ? { bg: '#dcfce7', c: '#166534', label: customRole.name } : { bg: '#f1f5f9', c: '#64748b', label: role });
@@ -181,23 +181,23 @@ const svgShield = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="no
 
 const ufStyles = `
 .uf-container { width: 100%; }
-.uf-header { display: flex; align-items: center; gap: 14px; padding: 20px 24px; background: linear-gradient(135deg,#f8fafc,#f1f5f9); border-bottom: 1.5px solid #e2e8f0; border-radius: 12px 12px 0 0; }
-.uf-header-icon { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.uf-header { display: flex; align-items: center; gap: 14px; padding: 15px 18px; background: linear-gradient(135deg,#f8fafc,#f1f5f9); border-bottom: 1.5px solid #e2e8f0; border-radius: 12px 12px 0 0; }
+.uf-header-icon { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg,#2563eb,#3b82f6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
 .uf-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
 .uf-subtitle { margin: 2px 0 0; font-size: .82rem; color: #64748b; }
-.uf-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.uf-body { padding: 15px 18px; display: flex; flex-direction: column; gap: 16px; }
 .uf-field { display: flex; flex-direction: column; gap: 6px; }
 .uf-label { font-size: .82rem; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 6px; letter-spacing: .01em; }
-.uf-label-icon { display: inline-flex; color: #6366f1; opacity: .7; }
+.uf-label-icon { display: inline-flex; color: #2563eb; opacity: .7; }
 .uf-input { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .9rem; color: #1e293b; background: #fff; transition: all .2s; outline: none; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-.uf-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.uf-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
 select.uf-input { cursor: pointer; appearance: auto; }
-.uf-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; background: #f8fafc; border-top: 1.5px solid #e2e8f0; border-radius: 0 0 12px 12px; }
-.uf-btn { padding: 10px 22px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; font-family: 'Outfit', sans-serif; border: none; }
+.uf-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 18px; background: #f8fafc; border-top: 1.5px solid #e2e8f0; border-radius: 0 0 12px 12px; }
+.uf-btn { padding: 10px 17px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; font-family: 'Outfit', sans-serif; border: none; }
 .uf-btn-cancel { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
 .uf-btn-cancel:hover { background: #f1f5f9; }
-.uf-btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
-.uf-btn-primary:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(99,102,241,.35); transform: translateY(-1px); }
+.uf-btn-primary { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; }
+.uf-btn-primary:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(37,99,235,.35); transform: translateY(-1px); }
 .uf-btn-primary:disabled { opacity: .6; cursor: not-allowed; }
 .uf-spinner { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; animation: ufSpin .6s linear infinite; }
 @keyframes ufSpin { to { transform: rotate(360deg); } }

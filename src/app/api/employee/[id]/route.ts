@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { auditFrom } from '@/lib/audit';
 
 // Soft delete: the row, and every record that references it (attendance,
 // payroll, credentials, etc.), stays in the database. The employee is just
@@ -42,13 +43,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       // just flipping the is_deleted flag - a real re-insert with the same
       // values would otherwise hit the unique constraint.
       await execute(
-        "UPDATE employees SET is_deleted = 1, deleted_at = NOW(), email_id = LEFT(CONCAT('deleted_', UNIX_TIMESTAMP(), '_', email_id), 150), emp_code = LEFT(CONCAT('del', UNIX_TIMESTAMP(), '_', COALESCE(emp_code, '')), 50) WHERE id = ?",
+        "UPDATE employees SET is_deleted = 1, deleted_at = NOW(), exit_date = COALESCE(exit_date, CURDATE()), email_id = LEFT(CONCAT('deleted_', UNIX_TIMESTAMP(), '_', email_id), 150), emp_code = LEFT(CONCAT('del', UNIX_TIMESTAMP(), '_', COALESCE(emp_code, '')), 50) WHERE id = ?",
         [id]
       );
     } else {
-      await execute('UPDATE employees SET is_deleted = 1, deleted_at = NOW() WHERE id = ?', [id]);
+      await execute('UPDATE employees SET is_deleted = 1, deleted_at = NOW(), exit_date = COALESCE(exit_date, CURDATE()) WHERE id = ?', [id]);
     }
 
+    await auditFrom(user, 'employee_deleted', 'employee', id, { free_identity: freeIdentity });
     return jsonSuccess({ message: 'Employee deleted' });
   } catch (e: any) {
     console.error('[employee delete] failed:', e?.message || e);

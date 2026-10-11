@@ -24,8 +24,17 @@ export async function GET(req: NextRequest) {
     )`;
     const params = [];
     if (status) { where += ' AND lr.status=?'; params.push(status); }
+    const type = searchParams.get('type') || '';
+    const dateFrom = searchParams.get('date_from') || '';
+    const dateTo = searchParams.get('date_to') || '';
+    const search = (searchParams.get('search') || '').trim();
+    if (type) { where += ' AND lr.leave_type=?'; params.push(type); }
+    // a request matches the range when it overlaps it
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateFrom)) { where += ' AND lr.end_date >= ?'; params.push(dateFrom); }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateTo)) { where += ' AND lr.start_date <= ?'; params.push(dateTo); }
+    if (search) { where += ' AND (e.full_name LIKE ? OR e.emp_code LIKE ?)'; params.push('%' + search + '%', '%' + search + '%'); }
 
-    const cnt = await query<RowDataPacket[]>(`SELECT COUNT(*) as cnt FROM leave_requests lr ${where}`, params);
+    const cnt = await query<RowDataPacket[]>(`SELECT COUNT(*) as cnt FROM leave_requests lr LEFT JOIN employees e ON lr.employee_id=e.id ${where}`, params);
     const rows = await query<RowDataPacket[]>(`SELECT lr.*, e.full_name as emp_name, e.emp_code, e.profile_photo FROM leave_requests lr LEFT JOIN employees e ON lr.employee_id=e.id ${where} ORDER BY lr.applied_on DESC LIMIT ${perPage} OFFSET ${offset}`, params);
     return jsonSuccess({ requests: rows, total: cnt[0].cnt, page, per_page: perPage });
   } catch (e: any) {

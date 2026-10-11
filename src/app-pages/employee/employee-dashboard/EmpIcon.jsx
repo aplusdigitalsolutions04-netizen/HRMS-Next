@@ -23,7 +23,7 @@ export default function EmpIcon({ name, size = 20 }) {
   const d = paths[name] || paths.home;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {d.split(' ').map((seg, i) => {
+      {d.split(/\s(?=M)/).map((seg, i) => {
         if (seg.startsWith('M') || seg.startsWith('L') || seg.startsWith('C') || seg.startsWith('Q') || seg.startsWith('A') || seg.startsWith('Z')) {
           return <path key={i} d={seg} />;
         }

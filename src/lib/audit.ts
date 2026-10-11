@@ -29,3 +29,13 @@ export async function logAudit(data: AuditLogData) {
     console.error('Failed to write audit log:', error);
   }
 }
+
+// Short form for route handlers: who (the signed-in user) did what to which record.
+export async function auditFrom(user: any, action: string, entity_type: string, entity_id?: string | null, details?: any) {
+  await logAudit({
+    action, entity_type, entity_id: entity_id || undefined,
+    performed_by: user?.id ? String(user.id) : undefined,
+    performed_by_email: user?.email || undefined,
+    details,
+  });
+}

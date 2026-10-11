@@ -6,6 +6,8 @@ import { RowDataPacket } from 'mysql2';
 import { hashPassword, generateTempPassword } from '@/lib/auth';
 import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
 import { sendDraftById } from '@/lib/draft-send';
+import { cleanRequiredDocs, requiredDocsHtml } from '@/lib/documents';
+import { auditFrom } from '@/lib/audit';
 
 // Editable from Settings -> Template Management (the row seeded with this
 // exact name via scratchpad/seed_invite_template.sql). No hardcoded fallback -
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
       return jsonError(`No "${INVITE_TEMPLATE_NAME}" email template found. Create it in Settings -> Email Templates before inviting employees.`, 422);
     }
 
+    const requiredDocs = cleanRequiredDocs(body.required_documents);
     const tempPassword = generateTempPassword();
     const id = uuidv4();
     const t = now();
@@ -46,9 +49,9 @@ export async function POST(req: NextRequest) {
     // mobile_no is required by the schema but is filled in by the employee
     // themselves during Complete Profile, just like alternate_mobile_no.
     await execute(
-      `INSERT INTO employees (id, emp_code, email_id, full_name, mobile_no, password, status, created_on, must_change_password)
-       VALUES (?,?,?,?,?,?,?,?,1)`,
-      [id, empCode, emailId, fullName, '', hashPassword(tempPassword), 'invited', t]
+      `INSERT INTO employees (id, emp_code, email_id, full_name, mobile_no, password, status, created_on, must_change_password, required_documents)
+       VALUES (?,?,?,?,?,?,?,?,1,?)`,
+      [id, empCode, emailId, fullName, '', hashPassword(tempPassword), 'invited', t, requiredDocs.length ? JSON.stringify(requiredDocs) : null]
     );
 
     const companyRows = await query<RowDataPacket[]>('SELECT company_name, company_logo FROM company_settings LIMIT 1');
@@ -66,7 +69,8 @@ export async function POST(req: NextRequest) {
       companyName,
     };
     const subject = fillEmployeeTemplate(tmplRows[0].subject || '', templateVars);
-    const htmlBody = fillEmployeeTemplate(tmplRows[0].body || '', templateVars);
+    // the template stays HR-editable; the compulsory-documents box is simply added under it
+    const htmlBody = fillEmployeeTemplate(tmplRows[0].body || '', templateVars) + requiredDocsHtml(requiredDocs);
     const attachmentsJson = JSON.stringify(logoAttachment ? [logoAttachment] : []);
 
     const draftId = uuidv4();
@@ -98,6 +102,7 @@ export async function POST(req: NextRequest) {
       emailError = e?.message || 'Could not send the email';
     }
 
+    await auditFrom(user, 'employee_invited', 'employee', id, { emp_code: empCode, email: emailId, required_documents: requiredDocs });
     return jsonSuccess({
       id, emp_code: empCode, email_sent: emailSent, email_error: emailError,
       message: emailSent

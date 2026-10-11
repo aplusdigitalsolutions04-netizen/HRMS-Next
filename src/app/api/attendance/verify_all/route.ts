@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
 import { execute } from '@/lib/db';
+import { auditFrom } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,7 @@ export async function POST(req: NextRequest) {
 
     const t = now();
     const result = await execute('UPDATE attendance_summary SET is_verified=1, verified_by=?, verified_on=? WHERE is_verified IS NULL OR is_verified=0', [user.email, t]);
+    await auditFrom(user, 'attendance_verified_all', 'attendance_summary', null, { affected: result.affectedRows });
     return jsonSuccess({ message: `All attendance records verified`, affected: result.affectedRows });
   } catch (e: any) { return jsonError(e, 500); }
 }

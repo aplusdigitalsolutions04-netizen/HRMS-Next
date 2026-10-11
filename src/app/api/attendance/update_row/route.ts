@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, requireRole, calcHours } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { auditFrom } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, detail: 'attendance_id and status are required' }, { status: 422 });
     }
 
-    const rows = await query<RowDataPacket[]>('SELECT id FROM attendance WHERE id = ?', [attendanceId]);
+    const rows = await query<RowDataPacket[]>("SELECT id, emp_code, DATE_FORMAT(attendance_date, '%Y-%m-%d') AS d, in_time, out_time, status FROM attendance WHERE id = ?", [attendanceId]);
     if (rows.length === 0) return NextResponse.json({ success: false, detail: 'Attendance record not found' }, { status: 404 });
 
     const inTime = body.in_time && body.in_time !== '--:--' ? body.in_time : null;
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
       [inTime, outTime, workingHours, status, attendanceId]
     );
 
+    await auditFrom(user, 'attendance_updated', 'attendance', rows[0].emp_code, { date: rows[0].d, from: { in: rows[0].in_time, out: rows[0].out_time, status: rows[0].status }, to: { in: inTime, out: outTime, status } });
     return NextResponse.json({ success: true, message: 'Attendance updated' });
   } catch (e: any) {
     return NextResponse.json({ success: false, detail: e?.message || 'Server error' }, { status: 500 });
