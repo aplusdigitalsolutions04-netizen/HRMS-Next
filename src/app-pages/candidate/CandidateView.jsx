@@ -1,3 +1,4 @@
+import { openResume } from '@/lib/resume-file';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
@@ -156,11 +157,11 @@ const CandidateView = () => {
                         <Link to="/candidates/data" className="icon-btn close">
                             ⬅ Back
                         </Link>
-                        <a className="icon-btn"
-                           href={`/${candidate.resume_pdf_path}`}
-                           download
-                           title="Download Resume">
-                            ⬇ Resume
+                        <a className="icon-btn" href="#" onClick={e => { e.preventDefault(); openResume(candidate.resume_pdf_path); }} title="Open Resume in a new tab">
+                            👁 View Resume
+                        </a>
+                        <a className="icon-btn" href="#" onClick={e => { e.preventDefault(); openResume(candidate.resume_pdf_path, { download: true }); }} title="Download Resume">
+                            ⬇ Download
                         </a>
                     </div>
                 </div>

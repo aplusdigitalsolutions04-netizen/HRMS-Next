@@ -10,7 +10,12 @@ let schemaReady: Promise<void> | null = null;
 // is missing. Everything here is additive (ADD COLUMN / CREATE TABLE IF NOT EXISTS), so
 // it never changes or removes existing data, and a failure is logged but never blocks.
 const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
+  hr_admins: {
+    must_change_password: 'TINYINT(1) NOT NULL DEFAULT 0',
+  },
   employees: {
+    reminder_count: 'INT NOT NULL DEFAULT 0',
+    last_reminder_on: 'DATETIME NULL',
     manager_id: 'VARCHAR(36) NULL',
     is_deleted: 'TINYINT(1) NOT NULL DEFAULT 0',
     deleted_at: 'DATETIME NULL',
@@ -27,6 +32,14 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
   attendance_regularizations: {
     workflow_id: 'VARCHAR(36) NULL',
     current_step: 'INT NULL',
+  },
+  // Candidates who do not answer are moved to the No Response list (and back when they answer).
+  interview_candidates: {
+    no_response: 'TINYINT(1) NOT NULL DEFAULT 0',
+    no_response_on: 'DATETIME NULL',
+    no_response_note: 'VARCHAR(300) NULL',
+    follow_up_count: 'INT NOT NULL DEFAULT 0',
+    last_follow_up_on: 'DATETIME NULL',
   },
   // Own mailbox: the incoming (IMAP) server next to the outgoing (SMTP) one that was already stored.
   user_email_accounts: {
@@ -101,6 +114,14 @@ const REQUIRED_TABLES: string[] = [
   `CREATE TABLE IF NOT EXISTS template_categories (
     id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, request_kind VARCHAR(30) NULL,
     is_system TINYINT(1) NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_template_category (name))`,
+  // Master list of request types (Leave, Work From Home, Missed punch, Late coming, ...): what a request mail can be for.
+  `CREATE TABLE IF NOT EXISTS request_types (
+    id INT AUTO_INCREMENT PRIMARY KEY, type_key VARCHAR(30) NOT NULL, name VARCHAR(60) NOT NULL,
+    is_system TINYINT(1) NOT NULL DEFAULT 0, is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_request_type_key (type_key), UNIQUE KEY uq_request_type_name (name))`,
+  // Wrong-password counts per email and per address, for the login lock.
+  `CREATE TABLE IF NOT EXISTS login_attempts (
+    attempt_key VARCHAR(190) PRIMARY KEY, fails INT NOT NULL DEFAULT 0, last_attempt DATETIME NULL, locked_until DATETIME NULL)`,
   // Per-user settings: notification choices, language, dashboard widgets.
   `CREATE TABLE IF NOT EXISTS user_preferences (
     user_key VARCHAR(120) PRIMARY KEY, prefs TEXT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,

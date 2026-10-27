@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { query, execute } from './db';
 import { employeeCodes, inList } from './status-master';
+import { validatePassword } from './password-policy';
 import { RowDataPacket } from 'mysql2';
 
 function randomIndex(max: number): number {
@@ -17,7 +18,8 @@ function getSecret(): string {
   }
   return s;
 }
-const EXPIRE_MINUTES = 60 * 24;
+// a login lasts one working day, not longer
+const EXPIRE_MINUTES = 60 * 8;
 
 export interface TokenPayload {
   sub: string;
@@ -25,8 +27,14 @@ export interface TokenPayload {
   role: string;
   type: 'admin' | 'employee';
   must_change_password?: boolean;
+  // fingerprint of the password the token was made with: changing the password makes every older token useless
+  pf?: string;
   iat?: number;
   exp?: number;
+}
+
+export function passwordFingerprint(hashed: string): string {
+  return crypto.createHmac('sha256', getSecret()).update(String(hashed || '')).digest('hex').slice(0, 16);
 }
 
 export function hashPassword(password: string): string {
@@ -152,6 +160,7 @@ export async function authUserFromToken(token: string): Promise<AuthUser | null>
     const admins = await query<HrAdminRow[]>('SELECT * FROM hr_admins WHERE id = ?', [payload.sub]);
     if (admins.length === 0) return null;
     const a = admins[0];
+    if (!a.is_active || payload.pf !== passwordFingerprint(a.password)) return null;
     
     let rolePerms: Record<string, boolean> = {};
     if (a.role && a.role !== 'ADMIN') {
@@ -170,12 +179,14 @@ export async function authUserFromToken(token: string): Promise<AuthUser | null>
       type: 'admin',
       profile_photo: a.profile_photo,
       last_login: a.last_login,
+      must_change_password: !!a.must_change_password,
       permissions: finalPerms,
     };
   } else {
     const emps = await query<EmployeeRow[]>('SELECT * FROM employees WHERE id = ? AND is_deleted = 0', [payload.sub]);
     if (emps.length === 0) return null;
     const e = emps[0];
+    if (payload.pf !== passwordFingerprint(e.password)) return null;
     return {
       id: e.id,
       email: e.email_id,
@@ -199,13 +210,17 @@ export async function authenticateUser(email: string, password: string, type: 'a
     const a = admins[0];
     if (!verifyPassword(password, a.password)) return null;
     if (!a.is_active) return null;
-    const token = createToken({ sub: a.id, email: a.email, role: a.role || 'HR_STAFF', type: 'admin' });
+    // a password that breaks the password rules (such as 123456) has to be changed at this login
+    const mustChange = !!a.must_change_password || validatePassword(password, a.email) !== null;
+    if (mustChange && !a.must_change_password) await execute('UPDATE hr_admins SET must_change_password = 1 WHERE id = ?', [a.id]);
+    const token = createToken({ sub: a.id, email: a.email, role: a.role || 'HR_STAFF', type: 'admin', must_change_password: mustChange, pf: passwordFingerprint(a.password) });
     await execute('UPDATE hr_admins SET last_login = NOW() WHERE id = ?', [a.id]);
     return {
       user: {
         id: a.id, email: a.email, name: a.full_name || a.email,
         role: a.role || 'HR_STAFF', type: 'admin',
         profile_photo: a.profile_photo, last_login: new Date(),
+        must_change_password: mustChange,
         permissions: parsePermissions(a.permissions),
       },
       token,
@@ -224,9 +239,12 @@ export async function authenticateUser(email: string, password: string, type: 'a
     if (emps.length === 0) return null;
     const e = emps[0];
     if (!verifyPassword(password, e.password)) return null;
+    const mustChange = !!e.must_change_password || validatePassword(password, e.email_id) !== null;
+    if (mustChange && !e.must_change_password) await execute('UPDATE employees SET must_change_password = 1 WHERE id = ?', [e.id]);
+    e.must_change_password = mustChange ? 1 : 0;
     const token = createToken({
       sub: e.id, email: e.email_id, role: 'USER', type: 'employee',
-      must_change_password: !!e.must_change_password,
+      must_change_password: mustChange, pf: passwordFingerprint(e.password),
     });
     await execute('UPDATE employees SET last_login = NOW() WHERE id = ?', [e.id]);
     return {

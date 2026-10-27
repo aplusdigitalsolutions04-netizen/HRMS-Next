@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
+import { validatePassword } from '@/lib/password-policy';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { hashPassword } from '@/lib/auth';
 import { execute, query } from '@/lib/db';
@@ -55,7 +56,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         sets.push(`\`${f}\` = ?`); vals.push(v);
       }
     }
-    if (body.password && body.password.length >= 6) {
+    if (body.password) {
+      const pwErr = validatePassword(body.password, body.email_id);
+      if (pwErr) return jsonError(pwErr, 422);
       sets.push('password = ?'); vals.push(hashPassword(body.password));
     }
 
@@ -98,10 +101,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (body.password && body.password.length >= 6) changed.password = 'changed';
       if (Object.keys(changed).length > 0) await auditFrom(user, body.status !== undefined && changed.status ? 'employee_status_changed' : 'employee_updated', 'employee', id, { emp_code: before.emp_code, name: before.full_name, changes: changed });
     }
-    if (body.password && body.password.length >= 6) {
-      // Keep the credentials-sent record in sync so "Employee Credentials"
-      // reflects the employee's actual current password, not the stale one.
-      await execute('UPDATE employee_credentials SET password = ? WHERE employee_id = ? ORDER BY created_at DESC LIMIT 1', [body.password, id]).catch(() => {});
+    if (body.password) {
+      // the password HR typed is not kept anywhere in readable form; the credentials list only shows that it was changed
+      await execute("UPDATE employee_credentials SET password = '' WHERE employee_id = ?", [id]).catch(() => {});
     }
     return jsonSuccess({ message: 'Employee updated' });
   } catch (e: any) {

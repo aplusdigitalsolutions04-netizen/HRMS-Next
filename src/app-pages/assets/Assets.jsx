@@ -292,7 +292,7 @@ export default function Assets() {
         </div>
       </div>
 
-      <Dialog open={!!modal} onClose={() => setModal(null)} width={modal && modal.kind === 'history' ? 640 : 460} label="Asset">
+      <Dialog open={!!modal} onClose={() => setModal(null)} width={modal && modal.kind === 'history' ? 760 : 640} label="Asset">
         {modal && (
           <form onSubmit={submit} noValidate style={{ padding: 18 }}>
             <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>

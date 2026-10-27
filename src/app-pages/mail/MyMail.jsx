@@ -186,7 +186,7 @@ function Compose({ account, accounts, initial, onClose, onSent }) {
         <div><label style={lab}>Subject</label><input style={inp} value={f.subject} onChange={set('subject')} /></div>
         <div><label style={lab}>Message</label><textarea style={{ ...inp, resize: 'vertical', lineHeight: 1.6, minHeight: 220 }} rows={12} value={f.body} onChange={set('body')} /></div>
         <div>
-          <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={e => { setFiles(p => [...p, ...Array.from(e.target.files)]); e.target.value = ''; }} />
+          <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={e => { const picked = Array.from(e.target.files); e.target.value = ''; setFiles(p => [...p, ...picked]); }} />
           <button type="button" className="btn-o" onClick={() => fileRef.current.click()}>Attach files</button>
           <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>Up to 10 MB each</span>
           {files.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{files.map((x, i) => <span key={i} style={{ background: '#f1f5f9', borderRadius: 16, padding: '3px 10px', fontSize: 12 }}>{x.name} <span style={{ color: '#94a3b8' }}>({sizeText(x.size)})</span> <button type="button" onClick={() => setFiles(p => p.filter((_, j) => j !== i))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' }}>✕</button></span>)}</div>}

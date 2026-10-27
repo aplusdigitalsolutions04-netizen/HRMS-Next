@@ -4,11 +4,11 @@ const InterviewModal = ({
     isOpen, candidateName, formError,
     applyPost, applyPosts, roundSelect, interviewDate, modeSelect,
     onApplyPostChange, onRoundChange, onDateChange, onModeChange,
-    previousInterviews, onPrevStatusChange,
+    previousInterviews, currentInterviewId, onPrevStatusChange,
     onSave, onCancel,
 }) => (
     <div className="modal" style={{ display: isOpen ? 'flex' : 'none' }}>
-        <div className="modal-content">
+        <div className="modal-content full">
             <h3 className="modal-title" style={{ marginBottom: 16 }}>
                 📋 Interview Details —&nbsp;
                 <span style={{ color: '#1e40af' }}>{candidateName}</span>
@@ -57,33 +57,37 @@ const InterviewModal = ({
                 <button className="btn btn-cancel" onClick={onCancel}>Cancel</button>
             </div>
             <hr />
-            {previousInterviews.length > 0 && (
+            {(
                 <div>
-                    <h4 style={{ marginBottom: 10 }}>Previous Interview Records</h4>
+                    <h4 style={{ marginBottom: 10 }}>Interview History <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: 13 }}>({previousInterviews.length} {previousInterviews.length === 1 ? 'round' : 'rounds'})</span></h4>
+                    {previousInterviews.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, padding: '6px 0' }}>No interview rounds yet. Fill the details above and save to start the history.</div>}
+                    {previousInterviews.length > 0 && (
                     <table>
                         <thead>
-                            <tr><th>Round</th><th>Date</th><th>Mode</th><th>Status</th><th>Remarks</th><th>Comments</th></tr>
+                            <tr><th>Round</th><th>Apply Post</th><th>Date</th><th>Mode</th><th style={{ minWidth: 150 }}>Status</th><th>Remarks</th><th>Comments</th></tr>
                         </thead>
                         <tbody>
-                            {previousInterviews.map((r, idx) => (
-                                <tr key={idx}>
-                                    <td>{r.interview_round}</td>
-                                    <td>{r.interview_date?.split('T')[0] || ''}</td>
+                            {[...previousInterviews].reverse().map((r, idx) => (
+                                <tr key={r.id || idx} style={r.id && r.id === currentInterviewId ? { background: '#eff6ff' } : undefined}>
+                                    <td>{r.interview_round}{r.id && r.id === currentInterviewId && <span style={{ marginLeft: 6, fontSize: 10.5, background: '#2563eb', color: '#fff', borderRadius: 8, padding: '1px 6px', fontWeight: 700 }}>Latest</span>}</td>
+                                    <td>{r.apply_post || '-'}</td>
+                                    <td style={{ whiteSpace: 'nowrap' }}>{r.interview_date?.split('T')[0] || ''}</td>
                                     <td>{r.interview_mode}</td>
-                                    <td>
-                                        <select defaultValue={r.status} onChange={e => onPrevStatusChange(r.id, e.target.value)}>
+                                    <td style={{ minWidth: 150 }}>
+                                        <select key={`${r.id}-${r.status}`} defaultValue={r.status} style={{ width: 'auto', minWidth: 130, padding: '8px 28px 8px 10px' }} onChange={e => onPrevStatusChange(r.id, e.target.value)}>
                                             <option value="Scheduled">Scheduled</option>
                                             <option value="Completed">Completed</option>
                                             <option value="On Hold">On Hold</option>
                                             <option value="Rejected">Rejected</option>
                                         </select>
                                     </td>
-                                    <td>{r.remarks || '-'}</td>
-                                    <td>{r.comments || '-'}</td>
+                                    <td style={{ minWidth: 200, whiteSpace: 'pre-wrap' }}>{r.remarks || '-'}</td>
+                                    <td style={{ minWidth: 200, whiteSpace: 'pre-wrap' }}>{r.comments || '-'}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    )}
                 </div>
             )}
         </div>

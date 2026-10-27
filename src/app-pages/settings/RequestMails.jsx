@@ -7,13 +7,14 @@ import { API, auth, SettingsCard, SaveButton } from './shared';
 // A step left on "Built-in mail" sends a plain default mail. The employee's reason is in every mail.
 export default function RequestMails({ saving, setSaving }) {
   const [data, setData] = useState(null);
+  const [loadErr, setLoadErr] = useState('');
   const [map, setMap] = useState({});
 
   useEffect(() => {
     fetch(`${API}/settings/request-mails`, { headers: auth() })
-      .then(r => r.json())
+      .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok || !d.kinds) throw new Error(d.detail || (r.status === 401 ? 'Your session has ended. Please log in again.' : 'Could not load this page (error ' + r.status + ').')); return d; })
       .then(d => { setData(d); setMap(d.map || {}); })
-      .catch(() => Swal.fire({ icon: 'error', title: 'Could not load', text: 'Please refresh the page.' }));
+      .catch(e => setLoadErr(e.message || 'Could not load this page.'));
   }, []);
 
   const save = async () => {
@@ -27,6 +28,7 @@ export default function RequestMails({ saving, setSaving }) {
     finally { setSaving(false); }
   };
 
+  if (loadErr) return <div style={{ padding: 20, color: '#b91c1c', background: '#fef2f2', borderRadius: 10, fontSize: 14 }}><b>Could not load Request Mails.</b><div style={{ marginTop: 6 }}>{loadErr}</div></div>;
   if (!data) return <div className="p-4 text-center">Loading...</div>;
   const th = { textAlign: 'left', padding: '8px 10px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.4px', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e8edf6' };
   const td = { padding: '8px 10px', borderBottom: '1px solid #f1f5f9', fontSize: 13, verticalAlign: 'middle' };

@@ -4,6 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess, uuidv4, createNotification } from 
 import { execute } from '@/lib/db';
 import { initApproval } from '@/lib/approvalEngine';
 import { getAccount } from '@/lib/mailbox';
+import { checkWfhRequest } from '@/lib/wfh';
 import { sendRequestMail, hrRecipients, managerOf, appUrl, realEmail, canSendAs } from '@/lib/request-mail';
 
 export async function POST(req: NextRequest) {
@@ -12,10 +13,9 @@ export async function POST(req: NextRequest) {
     if (!user || user.type !== 'employee') return jsonError('Not authenticated as employee', 401);
 
     const body = await req.json();
-    const { start_date, end_date, reason } = body;
-    if (!start_date || !end_date || !reason) {
-      return jsonError('Missing required fields (start_date, end_date, reason)', 400);
-    }
+    const chk = await checkWfhRequest(String(user.id), body);
+    if (chk.error) return jsonError(chk.error, 422);
+    const start_date = chk.start, end_date = chk.end, reason = chk.reason;
 
     // the connected email the employee chose to send from (their default one if none was chosen); checked before anything is saved
     const chosen = body.from_account_id ? await getAccount(user, String(body.from_account_id)) : null;

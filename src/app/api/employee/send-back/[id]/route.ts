@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
+import { encryptSecret } from '@/lib/mailbox';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
     await execute(
       `INSERT INTO employee_credentials (id, employee_id, employee_name, emp_code, email, password, status, draft_id, created_by, created_at) VALUES (?,?,?,?,?,?,'draft',?,?,?)`,
-      [uuidv4(), id, emp.full_name || '', emp.emp_code || '', emp.email_id, tempPassword, draftId, user.email, t]
+      [uuidv4(), id, emp.full_name || '', emp.emp_code || '', emp.email_id, encryptSecret(tempPassword), draftId, user.email, t]
     );
 
     // If sending fails the employee is still sent back (they will see the

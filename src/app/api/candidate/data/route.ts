@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
     const { page, perPage, offset } = parsePagination(searchParams, 20);
     const search = searchParams.get('search') || '';
     
-    let where = 'WHERE 1=1'; const params = [];
+    const view = searchParams.get('view') === 'no_response' ? 'no_response' : 'pool';
+    let where = view === 'no_response' ? 'WHERE no_response = 1' : 'WHERE (no_response IS NULL OR no_response = 0)'; const params = [];
     if (search.trim()) { where += ' AND (candidate_name LIKE ? OR email_id LIKE ? OR contact_number LIKE ?)'; const q = `%${search.trim()}%`; params.push(q, q, q); }
     
     const cnt = await query<RowDataPacket[]>(`SELECT COUNT(*) as cnt FROM interview_candidates ${where}`, params);
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest) {
        FROM interview_candidates ic ${where} ORDER BY ic.uploaded_on DESC LIMIT ${perPage} OFFSET ${offset}`,
       params
     );
-    return jsonSuccess({ data: rows, total: cnt[0].cnt, page, per_page: perPage });
+    const counts = await query<RowDataPacket[]>('SELECT SUM(CASE WHEN no_response = 1 THEN 1 ELSE 0 END) AS nr, SUM(CASE WHEN no_response = 1 THEN 0 ELSE 1 END) AS pool FROM interview_candidates');
+    return jsonSuccess({ data: rows, total: cnt[0].cnt, page, per_page: perPage, counts: { pool: Number(counts[0].pool) || 0, no_response: Number(counts[0].nr) || 0 } });
   } catch (e: any) { return jsonError(e, 500); }
 }
 

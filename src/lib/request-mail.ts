@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { getMailKinds } from './masters';
 import { query, execute } from './db';
 import { RowDataPacket } from 'mysql2';
 import { sendEmail } from './email';
@@ -13,6 +14,7 @@ import { createNotification } from './utils';
 //                     manager approves -> mail to HR  -> HR approves -> mail to the employee
 //                     rejected at any step -> mail to the employee with the reason
 
+// Starting values only; the live list of request types is the Request Types master (getMailKinds in masters.ts).
 export const MAIL_KINDS: Record<string, string> = {
   leave: 'Leave',
   wfh: 'Work From Home',
@@ -106,8 +108,7 @@ const ROWS: Record<string, [string, string][]> = {
   late_coming: [['Employee', 'employee_name'], ['Date', 'date'], ['Arrived at', 'in_time'], ['Reason', 'reason']],
 };
 
-function defaultMail(kind: string, event: string, v: Record<string, string>, updated = false) {
-  const what = MAIL_KINDS[kind] || 'Request';
+function defaultMail(kind: string, event: string, v: Record<string, string>, updated = false, what = 'Request') {
   const subjects: Record<string, string> = {
     submitted: `${what} request awaiting your approval - ${v.employee_name}`,
     to_hr: `${what} request approved by manager - ${v.employee_name}`,
@@ -170,7 +171,8 @@ export async function sendRequestMail(o: RequestMailOptions): Promise<boolean> {
     const company = (await query<RowDataPacket[]>('SELECT company_name FROM company_settings LIMIT 1').catch(() => []))[0]?.company_name || 'HRMS';
     const vars: Record<string, string> = { ...Object.fromEntries(MAIL_VARIABLES.map(([k]) => [k, ''])), company_name: company, status: o.event === 'approved' ? 'Approved' : o.event === 'rejected' ? 'Rejected' : 'Pending' };
     for (const [k, val] of Object.entries(o.vars || {})) vars[k] = val === null || val === undefined ? '' : String(val);
-    if (!vars.request_type) vars.request_type = MAIL_KINDS[o.kind];
+    const kindName = (await getMailKinds(false))[o.kind] || MAIL_KINDS[o.kind] || 'Request';
+    if (!vars.request_type) vars.request_type = kindName;
     if (o.kind === 'leave' && !vars.leave_type) vars.leave_type = vars.request_type;
 
     let subject = '', html = '';
@@ -185,11 +187,11 @@ export async function sendRequestMail(o: RequestMailOptions): Promise<boolean> {
       if (vars.review_link && !/\{{1,2}\s*review_link/i.test(tpl.body || '') && (o.event === 'submitted' || o.event === 'to_hr')) {
         body += `<p><a href="${vars.review_link}">Open the request</a></p>`;
       }
-      subject = fill(tpl.subject || '', vars, false) || defaultMail(o.kind, o.event, vars).subject;
+      subject = fill(tpl.subject || '', vars, false) || defaultMail(o.kind, o.event, vars, false, kindName).subject;
       if (o.updated) subject = 'Updated: ' + subject;
       html = body;
     } else {
-      ({ subject, html } = defaultMail(o.kind, o.event, vars, !!o.updated));
+      ({ subject, html } = defaultMail(o.kind, o.event, vars, !!o.updated, kindName));
     }
     if (o.subject && o.event === 'submitted' && !o.updated) subject = o.subject;
     return await sendEmail(o.to, subject, html, { cc: o.cc || undefined, bcc: o.bcc || undefined, replyTo: o.replyTo || undefined, asUser: o.asUser });

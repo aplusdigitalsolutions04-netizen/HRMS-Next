@@ -26,6 +26,7 @@ export default function ChangePasswordTab() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.access_token) sessionStorage.setItem('token', data.access_token);
         setCpMsg('Password changed successfully');
         setCpCurrent('');
         setCpNew('');

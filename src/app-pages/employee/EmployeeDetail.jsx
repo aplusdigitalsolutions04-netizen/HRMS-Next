@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import useLiveRefresh from '@/lib/live';
-import { openEmployeeDocument } from '@/lib/clientDocs';
+import { openEmployeeDocument, previewEmployeeDocument, previewDocumentUrl } from '@/lib/clientDocs';
 import { Tabs } from '@/lib/ui-motion';
 import { DOC_OPTIONS } from '@/lib/documents';
 import useStatusMaster, { pillStyle } from '../shared/useStatusMaster';
@@ -49,10 +49,46 @@ const EmployeeDetail = () => {
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || 'Could not save');
             loadPerms();
+            if (allow) askToMail(d.message || 'Permission given');
         } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
         finally { setPermBusy(''); }
     };
-    const [notifyEmp, setNotifyEmp] = useState(false);
+    // Mail the employee from here: the text comes from the "Document Request" template and can be changed before sending
+    const mailEmployee = async () => {
+        const auth = { Authorization: 'Bearer ' + sessionStorage.getItem('token') };
+        let m;
+        try {
+            const res = await fetch('/api/employee/document-mail?employee_id=' + employee.id + '&required=' + encodeURIComponent(reqDocs.join(',')), { headers: auth });
+            m = await res.json();
+            if (!res.ok) throw new Error(m.detail || 'Could not prepare the mail');
+        } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); return; }
+        const esc = (v) => String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const lbl = 'font-size:12px;font-weight:700;display:block;margin:10px 0 3px';
+        const box = 'width:100%;box-sizing:border-box;margin:0;font-size:13.5px';
+        const x = await Swal.fire({
+            title: 'Mail ' + (employee.full_name || 'the employee'), width: 680, showCancelButton: true, confirmButtonText: 'Send mail', focusConfirm: false,
+            html: `<div style="text-align:left"><div style="font-size:12.5px;color:#64748b">To: <b>${esc(m.to) || 'no email address'}</b>${m.documents.length ? ' &middot; Documents: ' + esc(m.documents.join(', ')) : ''}</div>
+              <label style="${lbl}">Cc (optional)</label><input id="dm-cc" class="swal2-input" style="${box};height:36px" />
+              <label style="${lbl}">Subject</label><input id="dm-sub" class="swal2-input" style="${box};height:36px" value="${esc(m.subject)}" />
+              <label style="${lbl}">Message</label><textarea id="dm-msg" class="swal2-textarea" style="${box};height:220px">${esc(m.body)}</textarea></div>`,
+            preConfirm: () => {
+                const subject = document.getElementById('dm-sub').value.trim(), message = document.getElementById('dm-msg').value.trim();
+                if (!subject || !message) { Swal.showValidationMessage('Write the subject and the message'); return false; }
+                return { subject, message, cc: document.getElementById('dm-cc').value.trim() };
+            },
+        });
+        if (!x.isConfirmed) return;
+        try {
+            const res = await fetch('/api/employee/document-mail', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: employee.id, ...x.value }) });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.detail || 'Could not send');
+            Swal.fire({ icon: 'success', title: 'Mail sent', text: d.message, timer: 2200, showConfirmButton: false });
+        } catch (e) { Swal.fire({ icon: 'error', title: 'Not sent', text: e.message }); }
+    };
+    const askToMail = async (title) => {
+        const r = await Swal.fire({ icon: 'success', title, text: 'Do you want to mail the employee about it now?', showCancelButton: true, confirmButtonText: 'Write the mail', cancelButtonText: 'Not now' });
+        if (r.isConfirmed) mailEmployee();
+    };
     const [savingReq, setSavingReq] = useState(false);
     useEffect(() => {
         if (!employee) return;
@@ -64,11 +100,12 @@ const EmployeeDetail = () => {
             const res = await fetch('/api/employee/required-documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sessionStorage.getItem('token') },
-                body: JSON.stringify({ employee_id: employee.id, required_documents: reqDocs, notify: notifyEmp }),
+                body: JSON.stringify({ employee_id: employee.id, required_documents: reqDocs }),
             });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || 'Could not save');
-            Swal.fire({ icon: 'success', title: 'Saved', text: d.message + (d.can_upload ? '' : ' (This employee can no longer upload from the onboarding form - use Send Back if you need new documents.)'), timer: 2600 });
+            if (reqDocs.length) askToMail(d.message || 'Saved');
+            else Swal.fire({ icon: 'success', title: 'Saved', text: d.message, timer: 2000, showConfirmButton: false });
         } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
         finally { setSavingReq(false); }
     };
@@ -314,7 +351,9 @@ const EmployeeDetail = () => {
                                                         <td style={{ whiteSpace: 'nowrap' }}>
                                                             <span style={{ color: d.waiting ? '#d97706' : d.filled ? '#15803d' : '#94a3b8', fontWeight: 600, fontSize: '.76rem' }}>{d.key === 'Additional' ? 'Extra papers' : d.waiting ? 'Waiting for approval' : d.filled ? 'Uploaded' : 'Not uploaded'}</span>
                                                             {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); openDoc(opt.column); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
+                                                            {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); previewEmployeeDocument(employee.id, opt.column, d.label); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
                                                             {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); openApproval(sent.id); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
+                                                            {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); previewDocumentUrl('/api/documents/' + sent.id + '/serve', d.label); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
                                                         </td>
                                                         <td style={{ textAlign: 'center' }}>{d.key === 'Additional' ? <span style={{ color: '#cbd5e1' }}>-</span> : <input type="checkbox" checked={reqDocs.includes(d.key)} onChange={() => setReqDocs(p => p.includes(d.key) ? p.filter(x => x !== d.key) : [...p, d.key])} />}</td>
                                                         <td>
@@ -340,7 +379,8 @@ const EmployeeDetail = () => {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '0 0 6px' }}>
                                     <button className="btn-p" onClick={saveReqDocs} disabled={savingReq}>{savingReq ? 'Saving...' : 'Save compulsory documents'}</button>
-                                    <label style={{ fontSize: '.8rem', color: '#475569', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={notifyEmp} onChange={e => setNotifyEmp(e.target.checked)} /> Email the employee about it (only if they can still upload)</label>
+                                    <button className="btn-o" onClick={mailEmployee}>&#9993; Mail the employee</button>
+                                    <span style={{ fontSize: '.76rem', color: '#64748b' }}>Asks for the compulsory documents that are not uploaded yet and the ones you have allowed. The text is the &quot;Document Request&quot; template.</span>
                                 </div>
                             </>
                         )}

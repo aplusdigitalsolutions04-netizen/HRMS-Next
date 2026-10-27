@@ -17,6 +17,11 @@ export const candidateDataStyles = `
     .btn { padding:8px 14px; border-radius:8px; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:-5px 15px 30px rgb(17 23 77/18%); color:#fff!important; background:linear-gradient(135deg,var(--primary) 0%,var(--accent) 100%); border:none!important; border-radius:50px; transition:all .5s ease-out; }
     .btn:hover { box-shadow:none; background:linear-gradient(135deg,var(--accent) 0%,var(--primary) 100%); }
     .btn.medium { padding:8px 14px; font-size:14px; }
+    .cand-table thead th { padding:9px 6px; font-size:12px; white-space:nowrap; }
+    .cand-table tbody td { padding:9px 6px; font-size:13px; }
+    .cand-table .status-badge { padding:4px 11px; }
+    .modal-content.full { width:96vw; height:94vh; max-height:94vh; padding:22px 26px; }
+    .modal-content.full table td, .modal-content.full table th { padding:11px 14px; }
     .action-buttons { display:flex; gap:8px; }
     .status-badge { padding:6px 14px; border-radius:14px; font-size:12px; font-weight:600; display:inline-block; }
     .status-badge.scheduled  { background:#e0f2fe; color:#0369a1; }

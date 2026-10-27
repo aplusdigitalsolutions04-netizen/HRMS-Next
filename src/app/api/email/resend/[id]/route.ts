@@ -30,8 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const status = success ? 'resent' : 'failed';
     await execute(
-      `INSERT INTO email_logs (id, candidate_id, to_email, subject, body, cc, bcc, attachments, status, sent_by, sent_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [newId, log.candidate_id, log.to_email, log.subject, log.body, log.cc, log.bcc, log.attachments, status, user.email, t]
+      `INSERT INTO email_logs (id, candidate_id, candidate_name, template_name, to_email, subject, body, cc, bcc, attachments, status, sent_by, sent_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [newId, log.candidate_id, log.candidate_name || null, log.template_name || null, log.to_email, log.subject, log.body, log.cc, log.bcc, log.attachments, status, user.email, t]
     );
 
     if (!success) {

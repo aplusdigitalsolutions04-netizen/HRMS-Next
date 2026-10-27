@@ -24,7 +24,7 @@ export function proxy(request: NextRequest) {
       return NextResponse.json({ detail: 'Invalid or expired token' }, { status: 401 });
     }
 
-    if (payload.type === 'employee' && payload.must_change_password) {
+    if (payload.must_change_password) {
       if (!pathname.startsWith('/api/change-password') &&
           !pathname.startsWith('/api/employee/change-password') &&
           !pathname.startsWith('/api/logout') &&

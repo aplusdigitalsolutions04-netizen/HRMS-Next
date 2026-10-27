@@ -124,7 +124,7 @@ const EmployeeCredentials = () => {
                   <td>{r.emp_code || '—'}</td>
                   <td>{r.email}</td>
                   <td style={{ fontFamily: 'monospace' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    {!r.password ? <span style={{ fontFamily: 'inherit', fontSize: '.78rem', color: '#94a3b8' }}>Changed by the employee</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       {revealedId === r.id ? r.password : '•'.repeat(Math.max(6, (r.password || '').length))}
                       <button
                         onClick={() => setRevealedId(revealedId === r.id ? null : r.id)}
@@ -133,7 +133,7 @@ const EmployeeCredentials = () => {
                       >
                         {revealedId === r.id ? '🙈' : '👁️'}
                       </button>
-                    </span>
+                    </span>}
                   </td>
                   <td>{statusBadge(r.status)}</td>
                   <td style={{ fontSize: '0.85rem' }}>{r.status === 'sent' ? formatDate(r.sent_at) : '—'}</td>

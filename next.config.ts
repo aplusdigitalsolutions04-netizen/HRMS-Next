@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+    // uploads pass through proxy.ts; the default 10 MB would cut off mails with attachments (up to 20 MB)
+    proxyClientMaxBodySize: '25mb',
     // The Turbopack dev server repeatedly panics ("Next.js package not found")
     // while rebuilding the [...slug] app endpoint on every server-side Fast
     // Refresh cycle, which then forces the browser to reload in a loop.

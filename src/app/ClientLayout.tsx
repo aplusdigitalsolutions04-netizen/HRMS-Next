@@ -40,6 +40,7 @@ const EditDepartment = dynamic(() => import('@/app-pages/department/EditDepartme
 const AddDesignation = dynamic(() => import('@/app-pages/department/AddDesignation'), { ssr: false });
 const CandidateData = dynamic(() => import('@/app-pages/candidate/CandidateData'), { ssr: false });
 const CandidateView = dynamic(() => import('@/app-pages/candidate/CandidateView'), { ssr: false });
+const NoResponse = dynamic(() => import('@/app-pages/candidate/NoResponse'), { ssr: false });
 const CandidatesForm = dynamic(() => import('@/app-pages/candidate/CandidatesForm'), { ssr: false });
 const TemplateManagement = dynamic(() => import('@/app-pages/settings/TemplateManagement'), { ssr: false });
 const EmailLog = dynamic(() => import('@/app-pages/communication/EmailLog'), { ssr: false });
@@ -56,6 +57,7 @@ const AuditLog = dynamic(() => import('@/app-pages/system/AuditLog'), { ssr: fal
 const Backup = dynamic(() => import('@/app-pages/system/Backup'), { ssr: false });
 const AssetTypes = dynamic(() => import('@/app-pages/assets/AssetTypes'), { ssr: false });
 const LeaveTypes = dynamic(() => import('@/app-pages/leave/LeaveTypes'), { ssr: false });
+const RequestTypes = dynamic(() => import('@/app-pages/settings/RequestTypes'), { ssr: false });
 const TemplateCategories = dynamic(() => import('@/app-pages/settings/TemplateCategories'), { ssr: false });
 const Assets = dynamic(() => import('@/app-pages/assets/Assets'), { ssr: false });
 const Reports = dynamic(() => import('@/app-pages/reports/Reports'), { ssr: false });
@@ -161,6 +163,7 @@ function MainLayout() {
                   <Route path="/backup" element={<PrivateRoute allowedRoles={ADMIN_ONLY}><Backup /></PrivateRoute>} />
                   <Route path="/masters/asset-types" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><AssetTypes /></PrivateRoute>} />
                   <Route path="/masters/leave-types" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><LeaveTypes /></PrivateRoute>} />
+                  <Route path="/masters/request-types" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><RequestTypes /></PrivateRoute>} />
                   <Route path="/masters/template-categories" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><TemplateCategories /></PrivateRoute>} />
                   <Route path="/assets" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Assets /></PrivateRoute>} />
                   <Route path="/reports" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Reports /></PrivateRoute>} />
@@ -183,6 +186,7 @@ function MainLayout() {
                   <Route path="/masters/designations/edit/:id" element={<PrivateRoute allowedRoles={ADMIN_HR}><AddDesignation /></PrivateRoute>} />
                     <Route path="/candidates/data" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><CandidateData /></PrivateRoute>} />
                   <Route path="/candidates/view/:id" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><CandidateView /></PrivateRoute>} />
+                  <Route path="/candidates/no-response" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><NoResponse /></PrivateRoute>} />
                   <Route path="/candidates/add" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><CandidatesForm /></PrivateRoute>} />
                   <Route path="/settings/template-editor" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><TemplateEditor /></PrivateRoute>} />
                   <Route path="/settings/templates" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><TemplateManagement /></PrivateRoute>} />

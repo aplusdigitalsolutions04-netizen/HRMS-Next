@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
+import { validatePassword } from '@/lib/password-policy';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now, requireRole } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
@@ -41,6 +42,8 @@ export async function POST(req: NextRequest) {
 
     const id = uuidv4(); const t = now();
     // Default permissions: only basic view access
+    const pwErr = validatePassword(body.password, email);
+    if (pwErr) return jsonError(pwErr, 422);
     const defaultPerms = JSON.stringify({
       view_dashboard: true,
       view_employees: true,
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
     });
     await execute(
       `INSERT INTO hr_admins (id, email, full_name, password, role, is_active, permissions, updated_at) VALUES (?,?,?,?,?,?,?,?)`,
-      [id, email, body.full_name || body.name || '', hashPassword(body.password || '123456'), body.role || 'HR_STAFF', body.is_active !== undefined ? (body.is_active ? 1 : 0) : 1, defaultPerms, t]
+      [id, email, body.full_name || body.name || '', hashPassword(body.password), body.role || 'HR_STAFF', body.is_active !== undefined ? (body.is_active ? 1 : 0) : 1, defaultPerms, t]
     );
     return jsonSuccess({ id, message: 'User created' }, 201);
   } catch (e: any) { return jsonError(e, 500); }

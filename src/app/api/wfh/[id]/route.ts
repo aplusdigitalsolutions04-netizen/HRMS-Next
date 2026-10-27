@@ -4,6 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { requestHasActions, mailApproverOfUpdate, appUrl } from '@/lib/request-mail';
+import { checkWfhRequest } from '@/lib/wfh';
 import { logAudit } from '@/lib/audit';
 
 // The employee changes their own WFH request (dates, reason) while nobody has acted on it yet.
@@ -20,10 +21,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (await requestHasActions('wfh', id)) return jsonError('This request was already reviewed, so it cannot be changed now', 409);
 
     const b = await req.json();
-    const start = String(b.start_date || '').slice(0, 10), end = String(b.end_date || '').slice(0, 10), reason = String(b.reason || '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return jsonError('Start date and end date required', 422);
-    if (new Date(end) < new Date(start)) return jsonError('End date must not be before the start date', 422);
-    if (!reason) return jsonError('Please enter a reason', 422);
+    const chk = await checkWfhRequest(String(user.id), b, String(id));
+    if (chk.error) return jsonError(chk.error, 422);
+    const start = chk.start, end = chk.end, reason = chk.reason;
 
     await execute('UPDATE wfh_requests SET start_date=?, end_date=?, reason=? WHERE id=?', [start, end, reason, id]);
     await mailApproverOfUpdate({

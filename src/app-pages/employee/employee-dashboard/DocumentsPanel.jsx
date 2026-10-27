@@ -1,4 +1,5 @@
 import React from 'react';
+import { previewDocumentUrl } from '@/lib/clientDocs';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -79,7 +80,10 @@ export default function DocumentsPanel({ documents, slots = [], onboarding = [],
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 {canView && (
-                  <span onClick={() => open(doc && doc.file_path ? `${API}/documents/${doc.id}/serve` : `${API}/my-documents/file?type=${key}`)} style={{ fontSize: 12, color: '#2563eb', fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>View</span>
+                  <>
+                    <span onClick={() => previewDocumentUrl(doc && doc.file_path ? `${API}/documents/${doc.id}/serve` : `${API}/my-documents/file?type=${key}`, label)} style={{ fontSize: 12, color: '#2563eb', fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>Preview</span>
+                    <span onClick={() => open(doc && doc.file_path ? `${API}/documents/${doc.id}/serve` : `${API}/my-documents/file?type=${key}`)} style={{ fontSize: 12, color: '#2563eb', fontWeight: 500, whiteSpace: 'nowrap', cursor: 'pointer' }}>View</span>
+                  </>
                 )}
                 {isPending ? (
                   <span style={{ ...btn, color: '#94a3b8', borderColor: '#e2e8f0', background: '#f1f5f9', cursor: 'not-allowed' }}>Pending</span>
@@ -129,7 +133,10 @@ export default function DocumentsPanel({ documents, slots = [], onboarding = [],
                     ) : (
                       <span style={{ fontSize: 10, color: '#16a34a', fontWeight: 600 }}>Approved</span>
                     )}
-                    <span onClick={() => open(`${API}/documents/${doc.id}/serve`)} style={{ fontSize: 11, color: '#2563eb', fontWeight: 600, cursor: 'pointer' }}>View</span>
+                    <span style={{ display: 'flex', gap: 10 }}>
+                      <span onClick={() => previewDocumentUrl(`${API}/documents/${doc.id}/serve`, doc.document_name || 'Document')} style={{ fontSize: 11, color: '#2563eb', fontWeight: 600, cursor: 'pointer' }}>Preview</span>
+  <span onClick={() => open(`${API}/documents/${doc.id}/serve`)} style={{ fontSize: 11, color: '#2563eb', fontWeight: 600, cursor: 'pointer' }}>View</span>
+                    </span>
                   </div>
                 </div>
               ))}

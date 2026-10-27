@@ -1,3 +1,4 @@
+import { openResume } from '@/lib/resume-file';
 import React, { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -75,8 +76,7 @@ const AddCandidateModal = ({ isOpen, onClose, onSaved }) => {
     };
 
     const handleViewResume = () => {
-        if (!rawData?.resume_pdf_path) { Swal.fire('Resume not available'); return; }
-        window.open('/' + rawData.resume_pdf_path, '_blank');
+        openResume(rawData?.resume_pdf_path);
     };
 
     const handleSave = () => {

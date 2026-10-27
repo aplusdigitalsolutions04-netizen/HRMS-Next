@@ -17,7 +17,6 @@ export default function ForceChangePassword() {
     const token = sessionStorage.getItem('token');
     const role = sessionStorage.getItem('role');
     if (!token) { navigate('/login', { replace: true }); return; }
-    if (role !== 'USER') { navigate('/', { replace: true }); return; }
     const mcp = sessionStorage.getItem('must_change_password');
     if (mcp !== 'true') { navigate('/', { replace: true }); return; }
   }, [navigate]);
@@ -47,13 +46,14 @@ export default function ForceChangePassword() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API}/employee/change-password`, {
+      const res = await fetch(`${API}${sessionStorage.getItem('role') === 'USER' ? '/employee/change-password' : '/change-password'}`, {
         method: 'POST',
         headers: { ...auth(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_password: newPassword, confirm_password: confirmPassword })
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.access_token) sessionStorage.setItem('token', data.access_token);
         sessionStorage.setItem('must_change_password', 'false');
         setSuccess(true);
         setTimeout(() => navigate('/', { replace: true }), 2000);

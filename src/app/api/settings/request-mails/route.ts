@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
+import { getMailKinds } from '@/lib/masters';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { MAIL_KINDS, MAIL_EVENTS, MAIL_VARIABLES, getMailTemplateMap, saveMailTemplateMap } from '@/lib/request-mail';
+import { MAIL_EVENTS, MAIL_VARIABLES, getMailTemplateMap, saveMailTemplateMap } from '@/lib/request-mail';
 import { auditFrom } from '@/lib/audit';
 import { ensureTemplateCategories } from '@/lib/masters';
 
@@ -14,8 +15,12 @@ export async function GET(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return jsonError('Insufficient permissions', 403);
     await ensureTemplateCategories();
-    const templates = await query<RowDataPacket[]>("SELECT t.id, t.name, t.subject, c.request_kind FROM email_templates t JOIN template_categories c ON c.name = t.template_type WHERE c.request_kind IS NOT NULL AND (t.is_deleted IS NULL OR t.is_deleted = 0) ORDER BY t.name");
+    const MAIL_KINDS = await getMailKinds(true);
+    // read both lists and match them here, instead of joining in SQL
+    const all = await query<RowDataPacket[]>('SELECT * FROM email_templates');
     const categories = await query<RowDataPacket[]>('SELECT name, request_kind FROM template_categories WHERE request_kind IS NOT NULL');
+    const kindByName = new Map(categories.map(c => [String(c.name).toLowerCase(), c.request_kind]));
+    const templates = all.filter(t => !t.is_deleted).map(t => ({ id: t.id, name: t.name, subject: t.subject, request_kind: kindByName.get(String(t.template_type || 'General').toLowerCase()) || null })).filter(t => t.request_kind).sort((x, y) => String(x.name).localeCompare(String(y.name)));
     const byKind: Record<string, any[]> = {};
     for (const k of Object.keys(MAIL_KINDS)) byKind[k] = templates.filter(t => t.request_kind === k).map(t => ({ id: t.id, name: t.name, subject: t.subject }));
     const categoryOf: Record<string, string> = {};
@@ -32,8 +37,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const incoming = body.map && typeof body.map === 'object' ? body.map : {};
     await ensureTemplateCategories();
-    const templates = await query<RowDataPacket[]>('SELECT t.id, c.request_kind FROM email_templates t LEFT JOIN template_categories c ON c.name = t.template_type');
-    const kindOf = new Map(templates.map(t => [t.id, t.request_kind]));
+    const MAIL_KINDS = await getMailKinds(true);
+    const all = await query<RowDataPacket[]>('SELECT * FROM email_templates');
+    const cats = await query<RowDataPacket[]>('SELECT name, request_kind FROM template_categories');
+    const kindByName = new Map(cats.map(c => [String(c.name).toLowerCase(), c.request_kind]));
+    const kindOf = new Map(all.map(t => [t.id, kindByName.get(String(t.template_type || 'General').toLowerCase()) || null]));
     const map: Record<string, string> = {};
     for (const kind of Object.keys(MAIL_KINDS)) {
       for (const ev of Object.keys(MAIL_EVENTS)) {

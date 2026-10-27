@@ -28,6 +28,7 @@ const CandidateData = () => {
 
     const [currentCandidateId,    setCurrentCandidateId]    = useState(null);
     const [currentCandidateName,  setCurrentCandidateName]  = useState('');
+    const [actionTemplateBody, setActionTemplateBody] = useState('');
     const [currentCandidateEmail, setCurrentCandidateEmail] = useState('');
     const [currentCandidateMobile, setCurrentCandidateMobile] = useState('');
     const [companyName, setCompanyName] = useState('');
@@ -182,7 +183,7 @@ const CandidateData = () => {
                 setInterviewDate(d.current_interview?.interview_date
                     ? d.current_interview.interview_date.split('T')[0] : '');
                 setModeSelect(d.current_interview?.interview_mode || '');
-                setPreviousInterviews(d.previous_interviews || []);
+                setPreviousInterviews(d.interviews || d.previous_interviews || []);
                 if (d.current_interview) {
                     setCurrentInterviewId(d.current_interview.id);
                     setOriginalRound(d.current_interview.interview_round || '');
@@ -190,6 +191,19 @@ const CandidateData = () => {
                 setIsCandidateModalOpen(true);
             })
             .catch(console.error);
+    };
+
+    // the candidate did not answer: move to the No Response list (sidebar > Recruitment > No Response)
+    const markNoResponse = async (c) => {
+        const x = await Swal.fire({ title: `${c.candidate_name} did not respond?`, text: 'They will move to the No Response list. You can bring them back when they answer.', input: 'text', inputPlaceholder: 'Note (optional), e.g. called twice, no answer', showCancelButton: true, confirmButtonText: 'Move to No Response' });
+        if (!x.isConfirmed) return;
+        try {
+            const res = await fetch(`${API}/candidate/${c.id}/no-response`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark', note: x.value || '' }) });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.detail || 'Could not move the candidate');
+            Swal.fire({ icon: 'success', title: 'Moved to No Response', timer: 1400, showConfirmButton: false });
+            fetchCandidates();
+        } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
     };
 
     const deleteCandidate = (id) => {
@@ -259,6 +273,7 @@ const CandidateData = () => {
     const openActionModal = () => {
         setActionTemplateId('');
         setActionTemplateSubject('');
+        setActionTemplateBody('');
         setActionSaving('');
         setActionMessage('');
         fetch(`${API}/templates/`, { headers: auth() })
@@ -284,10 +299,12 @@ const CandidateData = () => {
     const onActionTemplateSelect = (tplId) => {
         setActionTemplateId(tplId);
         setActionTemplateSubject('');
+        setActionTemplateBody('');
         if (!tplId) return;
         const tpl = actionTemplates.find(t => t.id === tplId);
         if (!tpl) return;
         setActionTemplateSubject(fillVariables(tpl.subject, currentTemplateVars()));
+        setActionTemplateBody(fillVariables(tpl.body, currentTemplateVars()));
     };
 
     /* ── Handle template selection in the Candidate Pool email-action modal ──
@@ -310,7 +327,7 @@ const CandidateData = () => {
         setActionMessage('');
         const vars = currentTemplateVars();
         const subject = actionTemplateSubject || fillVariables(tpl.subject, vars);
-        const body = fillVariables(tpl.body, vars);
+        const body = actionTemplateBody || fillVariables(tpl.body, vars);
         try {
             await saveEmailDraft({
                 candidate_id: currentCandidateId,
@@ -336,7 +353,7 @@ const CandidateData = () => {
         setActionMessage('');
         const vars = currentTemplateVars();
         const subject = actionTemplateSubject || (tpl ? fillVariables(tpl.subject, vars) : '');
-        const body = tpl ? fillVariables(tpl.body, vars) : '';
+        const body = actionTemplateBody || (tpl ? fillVariables(tpl.body, vars) : '');
         try {
             const draftData = await saveEmailDraft({
                 candidate_id: currentCandidateId,
@@ -365,8 +382,11 @@ const CandidateData = () => {
 
     /* ── Send Now (open email compose) ── */
     const sendNow = () => {
+        const carry = actionTemplateId ? { id: actionTemplateId, subject: actionTemplateSubject, body: actionTemplateBody } : null;
         setIsActionModalOpen(false);
         openEmailModal();
+        // keep the template and any edits made in the Email Action step
+        if (carry) { setSelectedTemplateId(carry.id); setEmailSubject(carry.subject); setEmailBody(carry.body); }
     };
 
     /* ── Open Email Action Modal (from Candidate Pool Email button) ── */
@@ -877,6 +897,7 @@ const CandidateData = () => {
                 onView={id => navigate(`/candidates/view/${id}`)}
                 onEmailAction={openEmailAction}
                 onDelete={deleteCandidate}
+                onNoResponse={markNoResponse}
             />
 
             {/* ══════════════════════════ INTERVIEW MODAL ══════════════════════════ */}
@@ -894,6 +915,7 @@ const CandidateData = () => {
                 onDateChange={v => { setInterviewDate(v); setFormError(''); }}
                 onModeChange={v => { setModeSelect(v); setFormError(''); }}
                 previousInterviews={previousInterviews}
+                currentInterviewId={currentInterviewId}
                 onPrevStatusChange={onStatusChange}
                 onSave={saveInterview}
                 onCancel={() => setIsCandidateModalOpen(false)}
@@ -918,6 +940,9 @@ const CandidateData = () => {
                 templates={actionTemplates}
                 templateId={actionTemplateId}
                 templateSubject={actionTemplateSubject}
+                templateBody={actionTemplateBody}
+                onSubjectChange={setActionTemplateSubject}
+                onBodyChange={setActionTemplateBody}
                 message={actionMessage}
                 saving={actionSaving}
                 onTemplateSelect={onActionTemplateSelect}

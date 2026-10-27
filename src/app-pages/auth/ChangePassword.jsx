@@ -28,6 +28,7 @@ export default function ChangePassword() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.access_token) sessionStorage.setItem('token', data.access_token);
         setMessage('Password changed successfully');
         setCurrent('');
         setNewPass('');

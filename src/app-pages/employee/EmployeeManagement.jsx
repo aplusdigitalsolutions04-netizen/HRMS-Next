@@ -210,6 +210,29 @@ const EmployeeManagement = () => {
     });
   };
 
+  // Reminder for an employee whose invite is still pending; the mail text comes from the "Invite Reminder" template
+  const sendInviteReminder = (emp) => {
+    const n = Number(emp.reminder_count || 0);
+    Swal.fire({
+      title: `Send a reminder to ${emp.full_name}?`,
+      html: `<div style="font-size:.9rem;color:#475569;text-align:left">The reminder mail goes to <b>${emp.email_id}</b>. The password is not changed.${n ? `<br/><br/>Reminders sent so far: <b>${n}</b>${emp.last_reminder_on ? ` (last on ${formatDT(emp.last_reminder_on)})` : ''}.` : ''}</div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Send reminder',
+      confirmButtonColor: '#1e40af',
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      fetch(`${API}/employee/invite-reminder/${emp.id}`, { method: 'POST', headers: auth() })
+        .then(async r => {
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.detail || 'Could not send the reminder');
+          Swal.fire({ icon: 'success', title: 'Reminder sent', text: data.message, timer: 2000, showConfirmButton: false });
+          fetchPage(page, search, statusFilter, deptFilter);
+        })
+        .catch(err => Swal.fire({ icon: 'error', title: 'Not sent', text: err.message }));
+    });
+  };
+
   const handleRestore = (emp) => {
     Swal.fire({
       title: `Restore "${emp.full_name}"?`,
@@ -415,6 +438,11 @@ const EmployeeManagement = () => {
                         <button className="emp-action-btn email" title="Draft Email" onClick={e => { e.stopPropagation(); handleDraftEmail(emp); }} style={{ color: '#0ea5e9' }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                         </button>
+                        {emp.status === 'invited' && (
+                          <button className="emp-action-btn view" title={Number(emp.reminder_count) ? `Send invite reminder (${emp.reminder_count} sent)` : 'Send invite reminder'} onClick={e => { e.stopPropagation(); sendInviteReminder(emp); }} style={{ color: '#7c3aed' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                          </button>
+                        )}
                         {['invited', 'needs_correction'].includes(emp.status) && (
                           <Link to={`/employees/detail/${emp.id}?tab=documents`} className="emp-action-btn view" title="Make documents compulsory" onClick={e => e.stopPropagation()} style={{ color: '#d97706' }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>

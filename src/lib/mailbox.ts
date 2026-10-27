@@ -214,9 +214,12 @@ export async function sendFromAccount(a: MailAccount, m: { to: string; cc?: stri
     await smtpTransport(a).sendMail({ envelope: { from: a.sender_email, to: rcpt }, raw });
   } catch (e: any) { throw new Error('Could not send: ' + friendly(e)); }
   // providers that do not file a copy themselves: put it in Sent so it shows in the Sent box
-  let saved = true;
-  if (!SAVES_SENT_ITSELF.test(a.smtp_host) && a.imap_host) {
-    saved = await withImap(a, async (c) => { const path = await folderPath(c, 'sent'); await c.append(path, raw, ['\\Seen']); return true; }).catch(() => false);
-  }
+  const saved = await saveToSent(a, raw);
   return { saved };
+}
+
+// Hostinger and most webmail hosts do not keep a copy of what SMTP sends, so the copy is appended to the Sent folder over IMAP.
+export async function saveToSent(a: MailAccount, raw: Buffer): Promise<boolean> {
+  if (SAVES_SENT_ITSELF.test(a.smtp_host) || !a.imap_host) return true;
+  return withImap(a, async (c) => { const path = await folderPath(c, 'sent'); await c.append(path, raw, ['\\Seen']); return true; }).catch((e) => { console.warn('[mail] could not save to Sent:', e?.message || e); return false; });
 }

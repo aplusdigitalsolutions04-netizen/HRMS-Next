@@ -90,7 +90,7 @@ export default function TemplateCategories() {
                 : rows.map((c, i) => (
                   <tr key={c.id}>
                     <td style={{ color: '#94a3b8' }}>{i + 1}</td>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}{c.is_system && <span style={{ marginLeft: 8, fontSize: '.68rem', fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '2px 7px', borderRadius: 10 }}>Built-in</span>}</td>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
                     <td>
                       <select style={sel} disabled={busy} value={c.request_kind || ''} onChange={e => call(`${API}/template-categories`, 'PUT', { id: c.id, request_kind: e.target.value })}>
                         <option value="">Not linked</option>
@@ -100,8 +100,8 @@ export default function TemplateCategories() {
                     <td>{c.templates}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="tc-b" disabled={busy || c.is_system} title={c.is_system ? 'Used by other screens' : ''} onClick={() => rename(c)}>Rename</button>
-                        <button className="tc-b del" disabled={busy || c.is_system || c.templates > 0} title={c.is_system ? 'Used by other screens' : c.templates > 0 ? 'Templates use it - move them first' : ''} onClick={() => remove(c)}>Delete</button>
+                        <button className="tc-b" disabled={busy} onClick={() => rename(c)}>Rename</button>
+                        <button className="tc-b del" disabled={busy || c.templates > 0} title={c.templates > 0 ? 'Templates use it - move them first' : ''} onClick={() => remove(c)}>Delete</button>
                       </div>
                     </td>
                   </tr>

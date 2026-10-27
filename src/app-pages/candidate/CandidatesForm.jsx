@@ -1,3 +1,4 @@
+import { openResume } from '@/lib/resume-file';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -167,11 +168,7 @@ const CandidatesForm = () => {
     };
 
     const viewResume = () => {
-        if (!rawCandidateData || !rawCandidateData.resume_pdf_path) {
-            Swal.fire("Resume not available");
-            return;
-        }
-        window.open("/" + rawCandidateData.resume_pdf_path, "_blank");
+        openResume(rawCandidateData && rawCandidateData.resume_pdf_path);
     };
 
     const resetForm = () => {

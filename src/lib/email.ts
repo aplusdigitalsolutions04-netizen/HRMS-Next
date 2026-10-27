@@ -2,7 +2,8 @@
 import nodemailer from 'nodemailer';
 import { query } from './db';
 import { RowDataPacket } from 'mysql2';
-import { decryptSecret } from './mailbox';
+import MailComposer from 'nodemailer/lib/mail-composer';
+import { decryptSecret, saveToSent } from './mailbox';
 
 interface SmtpRow extends RowDataPacket {
   smtp_host: string;
@@ -102,7 +103,7 @@ export async function sendEmailDetailed(
   subject: string,
   html: string,
   options?: SendEmailOptions
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; rejected?: string[]; savedToSent?: boolean }> {
   try {
     const s = await resolveSmtpConfig(options?.asUser);
     if (!s) {
@@ -129,8 +130,11 @@ export async function sendEmailDetailed(
     };
 
     if (options?.replyTo) mailOptions.replyTo = options.replyTo;
-    if (options?.cc) mailOptions.cc = options.cc;
-    if (options?.bcc) mailOptions.bcc = options.bcc;
+    // Cc / Bcc may be typed with commas, semicolons, spaces or new lines; the mail server only understands commas
+    const addrs = (v?: string) => String(v || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+    const ccList = addrs(options?.cc), bccList = addrs(options?.bcc);
+    if (ccList.length) mailOptions.cc = ccList.join(', ');
+    if (bccList.length) mailOptions.bcc = bccList.join(', ');
 
     if (options?.attachments) {
       let atts = options.attachments;
@@ -165,8 +169,17 @@ export async function sendEmailDetailed(
       }
     }
 
-    await transporter.sendMail(mailOptions);
-    return { success: true };
+    const toList = addrs(to);
+    const rcpt = [...toList, ...ccList, ...bccList];
+    const raw: Buffer = await new MailComposer(mailOptions).compile().build();
+    const info: any = await transporter.sendMail({ envelope: { from: s.sender_email, to: rcpt }, raw });
+    const rejected: string[] = (info?.rejected || []).map(String);
+    if (rejected.length) console.warn('[email] recipients refused by the mail server:', rejected.join(', '), info?.response || '');
+    if (rejected.length >= rcpt.length) return { success: false, error: `The mail server refused every recipient (${rejected.join(', ')})`, rejected };
+    // SMTP does not keep a copy; put it in the Sent folder of the person's own mailbox (needs its IMAP details)
+    let savedToSent: boolean | undefined;
+    if ((s as any).imap_host) savedToSent = await saveToSent(s as any, raw);
+    return { success: true, rejected, savedToSent };
   } catch (e: any) {
     console.error('[email] Send failed:', e?.message || e);
     return { success: false, error: e?.message || 'Send failed.' };

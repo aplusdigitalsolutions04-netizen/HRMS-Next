@@ -13,7 +13,7 @@ const BADGE_MAP = {
 
 const CandidateTable = ({
     candidates, emailStatuses, loadingCandidates, fetchError, formatDate,
-    onRefresh, onAdd, onEdit, onView, onEmailAction, onDelete,
+    onRefresh, onAdd, onEdit, onView, onEmailAction, onDelete, onNoResponse,
 }) => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(PAGE_SIZE);
@@ -30,15 +30,8 @@ const CandidateTable = ({
             </div>
         </div>
 
-        <div style={{ width: '100%', overflow: 'hidden' }}>
-            <table style={{ width: '100%', tableLayout: 'auto' }}>
-                <colgroup>
-                    <col style={{ width: '4%' }} />
-                    <col style={{ width: '13%' }} /><col style={{ width: '10%' }} /><col style={{ width: '13%' }} />
-                    <col style={{ width: '11%' }} /><col style={{ width: '7%' }} /><col style={{ width: '9%' }} />
-                    <col style={{ width: '7%' }} /><col style={{ width: '8%' }} /><col style={{ width: '10%' }} />
-                    <col style={{ width: '8%' }} />
-                </colgroup>
+        <div style={{ width: '100%', overflowX: 'auto', paddingBottom: 14 }}>
+            <table className="cand-table" style={{ width: '100%', tableLayout: 'auto', minWidth: 0 }}>
                 <thead>
                     <tr>
                         <th style={{ width: 40 }}>#</th>
@@ -57,15 +50,15 @@ const CandidateTable = ({
                         return (
                             <tr key={c.id}>
                                 <td style={{ color: '#94a3b8', fontSize: '.82rem' }}>{(page - 1) * pageSize + idx + 1}</td>
-                                <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>{c.candidate_name}</td>
+                                <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.candidate_name}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{c.contact_number}</td>
-                                <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>{c.email_id}</td>
-                                <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 0 }}>{c.apply_post}</td>
+                                <td style={{ whiteSpace: 'nowrap' }}>{c.email_id}</td>
+                                <td style={{}}>{c.apply_post}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{c.interview_round}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{formatDate(c.interview_date)}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{c.interview_mode}</td>
                                 <td>
-                                    <span className={`status-badge ${c.status?.toLowerCase().replace(' ', '-')}`} style={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                    <span className={`status-badge ${c.status?.toLowerCase().replace(' ', '-')}`} style={{ whiteSpace: 'nowrap', display: 'inline-block' }}>
                                         {c.status}
                                     </span>
                                 </td>
@@ -73,11 +66,12 @@ const CandidateTable = ({
                                     <span style={{ background: badge.bg, color: badge.c, padding: '2px 8px', borderRadius: 50, fontWeight: 700, fontSize: '.7rem', display: 'inline-block', whiteSpace: 'nowrap' }}>{badge.label}</span>
                                 </td>
                                 <td>
-                                    <div className="action-buttons" style={{ gap: '4px', flexWrap: 'nowrap' }}>
-                                        <button className="btn" onClick={() => onEdit(c.id)} style={{ padding: '5px 8px', fontSize: '.72rem', gap: '3px' }}>✏️</button>
-                                        <button className="btn" onClick={() => onView(c.id)} style={{ padding: '5px 8px', fontSize: '.72rem', gap: '3px' }}>👁️</button>
-                                        <button className="btn" onClick={() => onEmailAction(c, es)} style={{ padding: '5px 8px', fontSize: '.72rem', gap: '3px', background: emailStatus === 'overdue' ? 'linear-gradient(135deg,#dc2626,#ef4444)' : undefined }}>📧</button>
-                                        <button className="btn" onClick={() => onDelete(c.id)} style={{ padding: '5px 8px', fontSize: '.72rem', gap: '3px' }}>🗑️</button>
+                                    <div className="action-buttons" style={{ gap: '3px', flexWrap: 'nowrap' }}>
+                                        <button className="btn" onClick={() => onEdit(c.id)} style={{ padding: '5px 7px', fontSize: '.72rem', gap: '3px' }}>✏️</button>
+                                        <button className="btn" onClick={() => onView(c.id)} style={{ padding: '5px 7px', fontSize: '.72rem', gap: '3px' }}>👁️</button>
+                                        <button className="btn" onClick={() => onEmailAction(c, es)} style={{ padding: '5px 7px', fontSize: '.72rem', gap: '3px', background: emailStatus === 'overdue' ? 'linear-gradient(135deg,#dc2626,#ef4444)' : undefined }}>📧</button>
+                                        <button className="btn" title="Did not respond - move to No Response" onClick={() => onNoResponse && onNoResponse(c)} style={{ padding: '5px 7px', fontSize: '.72rem', gap: '3px' }}>🔕</button>
+                                        <button className="btn" onClick={() => onDelete(c.id)} style={{ padding: '5px 7px', fontSize: '.72rem', gap: '3px' }}>🗑️</button>
                                     </div>
                                 </td>
                             </tr>

@@ -3,15 +3,13 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { ensureTemplateCategories } from '@/lib/masters';
-import { MAIL_KINDS } from '@/lib/request-mail';
+import { ensureTemplateCategories, getMailKinds } from '@/lib/masters';
 import { auditFrom } from '@/lib/audit';
 
 // Email Template Categories master: what a template is for (Leave, Work From Home, Interview, ...).
 // A category can be linked to one request mail (leave / wfh / missed_punch / late_coming): Settings > Request Mails
 // then offers only the templates of that category for that mail.
 const canManage = (user: any) => user.type === 'admin' && checkPermission(user, 'settings_templates');
-const KINDS = Object.keys(MAIL_KINDS);
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,13 +17,15 @@ export async function GET(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return jsonError('Insufficient permissions', 403);
     await ensureTemplateCategories();
-    const rows = await query<RowDataPacket[]>(
-      `SELECT c.id, c.name, c.request_kind, c.is_system,
-              (SELECT COUNT(*) FROM email_templates t WHERE t.template_type = c.name AND (t.is_deleted IS NULL OR t.is_deleted = 0)) AS templates
-       FROM template_categories c ORDER BY c.is_system DESC, c.name`);
+    const rows = await query<RowDataPacket[]>('SELECT id, name, request_kind, is_system FROM template_categories ORDER BY is_system DESC, name');
+    // how many templates use each category (counted here, not joined in SQL)
+    const tpls = await query<RowDataPacket[]>('SELECT * FROM email_templates');
+    const countOf = new Map<string, number>();
+    for (const t of tpls) { if (t.is_deleted) continue; const k = String(t.template_type || 'General').toLowerCase(); countOf.set(k, (countOf.get(k) || 0) + 1); }
+    for (const r of rows) (r as any).templates = countOf.get(String(r.name).toLowerCase()) || 0;
     return jsonSuccess({
-      categories: rows.map(r => ({ id: r.id, name: r.name, request_kind: r.request_kind || '', is_system: Number(r.is_system) === 1, templates: Number(r.templates) || 0 })),
-      kinds: MAIL_KINDS,
+      categories: rows.map(r => ({ id: r.id, name: r.name, request_kind: r.request_kind || '', templates: Number(r.templates) || 0 })),
+      kinds: await getMailKinds(true),
     });
   } catch (e: any) { return jsonError(e, 500); }
 }
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     if (!canManage(user)) return jsonError('Insufficient permissions', 403);
     await ensureTemplateCategories();
+    const KINDS = Object.keys(await getMailKinds(true));
     const b = await req.json();
     const name = String(b.name || '').trim().slice(0, 100);
     if (!name) return jsonError('Category name is required', 422);
@@ -54,11 +55,11 @@ export async function PUT(req: NextRequest) {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (!canManage(user)) return jsonError('Insufficient permissions', 403);
+    const KINDS = Object.keys(await getMailKinds(true));
     const b = await req.json();
     const cur = (await query<RowDataPacket[]>('SELECT * FROM template_categories WHERE id = ?', [b.id]))[0];
     if (!cur) return jsonError('Category not found', 404);
     if (b.name !== undefined && String(b.name).trim() !== cur.name) {
-      if (Number(cur.is_system) === 1) return jsonError(`"${cur.name}" is used by other screens and cannot be renamed`, 409);
       const name = String(b.name).trim().slice(0, 100);
       if (!name) return jsonError('Category name is required', 422);
       const dup = await query<RowDataPacket[]>('SELECT id FROM template_categories WHERE LOWER(name) = LOWER(?) AND id <> ?', [name, cur.id]);
@@ -84,7 +85,6 @@ export async function DELETE(req: NextRequest) {
     const id = parseInt(new URL(req.url).searchParams.get('id') || '');
     const cur = (await query<RowDataPacket[]>('SELECT * FROM template_categories WHERE id = ?', [id]))[0];
     if (!cur) return jsonError('Category not found', 404);
-    if (Number(cur.is_system) === 1) return jsonError(`"${cur.name}" is used by other screens and cannot be deleted`, 409);
     const used = await query<RowDataPacket[]>('SELECT COUNT(*) AS n FROM email_templates WHERE template_type = ?', [cur.name]);
     if (Number(used[0].n) > 0) return jsonError(`${used[0].n} template(s) use "${cur.name}". Move them to another category first.`, 409);
     await execute('DELETE FROM template_categories WHERE id = ?', [id]);
