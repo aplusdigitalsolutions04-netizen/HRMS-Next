@@ -131,7 +131,7 @@ function defaultMail(kind: string, event: string, v: Record<string, string>, upd
     .map(([label, k]) => `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">${label}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#0f172a;${k === 'reason' ? '' : 'font-weight:600'}">${esc(v[k])}</td></tr>`).join('');
   const remarks = v.remarks ? `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">${event === 'rejected' ? 'Rejection reason' : 'Note'}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#0f172a">${esc(v.remarks)}</td></tr>` : '';
   const message = v.message && event === 'submitted'
-    ? `<div style="margin:16px 0;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;color:#334155;font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(v.message)}</div>` : '';
+    ? `<div style="margin:16px 0;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;color:#334155;font-size:14px;line-height:1.6">${esc(v.message).replace(/\n/g, '<br>')}</div>` : '';
   const button = (event === 'submitted' || event === 'to_hr') && v.review_link
     ? `<p style="margin-top:20px"><a href="${v.review_link}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Review request</a></p>` : '';
   if (updated) { subjects[event] = 'Updated: ' + subjects[event]; heads[event][0] += ' (updated by the employee)'; }
@@ -182,7 +182,7 @@ export async function sendRequestMail(o: RequestMailOptions): Promise<boolean> {
       let body = fill(tpl.body || '', vars, true);
       if (!/<[a-z][\s\S]*>/i.test(body)) body = esc(body).replace(/\n/g, '<br>'); // plain-text template
       if (vars.message && o.event === 'submitted' && !/\{{1,2}\s*message\s*\}{1,2}/i.test(tpl.body || '')) {
-        body += `<div style="white-space:pre-wrap">${esc(vars.message)}</div>`;
+        body += `<div>${esc(vars.message).replace(/\n/g, '<br>')}</div>`;
       }
       if (vars.review_link && !/\{{1,2}\s*review_link/i.test(tpl.body || '') && (o.event === 'submitted' || o.event === 'to_hr')) {
         body += `<p><a href="${vars.review_link}">Open the request</a></p>`;

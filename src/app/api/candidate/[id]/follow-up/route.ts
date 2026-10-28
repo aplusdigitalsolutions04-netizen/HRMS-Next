@@ -5,6 +5,7 @@ import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { sendEmailDetailed } from '@/lib/email';
 import { auditFrom } from '@/lib/audit';
+import { plainToHtml } from '@/lib/mail-format';
 
 const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const subject = String(b.subject || '').trim().slice(0, 200), message = String(b.message || '').trim().slice(0, 5000);
     if (!subject || !message) return jsonError('Write the subject and the message', 422);
 
-    const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6;white-space:pre-wrap">${esc(message)}</div>`;
+    const html = plainToHtml(message, true);
     const r = await sendEmailDetailed(c.email_id, subject, html, { asUser: { id: user.id, type: user.type } });
     if (!r.success) return jsonError(r.error || 'The mail could not be sent', 502);
 

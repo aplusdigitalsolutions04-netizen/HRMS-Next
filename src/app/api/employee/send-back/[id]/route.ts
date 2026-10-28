@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         <p>HR has reviewed the details you submitted and needs you to correct something before your account can be activated.</p>
         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;margin:16px 0">
           <div style="font-weight:700;color:#991b1b;margin-bottom:6px">Reason</div>
-          <div style="white-space:pre-wrap">${esc(remarks)}</div>
+          <div>${esc(remarks).replace(/\n/g, '<br>')}</div>
         </div>
         <p>Please log in, fix the above and submit your details again. Your login details:</p>
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin:16px 0">

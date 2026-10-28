@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { hashPassword, verifyPassword, createToken, passwordFingerprint } from '@/lib/auth';
 import { validatePassword } from '@/lib/password-policy';
+import { encryptSecret } from '@/lib/mailbox';
 import { execute, query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
@@ -38,8 +39,8 @@ async function handleChangePassword(req: NextRequest) {
       await execute('UPDATE hr_admins SET password = ?, must_change_password = 0, updated_at = NOW() WHERE id = ?', [hashed, user.id]);
     } else {
       await execute('UPDATE employees SET password = ?, must_change_password = 0 WHERE id = ?', [hashed, user.id]);
-      // the credentials list only keeps the temporary password that was mailed; the employee's own password is never kept
-      await execute("UPDATE employee_credentials SET password = '' WHERE employee_id = ?", [user.id]).catch(() => {});
+      // kept encrypted, so HR can see it in Employee Credentials
+      await execute('UPDATE employee_credentials SET password = ? WHERE employee_id = ? ORDER BY created_at DESC LIMIT 1', [encryptSecret(new_password), user.id]).catch(() => {});
     }
     const access_token = createToken({ sub: String(user.id), email: user.email, role: user.role, type: user.type, must_change_password: false, pf: passwordFingerprint(hashed) });
     return NextResponse.json({ message: 'Password changed successfully', access_token });

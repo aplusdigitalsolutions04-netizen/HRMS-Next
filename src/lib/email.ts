@@ -4,6 +4,7 @@ import { query } from './db';
 import { RowDataPacket } from 'mysql2';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { decryptSecret, saveToSent } from './mailbox';
+import { hasBlockHtml, plainToHtml, htmlToPlain } from './mail-format';
 
 interface SmtpRow extends RowDataPacket {
   smtp_host: string;
@@ -21,10 +22,8 @@ interface SmtpRow extends RowDataPacket {
 // markup, wrap it so newlines/indentation are preserved as the author typed
 // them, instead of touching every call site that composes an email body.
 function toHtmlBody(content: string): string {
-  if (/<\/?(p|div|br|table|tr|td|ul|ol|li|h[1-6])\b/i.test(content)) {
-    return content;
-  }
-  return `<div style="white-space:pre-line;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6">${content}</div>`;
+  if (hasBlockHtml(content)) return content;
+  return plainToHtml(content);
 }
 
 async function resolveSmtpConfig(asUser?: { id: string; type: string; accountId?: string }): Promise<SmtpRow | null> {
@@ -122,11 +121,13 @@ export async function sendEmailDetailed(
       console.warn('[email] transporter.verify() warning (continuing):', verifyErr?.message || verifyErr);
     }
 
+    const htmlBody = toHtmlBody(html);
     const mailOptions: any = {
       from: s.sender_name ? `"${s.sender_name}" <${s.sender_email}>` : s.sender_email,
       to,
       subject,
-      html: toHtmlBody(html),
+      html: htmlBody,
+      text: htmlToPlain(htmlBody),
     };
 
     if (options?.replyTo) mailOptions.replyTo = options.replyTo;

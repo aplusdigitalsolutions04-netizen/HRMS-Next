@@ -30,6 +30,20 @@ const EmployeeCredentials = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [revealedId, setRevealedId] = useState(null);
+  const [shown, setShown] = useState({});
+  // the password is fetched only when the eye is pressed (each look is recorded in the Audit Log)
+  const toggleReveal = async (r) => {
+    if (revealedId === r.id) { setRevealedId(null); return; }
+    if (shown[r.id] === undefined) {
+      try {
+        const res = await fetch(`${API}/employee-credentials?reveal=${r.id}`, { headers: auth() });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.detail || 'Could not show the password');
+        setShown(s => ({ ...s, [r.id]: d.password || '' }));
+      } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); return; }
+    }
+    setRevealedId(r.id);
+  };
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [resendingId, setResendingId] = useState(null);
@@ -124,10 +138,10 @@ const EmployeeCredentials = () => {
                   <td>{r.emp_code || '—'}</td>
                   <td>{r.email}</td>
                   <td style={{ fontFamily: 'monospace' }}>
-                    {!r.password ? <span style={{ fontFamily: 'inherit', fontSize: '.78rem', color: '#94a3b8' }}>Changed by the employee</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      {revealedId === r.id ? r.password : '•'.repeat(Math.max(6, (r.password || '').length))}
+                    {!r.has_password && r.password !== '(own password)' ? <span style={{ fontFamily: 'inherit', fontSize: '.78rem', color: '#94a3b8' }} title="This password was set before passwords were kept here. It shows again after the next password change.">Not available</span> : r.password === '(own password)' ? <span style={{ fontFamily: 'inherit', fontSize: '.78rem', color: '#94a3b8' }}>Own password</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      {revealedId === r.id ? shown[r.id] : '•'.repeat(10)}
                       <button
-                        onClick={() => setRevealedId(revealedId === r.id ? null : r.id)}
+                        onClick={() => toggleReveal(r)}
                         title={revealedId === r.id ? 'Hide' : 'Show'}
                         style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', fontSize: 13 }}
                       >

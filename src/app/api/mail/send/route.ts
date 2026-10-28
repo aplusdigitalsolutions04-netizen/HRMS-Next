@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { getAccount, sendFromAccount } from '@/lib/mailbox';
 import { auditFrom } from '@/lib/audit';
+import { plainToHtml } from '@/lib/mail-format';
 
 const MAX_FILE = 10 * 1024 * 1024, MAX_TOTAL = 20 * 1024 * 1024;
 const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       attachments.push({ filename: f.name, content: Buffer.from(await f.arrayBuffer()), contentType: f.type || undefined });
     }
 
-    const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6;white-space:pre-wrap">${esc(body)}</div>`;
+    const html = plainToHtml(body, true);
     const refs = String(fd.get('references') || '').split(/\s+/).filter(Boolean).slice(-10);
     const r = await sendFromAccount(a, { to, cc, bcc, subject: subject || '(no subject)', html, text: body, attachments, inReplyTo: String(fd.get('in_reply_to') || '') || undefined, references: refs });
     await auditFrom(user, 'mail_sent', 'mail', String(user.id), { from: a.sender_email, to: addresses(to).length, subject: subject.slice(0, 80) });

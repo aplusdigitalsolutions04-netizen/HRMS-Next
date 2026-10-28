@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server';
 import { validatePassword } from '@/lib/password-policy';
+import { encryptSecret } from '@/lib/mailbox';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { hashPassword } from '@/lib/auth';
 import { execute, query } from '@/lib/db';
@@ -102,8 +103,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (Object.keys(changed).length > 0) await auditFrom(user, body.status !== undefined && changed.status ? 'employee_status_changed' : 'employee_updated', 'employee', id, { emp_code: before.emp_code, name: before.full_name, changes: changed });
     }
     if (body.password) {
-      // the password HR typed is not kept anywhere in readable form; the credentials list only shows that it was changed
-      await execute("UPDATE employee_credentials SET password = '' WHERE employee_id = ?", [id]).catch(() => {});
+      // kept encrypted, so HR can see it in Employee Credentials
+      await execute('UPDATE employee_credentials SET password = ? WHERE employee_id = ? ORDER BY created_at DESC LIMIT 1', [encryptSecret(body.password), id]).catch(() => {});
     }
     return jsonSuccess({ message: 'Employee updated' });
   } catch (e: any) {

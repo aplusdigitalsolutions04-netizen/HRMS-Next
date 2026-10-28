@@ -8,6 +8,7 @@ import { parseRequiredDocs, requiredDocsHtml } from '@/lib/documents';
 import { sendEmailDetailed } from '@/lib/email';
 import { ensureInviteReminderTemplate, INVITE_REMINDER_TEMPLATE } from '@/lib/masters';
 import { auditFrom } from '@/lib/audit';
+import { hasBlockHtml, plainToHtml } from '@/lib/mail-format';
 
 // A reminder to an employee who was invited but has not completed the profile yet.
 // The wording comes from the "Invite Reminder" template (Settings > Template Management), nothing is typed in here.
@@ -33,9 +34,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
     const vars = { fullName: emp.full_name, email: emp.email_id, empCode: emp.emp_code, loginUrl: `${appUrl}/login`, companyLogo: logoHtml, companyName };
     const subject = fillEmployeeTemplate(tpl.subject || '', vars);
-    // a template written in plain words (no HTML) keeps its line breaks; the compulsory-documents box is HTML added under it
-    let text = fillEmployeeTemplate(tpl.body || '', vars);
-    if (!/<\/?(p|div|br|table|tr|td|ul|ol|li|h[1-6])\b/i.test(text)) text = `<div style="white-space:pre-line;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6">${text}</div>`;
+    // a template written in plain words (no HTML) becomes real paragraphs; the compulsory-documents box is HTML added under it
+    const filled = fillEmployeeTemplate(tpl.body || '', vars);
+    const text = hasBlockHtml(filled) ? filled : plainToHtml(filled);
     const html = text + requiredDocsHtml(parseRequiredDocs(emp.required_documents));
 
     const r = await sendEmailDetailed(emp.email_id, subject, html, { attachments: logoAtt ? [logoAtt] : undefined, asUser: { id: user.id, type: user.type } });
