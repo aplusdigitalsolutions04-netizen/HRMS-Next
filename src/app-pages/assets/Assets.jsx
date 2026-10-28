@@ -141,6 +141,7 @@ export default function Assets() {
   const [history, setHistory] = useState([]);
   const [saving, setSaving] = useState(false);
   const ready = useRef(false);
+  const [loadErr, setLoadErr] = useState('');
 
   const load = useCallback((p = page, o = {}) => {
     setLoading(true);
@@ -151,9 +152,10 @@ export default function Assets() {
     if (st && st !== 'All') params.set('status', st);
     if (ty) params.set('type', ty);
     if (q.trim()) params.set('search', q.trim());
-    fetch(`${API}/assets?${params}`, { headers: auth() }).then(r => r.json())
+    setLoadErr('');
+    fetch(`${API}/assets?${params}`, { headers: auth() }).then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.detail || `The server answered ${r.status}`); return d; })
       .then(d => { setRows(d.assets || []); setTotal(d.total || 0); setCounts(d.counts || {}); setTypes(d.types || []); setAllTypes(d.all_types || d.types || []); setNames(d.names || []); setPage(d.page || 1); })
-      .catch(() => { setRows([]); setTotal(0); }).finally(() => setLoading(false));
+      .catch(e => { setRows([]); setTotal(0); setLoadErr(e.message || 'Could not load the assets'); }).finally(() => setLoading(false));
   }, [page, tab, search, typeF, pageSize]);
 
   useEffect(() => { load(1); }, []);
@@ -262,6 +264,7 @@ export default function Assets() {
             <thead><tr><th style={{ width: 40 }}>#</th><th>Tag</th><th>Asset Name</th><th>Type</th><th>Serial</th><th>Status</th><th>Assigned To</th><th>Emp ID</th><th>Since</th><th>Actions</th></tr></thead>
             <tbody>
               {loading ? <tr><td colSpan="10" style={{ textAlign: 'center', padding: 26, color: '#94a3b8' }}>Loading...</td></tr>
+                : loadErr ? <tr><td colSpan="10" style={{ textAlign: 'center', padding: 30, color: '#b91c1c' }}>Could not load the assets: {loadErr}</td></tr>
                 : rows.length === 0 ? <tr><td colSpan="10" style={{ textAlign: 'center', padding: 30, color: '#94a3b8' }}>No assets yet. Use &quot;Add asset&quot; to start.</td></tr>
                 : rows.map((a, i) => (
                   <tr key={a.id}>

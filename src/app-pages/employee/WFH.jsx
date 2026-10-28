@@ -59,7 +59,7 @@ export default function WFH() {
   const fetchTeamPending = () => {
     fetch(`${API}/wfh/team/pending`, { headers: auth() })
       .then(r => r.json())
-      .then(d => setTeamRequests(d || []))
+      .then(d => setTeamRequests(Array.isArray(d) ? d : []))
       .catch(() => {});
   };
 
@@ -68,7 +68,7 @@ export default function WFH() {
     fetch(`${API}/wfh/my-requests`, { headers: auth() })
       .then(r => r.json())
       .then(d => {
-        setRequests(d || []);
+        setRequests(Array.isArray(d) ? d : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));

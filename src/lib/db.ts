@@ -28,6 +28,15 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
     required_documents: 'TEXT NULL',
     exit_date: 'DATE NULL', // set when an employee is dropped or deleted - the Attrition report reads it
   },
+  // The approval engine (manager -> HR) is used by leave, WFH and regularization requests.
+  leave_requests: {
+    workflow_id: 'VARCHAR(36) NULL',
+    current_step: 'INT NULL',
+  },
+  wfh_requests: {
+    workflow_id: 'VARCHAR(36) NULL',
+    current_step: 'INT NULL',
+  },
   // Missed punch / late coming go to the reporting manager first, then HR (same approval engine as leave).
   attendance_regularizations: {
     workflow_id: 'VARCHAR(36) NULL',
@@ -74,6 +83,16 @@ const REQUIRED_TABLES: string[] = [
     smtp_host VARCHAR(255) DEFAULT 'smtp.gmail.com', smtp_port INT DEFAULT 587, sender_email VARCHAR(255) NOT NULL,
     sender_name VARCHAR(255), app_password VARCHAR(500) NOT NULL, encryption VARCHAR(50) DEFAULT 'TLS',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME, UNIQUE KEY uq_user (user_id, user_type))`,
+  `CREATE TABLE IF NOT EXISTS approval_workflows (
+    id VARCHAR(36) NOT NULL PRIMARY KEY, module_key VARCHAR(50) NOT NULL UNIQUE, name VARCHAR(150) NOT NULL,
+    is_active TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+  `CREATE TABLE IF NOT EXISTS approval_workflow_steps (
+    id VARCHAR(36) NOT NULL PRIMARY KEY, workflow_id VARCHAR(36) NOT NULL, step_order INT NOT NULL,
+    approver_type VARCHAR(20) NOT NULL, specific_user_id VARCHAR(36) NULL, label VARCHAR(100) NULL, KEY (workflow_id))`,
+  `CREATE TABLE IF NOT EXISTS approval_actions (
+    id VARCHAR(36) NOT NULL PRIMARY KEY, request_type VARCHAR(50) NOT NULL, request_id VARCHAR(36) NOT NULL, step_order INT NOT NULL,
+    actor_type VARCHAR(20) NOT NULL, actor_id VARCHAR(36) NOT NULL, actor_name VARCHAR(150) NULL, action VARCHAR(20) NOT NULL,
+    remarks TEXT NULL, acted_at DATETIME DEFAULT CURRENT_TIMESTAMP, KEY idx_request (request_type, request_id))`,
   `CREATE TABLE IF NOT EXISTS wfh_requests (
     id VARCHAR(36) PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, start_date DATE NOT NULL, end_date DATE NOT NULL,
     reason TEXT, status VARCHAR(50) DEFAULT 'Pending', workflow_id VARCHAR(36), current_step INT,
@@ -147,6 +166,25 @@ async function syncSchema(p: Pool): Promise<void> {
       try { await p.query(ddl); }
       catch (e: any) { console.error('[schema] could not create table:', e?.message || e); }
     }
+    // Tables made here get the database's default text rules, which can differ from the older tables (employees ...). Joining
+    // two tables with different rules fails with "Illegal mix of collations" and the page shows nothing. Bring the tables made
+    // here to the same rules as employees; the data stays as it is.
+    try {
+      const [emp] = await p.query<RowDataPacket[]>("SELECT TABLE_COLLATION AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'employees'");
+      const target = String(emp[0]?.c || '');
+      if (/^[a-z0-9_]+$/i.test(target)) {
+        const charset = target.split('_')[0];
+        const ours = REQUIRED_TABLES.map(d => (d.match(/CREATE TABLE IF NOT EXISTS (\w+)/) || [])[1]).filter(Boolean);
+        const [have] = await p.query<RowDataPacket[]>('SELECT TABLE_NAME AS t, TABLE_COLLATION AS c FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()');
+        for (const row of have) {
+          if (!ours.includes(row.t) || !row.c || row.c === target) continue;
+          try {
+            await p.query(`ALTER TABLE \`${row.t}\` CONVERT TO CHARACTER SET ${charset} COLLATE ${target}`);
+            console.log(`[schema] ${row.t} now uses ${target}`);
+          } catch (e: any) { console.error(`[schema] could not change the text rules of ${row.t}:`, e?.message || e); }
+        }
+      }
+    } catch (e: any) { console.error('[schema] text rules check skipped:', e?.message || e); }
     // More than one email per person: the old rule allowed a single row per person, now it is one row per address.
     try {
       const [ix] = await p.query<RowDataPacket[]>("SELECT COUNT(*) AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_email_accounts' AND INDEX_NAME = 'uq_user'");

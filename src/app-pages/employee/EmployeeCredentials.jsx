@@ -81,10 +81,10 @@ const EmployeeCredentials = () => {
     }).then(res => {
       if (!res.isConfirmed) return;
       setResendingId(row.id);
-      fetch(`${API}/email/drafts/${row.draft_id}/send`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' } })
+      fetch(`${API}/employee-credentials/${row.id}/resend`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' } })
         .then(async r => ({ ok: r.ok, data: await r.json() }))
         .then(({ ok, data }) => {
-          Swal.fire({ icon: ok ? 'success' : 'error', title: ok ? 'Sent!' : 'Failed', text: ok ? '' : (data.detail || 'Could not resend.'), timer: ok ? 1500 : undefined, showConfirmButton: !ok });
+          Swal.fire({ icon: ok ? 'success' : 'error', title: ok ? 'Sent!' : 'Failed', text: ok ? (data.message || '') : (data.detail || 'Could not resend.'), timer: ok && !data.own_password ? 1500 : undefined, showConfirmButton: !ok || !!data.own_password });
           if (ok) fetchRows();
         })
         .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Could not resend.' }))
@@ -155,7 +155,7 @@ const EmployeeCredentials = () => {
                     <button
                       className="tbl-action tbl-view"
                       onClick={() => resend(r)}
-                      disabled={resendingId === r.id || !r.draft_id}
+                      disabled={resendingId === r.id}
                     >
                       {resendingId === r.id ? 'Sending...' : (r.status === 'sent' ? '📤 Resend' : '📤 Send')}
                     </button>

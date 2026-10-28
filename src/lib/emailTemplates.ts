@@ -22,17 +22,25 @@ export interface EmployeeTemplateVars {
 // "Available Variables" panel in Template Management shows the candidate
 // template convention (single brace, uppercase) right next to these.
 export function fillEmployeeTemplate(rawBody: string, vars: EmployeeTemplateVars): string {
+  // The value goes in through a function, so characters like $& or $$ in a password are put in exactly as they are.
+  const put = (body: string, pattern: RegExp, value: string) => body.replace(pattern, () => value);
+  const html = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   let body = rawBody || '';
-  body = body.replace(/\{{1,2}(candidate_name|name)\}{1,2}/gi, vars.fullName || 'Employee');
-  body = body.replace(/\{{1,2}email\}{1,2}/gi, vars.email || '');
-  body = body.replace(/\{{1,2}password\}{1,2}/gi, vars.password ?? '********');
-  body = body.replace(/\{{1,2}emp_code\}{1,2}/gi, vars.empCode || '');
-  body = body.replace(/\{{1,2}login_url\}{1,2}/gi, vars.loginUrl || '');
-  body = body.replace(/\{{1,2}official_email\}{1,2}/gi, vars.officialEmail || '');
-  body = body.replace(/\{{1,2}official_no\}{1,2}/gi, vars.officialNo || '');
-  body = body.replace(/\{{1,2}official_details_section\}{1,2}/gi, vars.officialDetailsHtml || '');
-  body = body.replace(/\{{1,2}company_logo\}{1,2}/gi, vars.companyLogo || '');
-  body = body.replace(/\{{1,2}company_name\}{1,2}/gi, vars.companyName || '');
+  body = put(body, /\{{1,2}(candidate_name|name)\}{1,2}/gi, vars.fullName || 'Employee');
+  body = put(body, /\{{1,2}email\}{1,2}/gi, vars.email || '');
+  body = put(body, /\{{1,2}password\}{1,2}/gi, vars.password != null ? html(vars.password) : '********');
+  body = put(body, /\{{1,2}emp_code\}{1,2}/gi, vars.empCode || '');
+  // The link may be given ready-made as <a href=...>. Where the template already puts the placeholder inside href="...",
+  // only the plain address goes in, otherwise the link would break open and show as text in the mail.
+  const loginUrl = vars.loginUrl || '';
+  const plainUrl = (loginUrl.match(/href=["']([^"']+)["']/i) || [])[1] || loginUrl;
+  body = body.replace(/(href\s*=\s*["'])\s*\{{1,2}login_url\}{1,2}/gi, (_m, pre) => pre + plainUrl);
+  body = put(body, /\{{1,2}login_url\}{1,2}/gi, loginUrl);
+  body = put(body, /\{{1,2}official_email\}{1,2}/gi, vars.officialEmail || '');
+  body = put(body, /\{{1,2}official_no\}{1,2}/gi, vars.officialNo || '');
+  body = put(body, /\{{1,2}official_details_section\}{1,2}/gi, vars.officialDetailsHtml || '');
+  body = put(body, /\{{1,2}company_logo\}{1,2}/gi, vars.companyLogo || '');
+  body = put(body, /\{{1,2}company_name\}{1,2}/gi, vars.companyName || '');
   return body;
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, verifyPassword, hashPassword } from '@/lib/auth';
+import { authenticateUser, verifyLoginPassword, hashPassword } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { employeeCodes, getStatuses } from '@/lib/status-master';
 import { clientIp, lockedMinutes, recordFailure, clearFailures } from '@/lib/login-guard';
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     // employee login: the password is checked first, and only then is the account status told
     const emps = await query<RowDataPacket[]>('SELECT status, password FROM employees WHERE email_id = ? AND is_deleted = 0', [email]);
-    const passwordOk = verifyPassword(password, emps.length > 0 ? emps[0].password : DUMMY_HASH) && emps.length > 0;
+    const passwordOk = verifyLoginPassword(password, emps.length > 0 ? emps[0].password : DUMMY_HASH) && emps.length > 0;
     if (!passwordOk) {
       await recordFailure(email, ip);
       return NextResponse.json({ detail: BAD_LOGIN }, { status: 401 });

@@ -223,7 +223,7 @@ export default function PayrollSalaryStructures() {
                 {pageItems.map((ss, idx) => (
                   <tr key={ss.id}>
                     <td style={{ color: '#94a3b8', fontSize: 13 }}>{(page - 1) * pageSize + idx + 1}</td>
-                    <td style={{ fontWeight: 600 }}>{ss.employee_name} <span style={{ color: '#94a3b8', fontSize: 12 }}>({ss.emp_code})</span></td>
+                    <td style={{ fontWeight: 600 }}>{ss.full_name || ss.employee_name} <span style={{ color: '#94a3b8', fontSize: 12 }}>({ss.emp_code})</span></td>
                     <td>{ss.designation || '—'}</td>
                     <td>{formatNum(ss.basic_pay)}</td>
                     <td>{formatNum(ss.hra)}</td>

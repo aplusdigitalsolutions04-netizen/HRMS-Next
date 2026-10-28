@@ -45,6 +45,15 @@ export function verifyPassword(plain: string, hashed: string): boolean {
   return bcrypt.compareSync(plain, hashed);
 }
 
+// A password copied out of a mail often brings a space or an invisible character along at either end. When the exact text
+// does not match, the text without those is tried too. Used for login only.
+const EDGE_JUNK = /^[\s\u00a0\u200b-\u200d\u2060\ufeff]+|[\s\u00a0\u200b-\u200d\u2060\ufeff]+$/g;
+export function verifyLoginPassword(plain: string, hashed: string): boolean {
+  if (bcrypt.compareSync(plain, hashed)) return true;
+  const cleaned = String(plain).replace(EDGE_JUNK, '');
+  return cleaned.length > 0 && cleaned !== plain && bcrypt.compareSync(cleaned, hashed);
+}
+
 export function createToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
   return jwt.sign(payload, getSecret(), { algorithm: 'HS256', expiresIn: EXPIRE_MINUTES * 60 });
 }
@@ -208,7 +217,7 @@ export async function authenticateUser(email: string, password: string, type: 'a
     const admins = await query<HrAdminRow[]>('SELECT * FROM hr_admins WHERE email = ?', [email]);
     if (admins.length === 0) return null;
     const a = admins[0];
-    if (!verifyPassword(password, a.password)) return null;
+    if (!verifyLoginPassword(password, a.password)) return null;
     if (!a.is_active) return null;
     // a password that breaks the password rules (such as 123456) has to be changed at this login
     const mustChange = !!a.must_change_password || validatePassword(password, a.email) !== null;
@@ -238,7 +247,7 @@ export async function authenticateUser(email: string, password: string, type: 'a
     );
     if (emps.length === 0) return null;
     const e = emps[0];
-    if (!verifyPassword(password, e.password)) return null;
+    if (!verifyLoginPassword(password, e.password)) return null;
     const mustChange = !!e.must_change_password || validatePassword(password, e.email_id) !== null;
     if (mustChange && !e.must_change_password) await execute('UPDATE employees SET must_change_password = 1 WHERE id = ?', [e.id]);
     e.must_change_password = mustChange ? 1 : 0;
