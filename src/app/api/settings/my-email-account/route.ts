@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4 } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { encryptSecret } from '@/lib/mailbox';
+import { encryptSecret, guessImapHost } from '@/lib/mailbox';
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,13 +38,13 @@ export async function POST(req: NextRequest) {
 
     if (existing.length > 0) {
       await execute(
-        'UPDATE user_email_accounts SET sender_email=?, app_password=?, sender_name=?, smtp_host=?, smtp_port=?, encryption=?, updated_at=NOW() WHERE id=?',
-        [sender_email, encryptSecret(app_password), sender_name || '', smtp_host, smtp_port || 587, encryption || 'TLS', existing[0].id]
+        'UPDATE user_email_accounts SET sender_email=?, app_password=?, sender_name=?, smtp_host=?, smtp_port=?, encryption=?, imap_host=COALESCE(imap_host, ?), updated_at=NOW() WHERE id=?',
+        [sender_email, encryptSecret(app_password), sender_name || '', smtp_host, smtp_port || 587, encryption || 'TLS', guessImapHost(smtp_host) || null, existing[0].id]
       );
     } else {
       await execute(
-        'INSERT INTO user_email_accounts (id, user_id, user_type, sender_email, app_password, sender_name, smtp_host, smtp_port, encryption) VALUES (?,?,?,?,?,?,?,?,?)',
-        [uuidv4(), user.id, user.type, sender_email, encryptSecret(app_password), sender_name || '', smtp_host, smtp_port || 587, encryption || 'TLS']
+        'INSERT INTO user_email_accounts (id, user_id, user_type, sender_email, app_password, sender_name, smtp_host, smtp_port, encryption, imap_host) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        [uuidv4(), user.id, user.type, sender_email, encryptSecret(app_password), sender_name || '', smtp_host, smtp_port || 587, encryption || 'TLS', guessImapHost(smtp_host) || null]
       );
     }
     return jsonSuccess({ message: 'Email account saved' });

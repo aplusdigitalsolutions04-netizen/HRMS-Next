@@ -219,7 +219,17 @@ export async function sendFromAccount(a: MailAccount, m: { to: string; cc?: stri
 }
 
 // Hostinger and most webmail hosts do not keep a copy of what SMTP sends, so the copy is appended to the Sent folder over IMAP.
-export async function saveToSent(a: MailAccount, raw: Buffer): Promise<boolean> {
-  if (SAVES_SENT_ITSELF.test(a.smtp_host) || !a.imap_host) return true;
+// The incoming (IMAP) server usually has the same name as the sending one with smtp. changed to imap. (smtp.hostinger.com -> imap.hostinger.com).
+export function guessImapHost(smtpHost: string): string {
+  const h = String(smtpHost || '').trim().toLowerCase();
+  if (/^smtp[.-]/.test(h)) return h.replace(/^smtp/, 'imap');
+  if (/^mail./.test(h)) return h;
+  return '';
+}
+
+export async function saveToSent(acc: MailAccount, raw: Buffer): Promise<boolean> {
+  const host = acc.imap_host || guessImapHost(acc.smtp_host);
+  if (SAVES_SENT_ITSELF.test(acc.smtp_host) || !host) return true;
+  const a = { ...acc, imap_host: host, imap_port: acc.imap_port || 993 };
   return withImap(a, async (c) => { const path = await folderPath(c, 'sent'); await c.append(path, raw, ['\\Seen']); return true; }).catch((e) => { console.warn('[mail] could not save to Sent:', e?.message || e); return false; });
 }

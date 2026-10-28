@@ -176,9 +176,9 @@ export async function sendEmailDetailed(
     const rejected: string[] = (info?.rejected || []).map(String);
     if (rejected.length) console.warn('[email] recipients refused by the mail server:', rejected.join(', '), info?.response || '');
     if (rejected.length >= rcpt.length) return { success: false, error: `The mail server refused every recipient (${rejected.join(', ')})`, rejected };
-    // SMTP does not keep a copy; put it in the Sent folder of the person's own mailbox (needs its IMAP details)
-    let savedToSent: boolean | undefined;
-    if ((s as any).imap_host) savedToSent = await saveToSent(s as any, raw);
+    // SMTP does not keep a copy; put it in the Sent folder of the mailbox it was sent from (the company account included).
+    // The IMAP server is the one saved with the account, or the sending server's name with smtp. changed to imap.
+    const savedToSent = await saveToSent(s as any, raw);
     return { success: true, rejected, savedToSent };
   } catch (e: any) {
     console.error('[email] Send failed:', e?.message || e);

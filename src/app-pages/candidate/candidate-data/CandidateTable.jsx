@@ -50,7 +50,7 @@ const CandidateTable = ({
                         return (
                             <tr key={c.id}>
                                 <td style={{ color: '#94a3b8', fontSize: '.82rem' }}>{(page - 1) * pageSize + idx + 1}</td>
-                                <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.candidate_name}</td>
+                                <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.candidate_name}{c.resume_missing && <div style={{ fontSize: 10.5, fontWeight: 700, color: '#b91c1c' }} title="The resume file is not on the server. Open the candidate and upload it again.">&#9888; resume missing</div>}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{c.contact_number}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>{c.email_id}</td>
                                 <td style={{}}>{c.apply_post}</td>

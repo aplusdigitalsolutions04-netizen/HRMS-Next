@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { readFile } from 'fs/promises';
 import { join, basename } from 'path';
+import { downloadFileFromDrive, getDriveFileMeta, driveErrorMessage } from '@/lib/googleDrive';
 
 const TYPES: Record<string, string> = {
   pdf: 'application/pdf',
@@ -21,13 +22,21 @@ export async function GET(req: NextRequest) {
     if (user.type !== 'admin' || !checkPermission(user, 'view_candidates')) return jsonError('Insufficient permissions', 403);
     const sp = new URL(req.url).searchParams;
     const rel = String(sp.get('path') || '').split('\\').join('/');
-    if (!/^uploads\/documents\/[^/]+$/.test(rel)) return jsonError('Resume not available', 404);
-    const name = basename(rel);
+    let buf: Buffer, name: string;
+    if (/^drive:[A-Za-z0-9_-]+$/.test(rel)) {
+      // a resume kept on Google Drive
+      const id = rel.slice(6);
+      try { const [b, meta] = await Promise.all([downloadFileFromDrive(id), getDriveFileMeta(id)]); buf = b; name = meta.name || 'resume'; }
+      catch (e: any) { const friendly = driveErrorMessage(e); return jsonError(friendly || 'The resume could not be fetched from Google Drive', friendly ? 503 : 404); }
+    } else {
+      // older resumes saved on the server
+      if (!/^uploads\/documents\/[^/]+$/.test(rel)) return jsonError('Resume not available', 404);
+      name = basename(rel);
+      try { buf = await readFile(join(process.cwd(), 'public', 'uploads', 'documents', name)); }
+      catch { return jsonError('The resume file was not found on the server. Upload it again for this candidate.', 404); }
+    }
     const ext = name.split('.').pop()!.toLowerCase();
     if (!TYPES[ext]) return jsonError('This file type cannot be opened', 415);
-    let buf: Buffer;
-    try { buf = await readFile(join(process.cwd(), 'public', 'uploads', 'documents', name)); }
-    catch { return jsonError('The resume file was not found on the server. Upload it again from the candidate\'s record.', 404); }
     // ?format=html: a Word resume as a web page, so it can be previewed in the browser
     if (sp.get('format') === 'html') {
       if (ext !== 'docx' && ext !== 'doc') return jsonError('Only Word files need this', 400);

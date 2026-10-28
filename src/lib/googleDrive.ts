@@ -184,6 +184,25 @@ export async function getEmployeeFolderId(empCode: string, employeeName?: string
   return folderId;
 }
 
+// A folder by name directly under the Drive root folder (made on first use), for files that do not belong to one employee.
+export async function getNamedFolderId(name: string): Promise<string> {
+  const key = 'named:' + name;
+  const cached = folderCache.get(key);
+  if (cached) return cached;
+  const parentId = rootFolderId();
+  let folderId = await findFolder(name, parentId);
+  if (!folderId) folderId = await createFolder(name, parentId);
+  folderCache.set(key, folderId);
+  return folderId;
+}
+
+// Saves a file on Google Drive (never on the server's disk) and returns "drive:<file id>", the value kept in the database.
+export async function saveToDriveFolder(folderName: string, fileName: string, buf: Buffer, mimeType: string): Promise<string> {
+  if (!(await isDriveConfigured())) throw new Error('Google Drive is not connected, so the file cannot be saved. Please ask HR to connect Google Drive (Settings > Google Drive).');
+  const folderId = await getNamedFolderId(folderName);
+  return 'drive:' + await uploadFileToDrive(folderId, fileName, buf, mimeType);
+}
+
 export async function uploadFileToDrive(folderId: string, fileName: string, buffer: Buffer, mimeType: string): Promise<string> {
   const drive = await getDrive();
   const res = await drive.files.create({

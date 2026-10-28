@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4 } from '@/lib/utils';
 import { query } from '@/lib/db';
+import { saveToDriveFolder, driveErrorMessage } from '@/lib/googleDrive';
 import { RowDataPacket } from 'mysql2';
 import { writeFile, mkdir, readFile, rm } from 'fs/promises';
 import { join } from 'path';
@@ -166,13 +167,10 @@ export async function POST(req: NextRequest) {
       return jsonSuccess({ success: false, data: existing[0], message: 'Duplicate record found' });
     }
 
-    // Save resume file
+    // The file is read here and saved on Google Drive once it has been read successfully (nothing is kept on the server's disk).
     const fileName = `resume_${mobile}_${Date.now()}.${ext}`;
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'documents');
-    await mkdir(uploadDir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(join(uploadDir, fileName), buffer);
-    const resumePath = `uploads/documents/${fileName}`;
+    const resumePath = '';
 
     let parsed: any;
     try {
@@ -211,6 +209,13 @@ export async function POST(req: NextRequest) {
       return jsonError('Could not read this file. Please try re-saving/re-exporting the resume and upload it again.', 422);
     }
 
+    try {
+      parsed.resume_pdf_path = await saveToDriveFolder('Candidate Resumes', fileName, buffer, file.type || MIME_BY_EXT[ext] || 'application/octet-stream');
+    } catch (e: any) {
+      const friendly = driveErrorMessage(e);
+      console.error('[resume/parse] Drive save failed:', e?.message || e);
+      return jsonError(friendly || e?.message || 'The resume could not be saved on Google Drive', 503);
+    }
     return jsonSuccess({ success: true, data: parsed });
   } catch (e: any) {
     console.error('[resume/parse] Error:', e?.message || e);

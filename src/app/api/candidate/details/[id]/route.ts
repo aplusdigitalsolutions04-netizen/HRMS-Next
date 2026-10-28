@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { resumeMissing } from '@/lib/resume-status';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     
     return jsonSuccess({
       ...rows[0],
+      resume_missing: resumeMissing(rows[0].resume_pdf_path),
       current_interview: latest,
       previous_interviews: previous,
       interviews

@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now, parsePagination } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { resumeMissing } from '@/lib/resume-status';
 
 export async function GET(req: NextRequest) {
   try {
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest) {
       params
     );
     const counts = await query<RowDataPacket[]>('SELECT SUM(CASE WHEN no_response = 1 THEN 1 ELSE 0 END) AS nr, SUM(CASE WHEN no_response = 1 THEN 0 ELSE 1 END) AS pool FROM interview_candidates');
+    for (const r of rows) (r as any).resume_missing = resumeMissing(r.resume_pdf_path);
     return jsonSuccess({ data: rows, total: cnt[0].cnt, page, per_page: perPage, counts: { pool: Number(counts[0].pool) || 0, no_response: Number(counts[0].nr) || 0 } });
   } catch (e: any) { return jsonError(e, 500); }
 }

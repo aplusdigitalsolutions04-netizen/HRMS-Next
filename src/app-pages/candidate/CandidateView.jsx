@@ -1,4 +1,5 @@
 import { openResume } from '@/lib/resume-file';
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
@@ -23,6 +24,26 @@ const CandidateView = () => {
                 });
         }
     }, [id]);
+
+    // puts a resume file on this candidate (saved on Google Drive); the candidate's details are not changed
+    const uploadResume = () => {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+        inp.onchange = async () => {
+            const f = inp.files && inp.files[0];
+            if (!f) return;
+            const fd = new FormData(); fd.append('resume', f);
+            Swal.fire({ title: 'Uploading...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const res = await fetch(`/api/candidate/${id}/resume`, { method: 'POST', headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') }, body: fd });
+                const d = await res.json();
+                if (!res.ok) throw new Error(d.detail || 'Upload failed');
+                setCandidate(c => ({ ...c, resume_pdf_path: d.resume_pdf_path, resume_missing: false }));
+                Swal.fire({ icon: 'success', title: 'Resume uploaded', timer: 1600, showConfirmButton: false });
+            } catch (e) { Swal.fire({ icon: 'error', title: 'Not uploaded', text: e.message }); }
+        };
+        inp.click();
+    };
 
     const displayValue = (val) => {
         if (val === null || val === undefined || String(val).trim() === '') {
@@ -157,6 +178,9 @@ const CandidateView = () => {
                         <Link to="/candidates/data" className="icon-btn close">
                             ⬅ Back
                         </Link>
+                        <a className="icon-btn" href="#" onClick={e => { e.preventDefault(); uploadResume(); }} title="Upload a resume file for this candidate">
+                            &#11014; {candidate.resume_pdf_path && !candidate.resume_missing ? 'Replace Resume' : 'Upload Resume'}
+                        </a>
                         <a className="icon-btn" href="#" onClick={e => { e.preventDefault(); openResume(candidate.resume_pdf_path); }} title="Open Resume in a new tab">
                             👁 View Resume
                         </a>
@@ -166,6 +190,7 @@ const CandidateView = () => {
                     </div>
                 </div>
 
+                {candidate.resume_missing && <div style={{ margin: '0 0 12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#b91c1c', fontSize: 13 }}>The resume file of this candidate is not on the server any more. Use <b>Upload Resume</b> to add it again.</div>}
                 <div className="candidate-content">
                     <div className="section-title">Personal Information</div>
                     
