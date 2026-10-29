@@ -116,6 +116,8 @@ export default function CompleteProfile({ onSubmitted }) {
     });
     const [files, setFiles] = useState({});
     const [busy, setBusy] = useState({});
+    const [progress, setProgress] = useState(null); // while the files are being sent: { done, total, name }
+    const sentRef = useRef(new Set()); // files already sent, so pressing Submit again does not send them twice
 
     useEffect(() => {
         fetch('/api/profile', { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } })
@@ -181,13 +183,37 @@ export default function CompleteProfile({ onSubmitted }) {
             return;
         }
         setSubmitting(true);
-        const data = new FormData();
-        Object.entries(form).forEach(([k, v]) => data.append(k, v || ''));
-        Object.entries(files).forEach(([k, v]) => {
-            if (Array.isArray(v)) v.forEach(f => data.append(k, f));
-            else if (v) data.append(k, v);
-        });
+        const authHeader = { Authorization: 'Bearer ' + sessionStorage.getItem('token') };
+        // Every file goes in a request of its own, one after the other: a single request with all the files ran so long that the
+        // hosting cut it off ("Failed to fetch"). A file that has already gone is not sent again if Submit is pressed again.
+        const queue = [];
+        Object.entries(files).forEach(([k, v]) => { (Array.isArray(v) ? v : [v]).forEach(f => { if (f) queue.push({ key: k, file: f }); }); });
+        const sig = (q) => q.key + '|' + q.file.name + '|' + q.file.size + '|' + q.file.lastModified;
+        const todo = queue.filter(q => !sentRef.current.has(sig(q)));
         try {
+            for (let i = 0; i < todo.length; i++) {
+                const q = todo[i];
+                setProgress({ done: i, total: todo.length, name: q.file.name });
+                const one = new FormData();
+                one.append('key', q.key);
+                one.append('file', q.file);
+                let up;
+                try {
+                    up = await fetch('/api/employee/complete-profile/document', { method: 'POST', headers: authHeader, body: one });
+                } catch (netErr) {
+                    Swal.fire({ icon: 'error', title: 'Could not upload', text: '"' + q.file.name + '" could not be sent. Please check your internet connection and press Submit again - the files that were already sent will not be sent again.' });
+                    return;
+                }
+                const upResult = await up.json().catch(() => ({}));
+                if (!up.ok) {
+                    Swal.fire({ icon: 'error', title: 'Could not upload', text: (upResult.detail || ('"' + q.file.name + '" could not be uploaded.')) + ' Press Submit again to retry - the files that were already sent will not be sent again.' });
+                    return;
+                }
+                sentRef.current.add(sig(q));
+            }
+            setProgress(null);
+            const data = new FormData();
+            Object.entries(form).forEach(([k, v]) => data.append(k, v || ''));
             const res = await fetch('/api/employee/complete-profile', {
                 method: 'PUT',
                 headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') },
@@ -213,6 +239,7 @@ export default function CompleteProfile({ onSubmitted }) {
                 : 'Failed to connect to the server: ' + err.message });
         } finally {
             setSubmitting(false);
+            setProgress(null);
         }
     };
 
@@ -347,8 +374,9 @@ export default function CompleteProfile({ onSubmitted }) {
                     </div>
 
                     <button type="submit" style={s.submitBtn} disabled={submitting}>
-                        {submitting ? 'Submitting...' : 'Submit for HR Review'}
+                        {submitting ? (progress ? 'Uploading ' + (progress.done + 1) + ' of ' + progress.total + '...' : 'Submitting...') : 'Submit for HR Review'}
                     </button>
+                    {progress && <p style={{ fontSize: 12.5, color: '#64748b', margin: '10px 0 0', wordBreak: 'break-all' }}>Sending &quot;{progress.name}&quot; ({progress.done + 1} of {progress.total}). Please keep this page open until it finishes.</p>}
                 </form>
             </div>
         </div>
