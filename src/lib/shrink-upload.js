@@ -41,3 +41,11 @@ export async function shrinkImage(file, maxSide = 1800, quality = 0.82) {
     return file;
   }
 }
+
+// A file chosen on a phone can be a link to a file in Google Drive / Downloads that is read only when it is sent, and that
+// read can fail halfway ("Failed to fetch"). Copying the bytes into memory right when it is chosen avoids that; if the copy
+// fails the person is told to choose the file again, instead of the upload failing later.
+export async function readIntoMemory(file) {
+  const bytes = await file.arrayBuffer();
+  return new File([bytes], file.name, { type: file.type, lastModified: file.lastModified || Date.now() });
+}

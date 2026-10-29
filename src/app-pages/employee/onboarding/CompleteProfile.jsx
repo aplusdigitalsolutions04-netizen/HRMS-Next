@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { DOC_OPTIONS } from '@/lib/documents';
-import { shrinkImage, MAX_UPLOAD_BYTES, MAX_TOTAL_BYTES, mb } from '@/lib/shrink-upload';
+import { shrinkImage, readIntoMemory, MAX_UPLOAD_BYTES, MAX_TOTAL_BYTES, mb } from '@/lib/shrink-upload';
 import { useNavigate } from 'react-router-dom';
 
 const s = {
@@ -154,7 +154,13 @@ export default function CompleteProfile({ onSubmitted }) {
                     input.value = '';
                     return;
                 }
-                ready.push(g);
+                let mem;
+                try { mem = await readIntoMemory(g); } catch {
+                    Swal.fire({ icon: 'error', title: 'Could not read the file', text: '"' + f.name + '" could not be read from your phone. Please choose it again (if it is in Google Drive, download it to the phone first).' });
+                    input.value = '';
+                    return;
+                }
+                ready.push(mem);
             }
             setFiles(prev => ({ ...prev, [name]: multiple ? ready : ready[0] }));
         } finally {
@@ -199,7 +205,12 @@ export default function CompleteProfile({ onSubmitted }) {
                 one.append('file', q.file);
                 let up;
                 try {
-                    up = await fetch('/api/employee/complete-profile/document', { method: 'POST', headers: authHeader, body: one });
+                    try {
+                        up = await fetch('/api/employee/complete-profile/document', { method: 'POST', headers: authHeader, body: one });
+                    } catch (first) { // one more try: a dropped mobile connection often works the second time
+                        await new Promise(r => setTimeout(r, 1500));
+                        up = await fetch('/api/employee/complete-profile/document', { method: 'POST', headers: authHeader, body: one });
+                    }
                 } catch (netErr) {
                     Swal.fire({ icon: 'error', title: 'Could not upload', text: '"' + q.file.name + '" could not be sent. Please check your internet connection and press Submit again - the files that were already sent will not be sent again.' });
                     return;
