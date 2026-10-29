@@ -13,7 +13,7 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const fmt = (d) => { if (!d) return ''; try { return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; } };
 
 const lab = { display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 };
-const inp = { height: 36, padding: '0 11px', border: '1px solid #e2e8f0', borderRadius: 9, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' };
+const inp = { height: 40, padding: '0 12px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' };
 
 function Field({ label, children }) { return <div style={{ marginBottom: 10 }}><label style={lab}>{label}</label>{children}</div>; }
 
@@ -42,6 +42,8 @@ function useEmployees() {
 function EmployeeSelect({ value, onPick }) {
   const { list, loading } = useEmployees();
   const [q, setQ] = useState('');
+  const ref = useRef(null);
+  useEffect(() => { if (!value && ref.current) ref.current.focus({ preventScroll: true }); }, [value]);
   const t = q.trim().toLowerCase();
   const shown = t ? list.filter(e => (String(e.full_name) + ' ' + String(e.emp_code) + ' ' + String(e.email_id || '')).toLowerCase().includes(t)) : list;
 
@@ -54,49 +56,43 @@ function EmployeeSelect({ value, onPick }) {
       </div>
     );
   }
-  // not chosen yet: a search box and the list of employees, right in the form (the form itself scrolls if needed)
+  // not chosen yet: a search box and the matching employees right under it; the popup grows to hold the list
   return (
-    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-      <input autoFocus style={{ ...inp, border: 'none', borderBottom: '1px solid #f1f5f9', borderRadius: 0 }} placeholder="Search by name, code or email..." value={q} onChange={e => setQ(e.target.value)} />
-      <div role="listbox" style={{ maxHeight: 170, overflowY: 'auto' }}>
-        {shown.length === 0 ? <div style={{ padding: 14, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{loading ? 'Loading employees...' : 'No employee found'}</div>
-          : shown.map(e => (
-            <button key={e.id} type="button" role="option"
-              onClick={() => { onPick({ id: e.id, label: `${e.full_name} (${e.emp_code})` }); setQ(''); }}
-              style={{ display: 'flex', justifyContent: 'space-between', gap: 10, width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderBottom: '1px solid #f8fafc', background: 'none', cursor: 'pointer', fontSize: 13 }}>
-              <span><b>{e.full_name}</b>{e.designation ? <span style={{ color: '#94a3b8' }}> - {e.designation}</span> : null}</span>
-              <span style={{ color: '#64748b', fontWeight: 600 }}>{e.emp_code}</span>
-            </button>
-          ))}
-      </div>
+    <div style={{ position: 'relative' }}>
+      <input ref={ref} style={inp} placeholder="Search by name, code or email..." autoComplete="off" value={q}
+        onChange={e => setQ(e.target.value)} />
+      {(
+        <div role="listbox" style={{ marginTop: 6, maxHeight: 140, overflowY: 'scroll', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10 }}>
+          {shown.length === 0 ? <div style={{ padding: 14, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{loading ? 'Loading employees...' : 'No employee found'}</div>
+            : shown.map(e => (
+              <button key={e.id} type="button" role="option" onMouseDown={ev => ev.preventDefault()}
+                onClick={() => { onPick({ id: e.id, label: `${e.full_name} (${e.emp_code})` }); setQ(''); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '6px 12px', border: 'none', borderBottom: '1px solid #f8fafc', background: 'none', cursor: 'pointer', fontSize: 13 }}>
+                <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{String(e.full_name || '?').trim().charAt(0).toUpperCase()}</span>
+                <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <b style={{ color: '#0f172a' }}>{e.full_name}</b>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>{e.designation ? ' - ' + e.designation : ''}</span>
+                </span>
+                <span style={{ color: '#64748b', fontWeight: 600, fontSize: 12 }}>{e.emp_code}</span>
+              </button>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// Type: a searchable list from the Asset Types master (inline in the form, no floating popup).
+// Type: a dropdown fed by the Asset Types master.
 function TypeField({ value, types, onChange }) {
-  const [q, setQ] = useState('');
-  const t = q.trim().toLowerCase();
-  const shown = t ? types.filter(x => x.toLowerCase().includes(t)) : types;
-  if (value) {
-    return (
-      <div style={{ ...inp, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#eff6ff', borderColor: '#93c5fd' }}>
-        <b style={{ color: '#0f172a' }}>{value}</b>
-        <button type="button" className="as-b" onClick={() => onChange('')}>Change</button>
-      </div>
-    );
-  }
+  const list = value && !types.includes(value) ? [value, ...types] : types;
   return (
-    <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
-      <input style={{ ...inp, border: 'none', borderBottom: '1px solid #f1f5f9', borderRadius: 0 }} placeholder="Search type..." value={q} onChange={e => setQ(e.target.value)} />
-      <div role="listbox" style={{ maxHeight: 130, overflowY: 'auto' }}>
-        {shown.length === 0 ? <div style={{ padding: 12, textAlign: 'center', color: '#94a3b8', fontSize: 12.5 }}>{types.length === 0 ? 'No types yet - add them with the Asset Types button on the Assets page.' : 'No matching type'}</div>
-          : shown.map(x => (
-            <button key={x} type="button" role="option" onClick={() => { onChange(x); setQ(''); }}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderBottom: '1px solid #f8fafc', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>{x}</button>
-          ))}
-      </div>
-    </div>
+    <>
+      <select style={inp} value={value || ''} onChange={e => onChange(e.target.value)}>
+        <option value="">{list.length === 0 ? 'No types yet' : 'Choose a type'}</option>
+        {list.map(x => <option key={x} value={x}>{x}</option>)}
+      </select>
+      {list.length === 0 && <div style={{ marginTop: 4, fontSize: 11.5, color: '#b45309' }}>Add types with the Asset Types button on the Assets page.</div>}
+    </>
   );
 }
 
@@ -106,11 +102,12 @@ function NameField({ value, names, onChange }) {
   const t = String(value || '').trim().toLowerCase();
   const matches = names.filter(n => n.toLowerCase() !== t && (t === '' || n.toLowerCase().includes(t))).slice(0, 6);
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
       <input style={inp} value={value || ''} placeholder="e.g. Dell Latitude 5420" autoComplete="off"
         onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 150)} onChange={e => onChange(e.target.value)} />
       {focus && matches.length > 0 && (
-        <div role="listbox" style={{ marginTop: 4, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+        // floats over the fields below, so the form does not jump down while typing
+        <div role="listbox" style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, zIndex: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', boxShadow: '0 8px 24px rgba(15,23,42,.14)' }}>
           <div style={{ padding: '5px 12px', fontSize: 11, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', background: '#f8fafc' }}>Already used</div>
           {matches.map(n => (
             <button key={n} type="button" role="option" onMouseDown={e => e.preventDefault()} onClick={() => { onChange(n); setFocus(false); }}
@@ -295,60 +292,69 @@ export default function Assets() {
         </div>
       </div>
 
-      <Dialog open={!!modal} onClose={() => setModal(null)} width={modal && modal.kind === 'history' ? 760 : 640} label="Asset">
+      <Dialog open={!!modal} onClose={() => setModal(null)} width={modal && modal.kind === 'history' ? 940 : 840} label="Asset">
         {modal && (
-          <form onSubmit={submit} noValidate style={{ padding: 18 }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '1rem' }}>
-              {modal.kind === 'add' ? 'Add asset' : modal.kind === 'edit' ? 'Edit asset' : modal.kind === 'assign' ? 'Assign asset' : modal.kind === 'return' ? 'Take asset back' : 'History'}
-              {modal.asset && <span style={{ color: '#94a3b8', fontWeight: 500 }}> - {modal.asset.asset_tag} {modal.asset.name}</span>}
-            </h3>
-
-            {(modal.kind === 'add' || modal.kind === 'edit') && (<>
-              <Field label="Asset tag *"><input style={inp} required value={form.asset_tag || ''} onChange={set('asset_tag')} placeholder="e.g. LAP-014" /></Field>
-              <Field label="Name *"><NameField value={form.name} names={names} onChange={v => setForm(f => ({ ...f, name: v }))} /></Field>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}><Field label="Type *"><TypeField value={form.asset_type} types={types} onChange={v => setForm(f => ({ ...f, asset_type: v }))} /></Field></div>
-                <div style={{ flex: 1 }}><Field label="Serial number"><input style={inp} value={form.serial_no || ''} onChange={set('serial_no')} /></Field></div>
+          <form onSubmit={submit} noValidate>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderBottom: '1px solid #eef2f7' }}>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>
+                  {modal.kind === 'add' ? 'Add asset' : modal.kind === 'edit' ? 'Edit asset' : modal.kind === 'assign' ? 'Assign asset' : modal.kind === 'return' ? 'Take asset back' : 'History'}
+                </h3>
+                {modal.asset && <div style={{ marginTop: 2, fontSize: 12.5, color: '#64748b' }}><b style={{ color: '#0f172a' }}>{modal.asset.asset_tag}</b> &middot; {modal.asset.name}{modal.asset.asset_type ? <> &middot; {modal.asset.asset_type}</> : null}</div>}
               </div>
-              {modal.kind === 'edit' && modal.asset.status !== 'Assigned' && (
-                <Field label="Status"><select style={inp} value={form.status} onChange={set('status')}>{['Available', 'In repair', 'Lost', 'Retired'].map(s => <option key={s}>{s}</option>)}</select></Field>
+              <button type="button" aria-label="Close" onClick={() => setModal(null)} style={{ border: 'none', background: '#f1f5f9', color: '#475569', width: 28, height: 28, borderRadius: 8, fontSize: 18, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>&times;</button>
+            </div>
+
+            <div style={{ padding: '14px 18px 4px' }}>
+              {(modal.kind === 'add' || modal.kind === 'edit') && (<>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}><Field label="Asset tag *"><input style={inp} required value={form.asset_tag || ''} onChange={set('asset_tag')} placeholder="e.g. LAP-014" /></Field></div>
+                  <div style={{ flex: 1 }}><Field label="Type *"><TypeField value={form.asset_type} types={types} onChange={v => setForm(f => ({ ...f, asset_type: v }))} /></Field></div>
+                </div>
+                <Field label="Name *"><NameField value={form.name} names={names} onChange={v => setForm(f => ({ ...f, name: v }))} /></Field>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}><Field label="Serial number"><input style={inp} value={form.serial_no || ''} onChange={set('serial_no')} /></Field></div>
+                  {modal.kind === 'edit' && modal.asset.status !== 'Assigned' && (
+                    <div style={{ flex: 1 }}><Field label="Status"><select style={inp} value={form.status} onChange={set('status')}>{['Available', 'In repair', 'Lost', 'Retired'].map(s => <option key={s}>{s}</option>)}</select></Field></div>
+                  )}
+                </div>
+                <Field label="Notes"><textarea rows={2} style={{ ...inp, height: 'auto', padding: '8px 11px', resize: 'vertical' }} value={form.notes || ''} onChange={set('notes')} /></Field>
+              </>)}
+
+              {modal.kind === 'assign' && (<>
+                <Field label="Employee *"><EmployeeSelect value={pick} onPick={setPick} /></Field>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}><Field label="Given on"><input type="date" style={inp} value={form.assigned_on} max={today()} onChange={set('assigned_on')} /></Field></div>
+                  <div style={{ flex: 1 }}><Field label="Condition"><input style={inp} value={form.condition_out} onChange={set('condition_out')} placeholder="New / Good" /></Field></div>
+                </div>
+                <Field label="Notes"><input style={inp} value={form.notes} onChange={set('notes')} /></Field>
+              </>)}
+
+              {modal.kind === 'return' && (<>
+                <p style={{ margin: '0 0 10px', fontSize: 13, color: '#475569' }}>Currently with <b>{modal.asset.holder_name}</b> since {fmt(modal.asset.assigned_on)}.</p>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}><Field label="Returned on"><input type="date" style={inp} value={form.returned_on} max={today()} onChange={set('returned_on')} /></Field></div>
+                  <div style={{ flex: 1 }}><Field label="Condition now"><input style={inp} value={form.condition_in} onChange={set('condition_in')} placeholder="Good / Damaged" /></Field></div>
+                </div>
+                <Field label="After returning it is"><select style={inp} value={form.status_after} onChange={set('status_after')}>{['Available', 'In repair', 'Lost', 'Retired'].map(s => <option key={s}>{s}</option>)}</select></Field>
+                <Field label="Notes"><input style={inp} value={form.notes} onChange={set('notes')} /></Field>
+              </>)}
+
+              {modal.kind === 'history' && (
+                <div style={{ maxHeight: 320, overflowY: 'auto', paddingBottom: 10 }}>
+                  {history.length === 0 ? <p style={{ color: '#94a3b8', fontSize: 13 }}>Nobody has held this asset yet.</p> : (
+                    <table className="as-t"><thead><tr><th>Employee</th><th>Given</th><th>Returned</th><th>Condition</th></tr></thead>
+                      <tbody>{history.map(h => (
+                        <tr key={h.id}><td>{h.full_name} <span style={{ color: '#94a3b8' }}>({h.emp_code})</span></td><td>{fmt(h.assigned_on)}</td><td>{h.returned_on ? fmt(h.returned_on) : <b style={{ color: '#1d4ed8' }}>Still with them</b>}</td><td>{[h.condition_out, h.condition_in].filter(Boolean).join(' → ') || '-'}</td></tr>
+                      ))}</tbody></table>
+                  )}
+                </div>
               )}
-              <Field label="Notes"><textarea rows={2} style={{ ...inp, height: 'auto', padding: '8px 11px' }} value={form.notes || ''} onChange={set('notes')} /></Field>
-            </>)}
+            </div>
 
-            {modal.kind === 'assign' && (<>
-              <Field label="Employee *"><EmployeeSelect value={pick} onPick={setPick} /></Field>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}><Field label="Given on"><input type="date" style={inp} value={form.assigned_on} max={today()} onChange={set('assigned_on')} /></Field></div>
-                <div style={{ flex: 1 }}><Field label="Condition"><input style={inp} value={form.condition_out} onChange={set('condition_out')} placeholder="New / Good" /></Field></div>
-              </div>
-              <Field label="Notes"><input style={inp} value={form.notes} onChange={set('notes')} /></Field>
-            </>)}
-
-            {modal.kind === 'return' && (<>
-              <p style={{ margin: '0 0 10px', fontSize: 13, color: '#475569' }}>Currently with <b>{modal.asset.holder_name}</b> since {fmt(modal.asset.assigned_on)}.</p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}><Field label="Returned on"><input type="date" style={inp} value={form.returned_on} max={today()} onChange={set('returned_on')} /></Field></div>
-                <div style={{ flex: 1 }}><Field label="Condition now"><input style={inp} value={form.condition_in} onChange={set('condition_in')} placeholder="Good / Damaged" /></Field></div>
-              </div>
-              <Field label="After returning it is"><select style={inp} value={form.status_after} onChange={set('status_after')}>{['Available', 'In repair', 'Lost', 'Retired'].map(s => <option key={s}>{s}</option>)}</select></Field>
-              <Field label="Notes"><input style={inp} value={form.notes} onChange={set('notes')} /></Field>
-            </>)}
-
-            {modal.kind === 'history' && (
-              <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                {history.length === 0 ? <p style={{ color: '#94a3b8', fontSize: 13 }}>Nobody has held this asset yet.</p> : (
-                  <table className="as-t"><thead><tr><th>Employee</th><th>Given</th><th>Returned</th><th>Condition</th></tr></thead>
-                    <tbody>{history.map(h => (
-                      <tr key={h.id}><td>{h.full_name} <span style={{ color: '#94a3b8' }}>({h.emp_code})</span></td><td>{fmt(h.assigned_on)}</td><td>{h.returned_on ? fmt(h.returned_on) : <b style={{ color: '#1d4ed8' }}>Still with them</b>}</td><td>{[h.condition_out, h.condition_in].filter(Boolean).join(' → ') || '-'}</td></tr>
-                    ))}</tbody></table>
-                )}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 18px', borderTop: '1px solid #eef2f7', background: '#f8fafc', borderRadius: '0 0 14px 14px' }}>
               <button type="button" className="btn-o" onClick={() => setModal(null)}>{modal.kind === 'history' ? 'Close' : 'Cancel'}</button>
-              {modal.kind !== 'history' && <button type="submit" className="btn-p" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>}
+              {modal.kind !== 'history' && <button type="submit" className="btn-p" disabled={saving}>{saving ? 'Saving...' : modal.kind === 'assign' ? 'Assign' : 'Save'}</button>}
             </div>
           </form>
         )}

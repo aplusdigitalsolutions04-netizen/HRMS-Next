@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { DOC_OPTIONS } from '@/lib/documents';
+import { shrinkImage, MAX_UPLOAD_BYTES, MAX_TOTAL_BYTES, mb } from '@/lib/shrink-upload';
 import { useNavigate } from 'react-router-dom';
 
 const s = {
@@ -17,14 +18,81 @@ const s = {
     label: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 },
     input: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' },
     textarea: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', background: '#fff' },
-    fileInput: { width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fafbfc' },
     sectionTitle: { fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #eff6ff', fontFamily: "'Outfit', sans-serif" },
-    grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
-    grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 },
     submitBtn: { padding: '12px 24px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
 };
 
 const DOCS = DOC_OPTIONS.map(d => ({ label: d.label, name: d.key }));
+
+const CSS = `
+.cp-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cp-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.cp-file { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px; border-radius: 10px; box-sizing: border-box; width: 100%; text-align: left; font-family: inherit; }
+.cp-file-empty { border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; }
+.cp-file-ok { border: 1.5px solid #86efac; background: #f0fdf4; color: #166534; }
+.cp-file-old { border: 1.5px solid #bfdbfe; background: #eff6ff; color: #1e40af; }
+.cp-file b { font-weight: 600; word-break: break-all; }
+.cp-file small { display: block; font-size: 11.5px; opacity: .8; }
+.cp-file-btn { margin-left: auto; flex-shrink: 0; border: 1.5px solid currentColor; background: #fff; color: inherit; border-radius: 8px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.cp-file-x { flex-shrink: 0; border: none; background: transparent; color: #b91c1c; font-size: 20px; line-height: 1; cursor: pointer; padding: 4px 6px; }
+@media (max-width: 900px) { .cp-grid3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) {
+  .cp-grid2, .cp-grid3 { grid-template-columns: 1fr; gap: 4px; }
+  .cp-page { padding: 12px 8px !important; }
+  .cp-card { padding: 16px 14px !important; border-radius: 12px !important; }
+  .cp-card input, .cp-card textarea { font-size: 16px !important; }
+  .cp-card button[type=submit] { width: 100%; }
+}
+`;
+
+const fmtSize = (n) => (n >= 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+
+// Shows plainly whether a file is chosen: a dashed "Choose file" box, a green box with the file name and size, or a blue
+// "already uploaded" box. Replacing and removing are buttons, so nothing depends on reading the browser's own file field.
+function FilePick({ name, multiple, value, had, busy, onChange, onClear }) {
+    const ref = useRef(null);
+    const list = Array.isArray(value) ? value : (value ? [value] : []);
+    const open = () => ref.current && ref.current.click();
+    const clear = () => { if (ref.current) ref.current.value = ''; onClear(); };
+    let box;
+    if (busy) {
+        box = <div className="cp-file cp-file-old"><span>Preparing the file...</span></div>;
+    } else if (list.length > 0) {
+        box = (
+            <div className="cp-file cp-file-ok">
+                <span style={{ fontSize: 18 }}>✓</span>
+                <span style={{ minWidth: 0 }}>
+                    {list.length === 1
+                        ? <><b>{list[0].name}</b><small>{fmtSize(list[0].size)} - ready to submit</small></>
+                        : <><b>{list.length} files selected</b><small>{list.map(x => x.name).join(', ')}</small></>}
+                </span>
+                <button type="button" className="cp-file-btn" onClick={open}>Change</button>
+                <button type="button" className="cp-file-x" aria-label="Remove" onClick={clear}>&times;</button>
+            </div>
+        );
+    } else if (had) {
+        box = (
+            <div className="cp-file cp-file-old">
+                <span style={{ fontSize: 18 }}>✓</span>
+                <span style={{ minWidth: 0 }}><b>Already uploaded</b><small>Choose a file only if you want to replace it</small></span>
+                <button type="button" className="cp-file-btn" onClick={open}>Replace</button>
+            </div>
+        );
+    } else {
+        box = (
+            <button type="button" className="cp-file cp-file-empty" onClick={open}>
+                <span style={{ fontSize: 18 }}>⬆</span>
+                <span><b>{multiple ? 'Choose files' : 'Choose file'}</b><small>Not uploaded yet - PDF, JPG or PNG</small></span>
+            </button>
+        );
+    }
+    return (
+        <>
+            <input ref={ref} type="file" style={{ display: 'none' }} name={name} multiple={multiple} accept="application/pdf,image/jpeg,image/jpg,image/png" onChange={onChange} />
+            {box}
+        </>
+    );
+}
 
 export default function CompleteProfile({ onSubmitted }) {
     const navigate = useNavigate();
@@ -47,6 +115,7 @@ export default function CompleteProfile({ onSubmitted }) {
         location: '', date_of_joining: '',
     });
     const [files, setFiles] = useState({});
+    const [busy, setBusy] = useState({});
 
     useEffect(() => {
         fetch('/api/profile', { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } })
@@ -66,9 +135,29 @@ export default function CompleteProfile({ onSubmitted }) {
     }, []);
 
     const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    const handleFile = (e) => {
-        const { name, multiple, files: fl } = e.target;
-        setFiles(prev => ({ ...prev, [name]: multiple ? Array.from(fl) : fl[0] }));
+    // Pictures are made smaller here before they are sent (phone photos are several MB each); a file that is still too big is refused
+    // with its size, instead of the whole form failing later with "Failed to fetch".
+    const handleFile = async (e) => {
+        const input = e.target;
+        const { name, multiple } = input;
+        const picked = Array.from(input.files || []);
+        if (picked.length === 0) return; // the picker was closed without choosing: keep what was chosen before
+        const ready = [];
+        setBusy(p => ({ ...p, [name]: true }));
+        try {
+            for (const f of picked) {
+                const g = await shrinkImage(f);
+                if (g.size > MAX_UPLOAD_BYTES) {
+                    Swal.fire({ icon: 'warning', title: 'File is too big', text: '"' + f.name + '" is ' + mb(f.size) + '. Please upload a file smaller than ' + mb(MAX_UPLOAD_BYTES) + ' (a photo of the document, or a smaller PDF).' });
+                    input.value = '';
+                    return;
+                }
+                ready.push(g);
+            }
+            setFiles(prev => ({ ...prev, [name]: multiple ? ready : ready[0] }));
+        } finally {
+            setBusy(p => ({ ...p, [name]: false }));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -84,6 +173,11 @@ export default function CompleteProfile({ onSubmitted }) {
         if (missingKeys.length > 0) {
             const names = DOCS.filter(d => missingKeys.includes(d.name)).map(d => d.label).join(', ');
             Swal.fire({ icon: 'warning', title: 'Documents required', text: 'Please upload the compulsory document(s): ' + names });
+            return;
+        }
+        const totalBytes = Object.values(files).reduce((n, v) => n + (Array.isArray(v) ? v.reduce((a, f) => a + (f ? f.size : 0), 0) : (v ? v.size : 0)), 0);
+        if (totalBytes > MAX_TOTAL_BYTES) {
+            Swal.fire({ icon: 'warning', title: 'Files are too big together', text: 'The files add up to ' + mb(totalBytes) + '. Please keep them under ' + mb(MAX_TOTAL_BYTES) + ' in total (smaller photos or PDFs).' });
             return;
         }
         setSubmitting(true);
@@ -113,7 +207,10 @@ export default function CompleteProfile({ onSubmitted }) {
                 Swal.fire({ icon: 'error', title: 'Could not save', text: result.detail || 'Failed to submit profile.' });
             }
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Connection error', text: 'Failed to connect to the server: ' + err.message });
+            const dropped = /failed to fetch|networkerror|load failed/i.test(String(err && err.message));
+            Swal.fire({ icon: 'error', title: 'Connection error', text: dropped
+                ? 'Your details could not reach the server. Please check your internet connection and try again. If it keeps happening, use smaller files (under ' + mb(MAX_UPLOAD_BYTES) + ' each) or try again on a faster connection. (' + err.message + ')'
+                : 'Failed to connect to the server: ' + err.message });
         } finally {
             setSubmitting(false);
         }
@@ -122,8 +219,9 @@ export default function CompleteProfile({ onSubmitted }) {
     if (loading) return <div style={{ textAlign: 'center', padding: 45, color: '#64748b' }}>Loading...</div>;
 
     return (
-        <div style={s.page}>
-            <div style={s.card}>
+        <div className="cp-page" style={s.page}>
+            <style>{CSS}</style>
+            <div className="cp-card" style={s.card}>
                 <div style={s.header}>
                     <h2 style={s.title}>👋 Complete Your Profile</h2>
                     <button type="button" style={s.logoutBtn} onClick={handleLogout}>Log Out</button>
@@ -142,7 +240,7 @@ export default function CompleteProfile({ onSubmitted }) {
 
                 <form onSubmit={handleSubmit} encType="multipart/form-data">
                     <div style={s.sectionTitle}>Personal Details</div>
-                    <div style={s.grid2}>
+                    <div className="cp-grid2">
                         <div style={s.field}>
                             <label style={s.label}>Full Name *</label>
                             <input style={s.input} name="full_name" value={form.full_name} onChange={handleChange} required />
@@ -174,7 +272,7 @@ export default function CompleteProfile({ onSubmitted }) {
                     </div>
 
                     <div style={s.sectionTitle}>Education</div>
-                    <div style={s.grid3}>
+                    <div className="cp-grid3">
                         <div style={s.field}>
                             <label style={s.label}>College Name</label>
                             <input style={s.input} name="college_name" value={form.college_name} onChange={handleChange} />
@@ -202,7 +300,7 @@ export default function CompleteProfile({ onSubmitted }) {
                     </div>
 
                     <div style={s.sectionTitle}>Bank &amp; Joining Details</div>
-                    <div style={s.grid3}>
+                    <div className="cp-grid3">
                         <div style={s.field}>
                             <label style={s.label}>Bank Name</label>
                             <input style={s.input} name="bank_name" value={form.bank_name} onChange={handleChange} />
@@ -231,20 +329,20 @@ export default function CompleteProfile({ onSubmitted }) {
                             ? <>Documents marked <b style={{ color: '#dc2626' }}>*</b> are compulsory - HR needs them before you can submit. The rest are optional.</>
                             : 'Upload whichever of these you have - none are required to submit, and you can add the rest later.'}
                     </p>
-                    <div style={s.grid3}>
+                    <div className="cp-grid3">
                         {DOCS.map(({ label, name }) => {
                             const isReq = !!(profile && profile.required_documents && profile.required_documents.includes(name));
                             const had = !!(profile && profile.uploaded_documents && profile.uploaded_documents.includes(name));
                             return (
                                 <div style={s.field} key={name}>
                                     <label style={s.label}>{label}{isReq && <span style={{ color: '#dc2626' }}> *</span>}{had && <span style={{ color: '#16a34a', fontWeight: 500, fontSize: 11.5 }}> (already uploaded)</span>}</label>
-                                    <input type="file" style={s.fileInput} name={name} accept="application/pdf,image/jpeg,image/jpg,image/png" onChange={handleFile} />
+                                    <FilePick name={name} value={files[name]} had={had} busy={!!busy[name]} onChange={handleFile} onClear={() => setFiles(prev => ({ ...prev, [name]: undefined }))} />
                                 </div>
                             );
                         })}
                         <div style={{ ...s.field, gridColumn: '1 / -1' }}>
                             <label style={s.label}>Additional Documents</label>
-                            <input type="file" style={s.fileInput} name="AdditionalDocuments" multiple accept="application/pdf,image/jpeg,image/jpg,image/png" onChange={handleFile} />
+                            <FilePick name="AdditionalDocuments" multiple value={files.AdditionalDocuments} busy={!!busy.AdditionalDocuments} onChange={handleFile} onClear={() => setFiles(prev => ({ ...prev, AdditionalDocuments: undefined }))} />
                         </div>
                     </div>
 
