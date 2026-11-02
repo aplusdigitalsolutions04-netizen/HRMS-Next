@@ -66,10 +66,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         [draftId, null, emp.email_id, subject, htmlBody, '', '', attachmentsJson, user.email, t, t]
       );
     });
-    await execute(
-      `INSERT INTO employee_credentials (id, employee_id, employee_name, emp_code, email, password, status, draft_id, created_by, created_at) VALUES (?,?,?,?,?,?,'draft',?,?,?)`,
-      [uuidv4(), cred.employee_id, emp.full_name || '', emp.emp_code || '', emp.email_id, '(own password)', draftId, user.email, t]
-    );
+    // the employee's own row is reused (their password stays as it is), so the list keeps one row per employee
+    await execute("UPDATE employee_credentials SET status = 'draft', sent_at = NULL, draft_id = ?, created_by = ?, created_at = ? WHERE id = ?", [draftId, user.email, t, cred.id]);
     const r = await sendDraftById(draftId, user);
     if (!r.success) return jsonError(r.error || 'Could not send the mail', 502);
     await auditFrom(user, 'credentials_resent', 'employee', String(cred.employee_id), { emp_code: cred.emp_code, with_password: false });

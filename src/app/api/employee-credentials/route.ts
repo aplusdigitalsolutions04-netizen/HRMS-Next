@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
     const rows = await query<RowDataPacket[]>(
       'SELECT * FROM employee_credentials ORDER BY created_at DESC'
     );
-    return jsonSuccess(rows.map(r => ({ ...r, has_password: !!r.password && r.password !== '(own password)', password: r.password === '(own password)' ? r.password : '' })));
+    // one row per employee: the newest (older rows from earlier password changes are not shown)
+    const seen = new Set();
+    const latest = rows.filter(r => { if (!r.employee_id) return true; if (seen.has(r.employee_id)) return false; seen.add(r.employee_id); return true; });
+    return jsonSuccess(latest.map(r => ({ ...r, has_password: !!r.password && r.password !== '(own password)', password: r.password === '(own password)' ? r.password : '' })));
   } catch (e: any) {
     return jsonError(e, 500);
   }
