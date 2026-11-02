@@ -70,6 +70,21 @@ export default function PayrollPayslipHistory() {
     finally { setApproving(false); }
   };
 
+  // Copies the approved payslips of the chosen month to Google Drive (folder "<Month> <Year>")
+  const saveMonthToDrive = async () => {
+    const label = `${months.find(m => m.value === month)?.label} ${year}`;
+    const c = await Swal.fire({ icon: 'question', title: 'Save to Google Drive?', text: `Save all approved payslips of ${label} in a Drive folder named "${label}"? Files already there are replaced.`, showCancelButton: true, confirmButtonText: 'Save', confirmButtonColor: '#2563eb' });
+    if (!c.isConfirmed) return;
+    setApproving(true);
+    try {
+      const res = await fetch(`${API}/payroll/payslips/save-to-drive`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ month, year }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || 'Could not save');
+      Swal.fire({ icon: d.failed ? 'warning' : 'success', title: 'Done', text: d.message });
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
+    finally { setApproving(false); }
+  };
+
   const downloadPayslip = async (id) => {
     try {
       const res = await fetch(`${API}/payroll/payslips/${id}/download`, { headers: auth() });
@@ -161,6 +176,10 @@ export default function PayrollPayslipHistory() {
           <h2 className="pr-title">Payslip History</h2>
           <p className="pr-subtitle">Payslips are prepared as drafts. Check them, then approve - approving publishes the payslip to the employee and emails it.</p>
         </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {month && year && (
+          <button className="pr-btn pr-btn-secondary" disabled={approving} onClick={saveMonthToDrive} title="Save the approved payslips of this month to Google Drive">Save month to Drive</button>
+        )}
         {drafts > 0 && (
           <button className="pr-btn pr-btn-primary" disabled={approving || !month || !year}
             title={!month || !year ? 'Pick a month and a year to approve all of its drafts at once' : ''}
@@ -168,6 +187,7 @@ export default function PayrollPayslipHistory() {
             {approving ? 'Working...' : `Approve & email all drafts (${drafts})`}
           </button>
         )}
+        </div>
       </div>
 
       <div className="tabs-bar">

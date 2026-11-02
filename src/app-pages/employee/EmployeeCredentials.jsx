@@ -92,7 +92,7 @@ const EmployeeCredentials = () => {
     });
   };
 
-  // HR/Admin sets a new password for the employee of this row; they must choose their own at the next login
+  // HR/Admin sets a new password for the employee of this row; they log in with it directly
   const resetPassword = (row) => {
     Swal.fire({
       title: `Change password of ${row.employee_name}`,
@@ -100,7 +100,7 @@ const EmployeeCredentials = () => {
         <label style="display:block;font-weight:600;margin-bottom:4px">New password</label>
         <input id="rp-pass" class="swal2-input" style="margin:0;width:100%;box-sizing:border-box" placeholder="Leave empty to generate one" autocomplete="off">
         <label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input id="rp-mail" type="checkbox" checked> Email the new password to ${row.email}</label>
-        <div style="margin-top:10px;color:#64748b">The employee must set their own password at the next login. Their current password stops working now.</div>
+        <div style="margin-top:10px;color:#64748b">The employee can log in with this password straight away. Their current password stops working now.</div>
       </div>`,
       showCancelButton: true,
       confirmButtonText: 'Change password',

@@ -256,6 +256,21 @@ export async function uploadFileToDrive(folderId: string, fileName: string, buff
   return res.data.id as string;
 }
 
+// Saves a file in a folder, replacing the file of the same name if one is already there (so saving a payslip again does not
+// leave two copies).
+export async function upsertFileInFolder(folderId: string, fileName: string, buffer: Buffer, mimeType: string): Promise<string> {
+  const drive = await getDrive();
+  const safe = fileName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `name='${safe}' and '${folderId}' in parents and trashed=false`,
+    fields: 'files(id)', pageSize: 1, supportsAllDrives: true, includeItemsFromAllDrives: true,
+  });
+  const existing = res.data.files?.[0]?.id;
+  if (!existing) return uploadFileToDrive(folderId, fileName, buffer, mimeType);
+  await drive.files.update({ fileId: existing, media: { mimeType, body: Readable.from(buffer) }, supportsAllDrives: true });
+  return existing;
+}
+
 export async function downloadFileFromDrive(fileId: string): Promise<Buffer> {
   const drive = await getDrive();
   const res = await drive.files.get(

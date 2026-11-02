@@ -13,7 +13,7 @@ import { auditFrom } from '@/lib/audit';
 const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // HR/Admin sets a new password for any employee (forgotten password, locked out, ...). The password is either typed in or
-// generated. The employee must choose their own at the next login, the old password stops working at once (the login token
+// generated. The employee logs in with it directly (no forced change), the old password stops working at once (the login token
 // is tied to the password), and a login lock caused by wrong attempts is lifted. The new password can be mailed to them.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!emp) return jsonError('Employee not found', 404);
 
     const password = typed || generateTempPassword();
-    await execute('UPDATE employees SET password = ?, must_change_password = 1 WHERE id = ?', [hashPassword(password), id]);
+    await execute('UPDATE employees SET password = ?, must_change_password = 0 WHERE id = ?', [hashPassword(password), id]);
     await clearFailures(emp.email_id).catch(() => {});
 
     const t = now();
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           <div><strong>Email:</strong> ${esc(emp.email_id)}</div>
           <div><strong>New password:</strong> ${esc(password)}</div>
         </div>
-        <p style="color:#64748b;font-size:13px">You will be asked to set a new password when you log in.</p>
+        <p style="color:#64748b;font-size:13px">You can change this password later from your profile.</p>
         <p>Regards,<br/>${esc(companyName)}</p>
       </div>`;
       draftId = uuidv4();

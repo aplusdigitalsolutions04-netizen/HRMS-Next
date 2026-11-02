@@ -4,6 +4,7 @@ import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/util
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { sendPayslipEmail } from '@/lib/payslip-mail';
+import { savePayslipToDrive } from '@/lib/payslip-drive';
 import { auditFrom } from '@/lib/audit';
 
 // Approve draft payslips (the ones listed in `ids`, or every draft of month/year) and email them.
@@ -34,6 +35,13 @@ export async function POST(req: NextRequest) {
       [user.email, ...drafts.map(d => d.id)]
     );
 
+    // a copy of each approved payslip goes to Drive, in a folder for its month; a Drive problem never undoes the approval
+    let driveSaved = 0, driveFailed = 0;
+    for (const d of drafts) {
+      const r = await savePayslipToDrive(d.id);
+      if (r.ok) driveSaved++; else if (!r.skipped) driveFailed++;
+    }
+
     let emailed = 0; const failed: { emp_code: string; error: string }[] = [];
     if (sendEmail) {
       for (const d of drafts) {
@@ -43,10 +51,10 @@ export async function POST(req: NextRequest) {
         } catch (e: any) { failed.push({ emp_code: d.emp_code, error: e?.message || 'Email failed' }); }
       }
     }
-    await auditFrom(user, 'payslips_approved', 'payslip', ids.length ? `${ids.length} selected` : `${month}/${year}`, { count: drafts.length, emailed, failed: failed.length, send_email: sendEmail });
+    await auditFrom(user, 'payslips_approved', 'payslip', ids.length ? `${ids.length} selected` : `${month}/${year}`, { count: drafts.length, emailed, drive_saved: driveSaved, drive_failed: driveFailed, failed: failed.length, send_email: sendEmail });
     return jsonSuccess({
-      approved: drafts.length, emailed, failed,
-      message: `Approved ${drafts.length} payslip(s)` + (sendEmail ? `, emailed ${emailed}` + (failed.length ? `, ${failed.length} email(s) failed (use "Send email" on them again)` : '') : ' (not emailed)') + '.',
+      approved: drafts.length, emailed, failed, drive_saved: driveSaved, drive_failed: driveFailed,
+      message: `Approved ${drafts.length} payslip(s)` + (sendEmail ? `, emailed ${emailed}` + (failed.length ? `, ${failed.length} email(s) failed (use "Send email" on them again)` : '') : ' (not emailed)') + '.' + (driveSaved ? ` Saved ${driveSaved} to Google Drive.` : '') + (driveFailed ? ` ${driveFailed} could not be saved to Google Drive.` : ''),
     });
   } catch (e: any) { return jsonError(e, 500); }
 }
