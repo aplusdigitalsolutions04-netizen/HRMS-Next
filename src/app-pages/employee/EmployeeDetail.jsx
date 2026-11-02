@@ -5,6 +5,7 @@ import useLiveRefresh from '@/lib/live';
 import { openEmployeeDocument, previewEmployeeDocument, previewDocumentUrl } from '@/lib/clientDocs';
 import { Tabs } from '@/lib/ui-motion';
 import { DOC_OPTIONS } from '@/lib/documents';
+import { shrinkImage, MAX_UPLOAD_BYTES, mb } from '@/lib/shrink-upload';
 import useStatusMaster, { pillStyle } from '../shared/useStatusMaster';
 
 const EmployeeDetail = () => {
@@ -16,7 +17,7 @@ const EmployeeDetail = () => {
     const [employee, setEmployee] = useState(null);
     const [loading, setLoading] = useState(true);
     // ?tab=documents opens straight on the compulsory-documents editor (used by the Documents button in Manage Employees)
-    const [tab, setTab] = useState(['overview', 'documents', 'assets'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'overview');
+    const [tab, setTab] = useState(['overview', 'documents', 'assets', 'bank'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'overview');
     const [assets, setAssets] = useState(null); // null = not loaded / not allowed
     const [reqDocs, setReqDocs] = useState([]);
     useEffect(() => {
@@ -42,6 +43,46 @@ const EmployeeDetail = () => {
     };
     useEffect(() => { loadPerms(); }, [tab === 'documents', employee && employee.id]);
     useLiveRefresh(() => loadPerms());
+    // HR puts a document into the employee's profile (replaces the one that is there)
+    const [uploadingKey, setUploadingKey] = useState('');
+    const uploadDocument = async (key, label, e) => {
+        const input = e.target;
+        const picked = input.files && input.files[0];
+        if (!picked) return;
+        setUploadingKey(key);
+        try {
+            const file = await shrinkImage(picked);
+            if (file.size > MAX_UPLOAD_BYTES) throw new Error('"' + picked.name + '" is ' + mb(picked.size) + '. Please use a file smaller than ' + mb(MAX_UPLOAD_BYTES) + '.');
+            const fd = new FormData();
+            fd.append('key', key);
+            fd.append('file', file);
+            const res = await fetch('/api/employee/' + employee.id + '/upload-document', { method: 'POST', headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') }, body: fd });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.detail || 'Could not upload');
+            const fresh = await fetch('/api/employee/detail/' + employee.id, { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } }).then(r => r.json());
+            setEmployee(fresh);
+            loadPerms();
+            Swal.fire({ icon: 'success', title: 'Uploaded', text: d.message || label + ' uploaded.', timer: 1500, showConfirmButton: false });
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Not uploaded', text: err.message === 'Failed to fetch' ? 'The file could not be sent. Please check the connection and try again.' : err.message });
+        } finally {
+            input.value = '';
+            setUploadingKey('');
+        }
+    };
+    // HR lets the employee change their bank and contact details once, or takes that back
+    const [editBusy, setEditBusy] = useState(false);
+    const setProfileEdit = async (allow) => {
+        setEditBusy(true);
+        try {
+            const res = await fetch('/api/employee/' + employee.id + '/profile-edit', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sessionStorage.getItem('token') }, body: JSON.stringify({ allow }) });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.detail || 'Could not save');
+            setEmployee({ ...employee, profile_edit_allowed: allow ? 1 : 0 });
+            Swal.fire({ icon: 'success', title: allow ? 'Allowed' : 'Taken back', text: d.message, timer: 1800, showConfirmButton: false });
+        } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
+        finally { setEditBusy(false); }
+    };
     const setPerm = async (key, allow) => {
         setPermBusy(key);
         try {
@@ -253,6 +294,7 @@ const EmployeeDetail = () => {
                             { id: 'overview', label: 'Overview' },
                             { id: 'personal', label: 'Personal Info' },
                             { id: 'education', label: 'Education / Work' },
+                            { id: 'bank', label: 'Bank Details' },
                             { id: 'documents', label: <>Documents ({permDocs.length ? permDocs.filter(d => d.filled).length + uploads.filter(u => u.document_type === 'Additional').length : docs.length}){permDocs.some(d => d.permission === 'requested') && <span style={{ marginLeft: 6, background: '#2563eb', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10.5, fontWeight: 700 }}>{permDocs.filter(d => d.permission === 'requested').length} asked</span>}</> },
                             { id: 'assets', label: 'Assets' },
                         ]} />
@@ -300,6 +342,28 @@ const EmployeeDetail = () => {
                                 <Row label="CGPA" value={employee.cgpa} />
                                 <Row label="Company" value={employee.previous_company} />
                                 <Row label="Designation" value={employee.designation} />
+                            </>
+                        )}
+                        {tab === 'bank' && (
+                            <>
+                                <h3>Bank Details</h3>
+                                <Row label="Bank Name" value={employee.bank_name} />
+                                <Row label="Account Number" value={employee.account_number} />
+                                <Row label="PAN" value={employee.pan} />
+                                <Row label="UAN" value={employee.uan} />
+                                <Row label="Pay Mode" value={employee.pay_mode} />
+                                <div style={{ marginTop: 14, padding: '10px 12px', border: '1px solid #e8edf6', borderRadius: 10, background: '#f8fafc', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '.8rem', color: '#475569', flex: 1, minWidth: 220 }}>
+                                        The employee can see these details but cannot change them. Allow them to update their bank and contact details once.
+                                        {Number(employee.profile_edit_allowed) ? <b style={{ color: '#15803d' }}> Allowed now.</b> : null}
+                                    </span>
+                                    {Number(employee.profile_edit_allowed)
+                                        ? <button className="btn-o" disabled={editBusy} onClick={() => setProfileEdit(false)}>Take back</button>
+                                        : <button className="btn-p" disabled={editBusy} onClick={() => setProfileEdit(true)}>Allow employee to edit</button>}
+                                </div>
+                                {!employee.bank_name && !employee.account_number && !employee.pan && (
+                                    <p style={{ fontSize: '.8rem', color: '#94a3b8', margin: '10px 0 0' }}>The employee has not filled in the bank details yet.</p>
+                                )}
                             </>
                         )}
                         {tab === 'assets' && (
@@ -350,6 +414,10 @@ const EmployeeDetail = () => {
                                                         <td style={{ fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>{d.label}</td>
                                                         <td style={{ whiteSpace: 'nowrap' }}>
                                                             <span style={{ color: d.waiting ? '#d97706' : d.filled ? '#15803d' : '#94a3b8', fontWeight: 600, fontSize: '.76rem' }}>{d.key === 'Additional' ? 'Extra papers' : d.waiting ? 'Waiting for approval' : d.filled ? 'Uploaded' : 'Not uploaded'}</span>
+                                                            <label className="btn-o" style={{ height: 22, padding: '0 9px', fontSize: '.7rem', marginLeft: 8, display: 'inline-flex', alignItems: 'center', cursor: uploadingKey === d.key ? 'wait' : 'pointer' }}>
+                                                                {uploadingKey === d.key ? 'Uploading...' : (d.key === 'Additional' ? 'Add file' : d.filled ? 'Replace' : 'Upload')}
+                                                                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={!!uploadingKey} onChange={(e) => uploadDocument(d.key, d.label, e)} />
+                                                            </label>
                                                             {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); openDoc(opt.column); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
                                                             {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); previewEmployeeDocument(employee.id, opt.column, d.label); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
                                                             {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); openApproval(sent.id); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>View</a>}

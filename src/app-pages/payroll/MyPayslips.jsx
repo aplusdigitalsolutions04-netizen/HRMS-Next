@@ -33,7 +33,7 @@ export default function MyPayslips() {
   const downloadPayslip = async (id) => {
     try {
       const res = await fetch(`${API}/payroll/payslips/${id}/download`, { headers: auth() });
-      if (!res.ok) throw new Error('Download failed');
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail ? 'Download failed: ' + d.detail : 'Download failed'); }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const cd = res.headers.get('Content-Disposition') || '';
@@ -55,7 +55,7 @@ export default function MyPayslips() {
     const tab = window.open('', '_blank');
     try {
       const res = await fetch(`${API}/payroll/payslips/${id}/download`, { headers: auth() });
-      if (!res.ok) throw new Error('Failed to load');
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail ? 'Failed to load: ' + d.detail : 'Failed to load'); }
       const blob = await res.blob();
       const pdfUrl = window.URL.createObjectURL(blob);
       if (tab) tab.location.href = pdfUrl; else window.location.href = pdfUrl;

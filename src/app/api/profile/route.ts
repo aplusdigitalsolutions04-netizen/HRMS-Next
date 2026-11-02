@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       const rows = await query<RowDataPacket[]>(
         `SELECT id, emp_code, email_id, full_name, status, hr_remarks, profile_photo, last_login, designation, mobile_no,
           dob, present_address, permanent_address, father_spouse_name, college_name, course_name, specialization,
-          course_duration, cgpa, alternate_mobile_no, previous_company, bank_name, account_number, pan, location, date_of_joining,
+          course_duration, cgpa, alternate_mobile_no, previous_company, bank_name, account_number, pan, uan, profile_edit_allowed, location, date_of_joining,
           required_documents, identity_proof, address_proof, resume_path, ug_document, marksheet10, marksheet12, offer_letter, pg_document,
           appointment_letter, internship_certificate, photograph, bank_document
          FROM employees WHERE id = ?`,
@@ -63,6 +63,8 @@ export async function GET(req: NextRequest) {
         bank_name: u.bank_name,
         account_number: u.account_number,
         pan: u.pan,
+        uan: u.uan,
+        profile_edit_allowed: !!u.profile_edit_allowed,
         location: u.location,
         date_of_joining: u.date_of_joining,
         required_documents: parseRequiredDocs(u.required_documents),
