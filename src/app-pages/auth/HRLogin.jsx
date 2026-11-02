@@ -190,7 +190,7 @@ export default function HRLogin() {
                                 <form onSubmit={handleLogin}>
                                     <div className="lr-field">
                                         <label htmlFor="EmailId">Username or Email</label>
-                                        <input type="text" id="EmailId" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your username or email" autoComplete="username" autoFocus required />
+                                        <input type="text" id="EmailId" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your username or email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoFocus required />
                                     </div>
 
                                     <div className="lr-field">

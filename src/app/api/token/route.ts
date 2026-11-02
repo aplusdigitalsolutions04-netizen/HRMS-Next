@@ -48,17 +48,20 @@ export async function POST(req: NextRequest) {
     }
 
     // employee login: the password is checked first, and only then is the account status told
-    const emps = await query<RowDataPacket[]>('SELECT status, password FROM employees WHERE email_id = ? AND is_deleted = 0', [email]);
-    const passwordOk = verifyLoginPassword(password, emps.length > 0 ? emps[0].password : DUMMY_HASH) && emps.length > 0;
+    const emps = await query<RowDataPacket[]>('SELECT status, password FROM employees WHERE LOWER(email_id) = LOWER(?) AND is_deleted = 0', [email]);
+    // the record whose password matches (two records can share one email); the first record when none matches
+    const matched = emps.find(x => verifyLoginPassword(password, x.password));
+    if (emps.length === 0) verifyLoginPassword(password, DUMMY_HASH);
+    const passwordOk = !!matched;
     if (!passwordOk) {
       await recordFailure(email, ip);
       return NextResponse.json({ detail: BAD_LOGIN }, { status: 401 });
     }
     // Which statuses may log in comes from Settings > Status Master (Can log in).
     const loginableStatuses = await employeeCodes('can_login');
-    if (!loginableStatuses.includes(emps[0].status)) {
-      const row = (await getStatuses('employee', true)).find(s => s.code === emps[0].status);
-      return NextResponse.json({ detail: `Account is ${row?.label || emps[0].status}. Please contact HR to activate your account.` }, { status: 401 });
+    if (!loginableStatuses.includes(matched.status)) {
+      const row = (await getStatuses('employee', true)).find(s => s.code === matched.status);
+      return NextResponse.json({ detail: `Account is ${row?.label || matched.status}. Please contact HR to activate your account.` }, { status: 401 });
     }
     authResult = await authenticateUser(email, password, 'employee');
     if (!authResult) {

@@ -23,13 +23,13 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const fullName = (body.full_name || '').trim();
-    const emailId = (body.email_id || '').trim();
+    const emailId = (body.email_id || '').trim().toLowerCase(); // one spelling of an email, so 'Name@x.com' and 'name@x.com' cannot become two employees
     const empCode = (body.emp_code || '').trim();
     if (!fullName || !emailId || !empCode) {
       return jsonError('Name, email, and employee ID are required', 422);
     }
 
-    const existing = await query<RowDataPacket[]>('SELECT id, is_deleted FROM employees WHERE email_id = ? OR emp_code = ?', [emailId, empCode]);
+    const existing = await query<RowDataPacket[]>('SELECT id, is_deleted FROM employees WHERE LOWER(TRIM(email_id)) = ? OR emp_code = ?', [emailId, empCode]);
     if (existing.length > 0) {
       if (existing[0].is_deleted) {
         return jsonError('This email/employee ID belongs to a deleted employee whose identity was kept locked. Restore that employee first, or delete them again choosing to free it up for reuse.', 409);

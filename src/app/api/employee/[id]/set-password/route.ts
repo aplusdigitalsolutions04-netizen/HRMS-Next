@@ -71,11 +71,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         );
       });
     }
-    // kept in Employee Credentials (encrypted) so HR can look it up there until the employee sets their own
-    await execute(
-      `INSERT INTO employee_credentials (id, employee_id, employee_name, emp_code, email, password, status, draft_id, created_by, created_at) VALUES (?,?,?,?,?,?,'draft',?,?,?)`,
-      [uuidv4(), id, emp.full_name || '', emp.emp_code || '', emp.email_id, encryptSecret(password), draftId, user.email, t]
-    );
+    // Kept in Employee Credentials (encrypted) so HR can look it up there until the employee sets their own. The employee's
+    // existing row is updated, so the list keeps one row per employee; a new row is made only when there is none yet.
+    const last = (await query<RowDataPacket[]>('SELECT id FROM employee_credentials WHERE employee_id = ? ORDER BY created_at DESC LIMIT 1', [id]))[0];
+    if (last) {
+      await execute(
+        "UPDATE employee_credentials SET password = ?, status = 'draft', sent_at = NULL, draft_id = ?, created_by = ?, created_at = ? WHERE id = ?",
+        [encryptSecret(password), draftId, user.email, t, last.id]
+      );
+    } else {
+      await execute(
+        `INSERT INTO employee_credentials (id, employee_id, employee_name, emp_code, email, password, status, draft_id, created_by, created_at) VALUES (?,?,?,?,?,?,'draft',?,?,?)`,
+        [uuidv4(), id, emp.full_name || '', emp.emp_code || '', emp.email_id, encryptSecret(password), draftId, user.email, t]
+      );
+    }
     if (draftId) {
       try { const r = await sendDraftById(draftId, user); emailSent = r.success; emailError = r.error; }
       catch (e: any) { emailError = e?.message || 'Could not send the email'; }

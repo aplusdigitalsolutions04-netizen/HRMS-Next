@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Swal from 'sweetalert2';
 import { API, auth, SettingsCard } from './shared';
 
 export default function GoogleDriveSettings() {
@@ -37,6 +38,38 @@ export default function GoogleDriveSettings() {
       setResult({ connected: false, message: e.message || 'Failed to start Google authorization' });
       setConnecting(false);
     }
+  };
+
+  // employee folders that were made more than once (an older bug): look at them, then merge into one folder each
+  const [dupGroups, setDupGroups] = useState(null);
+  const [dupBusy, setDupBusy] = useState(false);
+  const checkDuplicates = async () => {
+    setDupBusy(true);
+    try {
+      const res = await fetch(`${API}/settings/google-drive/duplicates`, { headers: auth() });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.detail || 'Could not check the folders');
+      setDupGroups(d.groups || []);
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Not checked', text: e.message }); }
+    finally { setDupBusy(false); }
+  };
+  const mergeDuplicates = async (key) => {
+    const ok = await Swal.fire({
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Merge',
+      title: key ? `Merge the folders of ${key}?` : 'Merge all duplicate folders?',
+      text: 'The files are moved into one folder per employee. The emptied extra folders go to the Google Drive trash, where they can be restored.',
+    });
+    if (!ok.isConfirmed) return;
+    setDupBusy(true);
+    try {
+      const res = await fetch(`${API}/settings/google-drive/duplicates`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify(key ? { key } : {}) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.detail || 'Could not merge');
+      await Swal.fire({ icon: 'success', title: 'Done', text: d.message });
+      const again = await fetch(`${API}/settings/google-drive/duplicates`, { headers: auth() }).then(r => r.json()).catch(() => ({}));
+      setDupGroups(again.groups || []);
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Not merged', text: e.message }); }
+    finally { setDupBusy(false); }
   };
 
   return (
@@ -79,6 +112,38 @@ export default function GoogleDriveSettings() {
               </button>
             )}
           </div>
+        )}
+      </div>
+
+      <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: 24, marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h4 style={{ margin: '0 0 4px', fontSize: '.85rem', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '.02em' }}>Duplicate Folders</h4>
+            <p style={{ margin: 0, fontSize: '.85rem', color: '#64748b', maxWidth: 520 }}>
+              Finds employees who have more than one folder in Drive and puts their files together in one folder. Nothing is deleted: emptied folders go to the Drive trash.
+            </p>
+          </div>
+          <button className="btn-premium" onClick={checkDuplicates} disabled={dupBusy} style={{ flexShrink: 0 }}>
+            {dupBusy ? <><span className="spinner-sm" /> Working...</> : '🗂 Check Folders'}
+          </button>
+        </div>
+        {dupGroups && (
+          dupGroups.length === 0
+            ? <p style={{ margin: '16px 0 0', fontSize: '.88rem', fontWeight: 600, color: '#047857' }}>✅ No employee has more than one folder.</p>
+            : (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <span style={{ fontSize: '.85rem', color: '#b45309', fontWeight: 600 }}>{dupGroups.length} employee{dupGroups.length === 1 ? '' : 's'} with more than one folder</span>
+                  <button className="btn-premium" onClick={() => mergeDuplicates('')} disabled={dupBusy}>Merge all</button>
+                </div>
+                {dupGroups.map(g => (
+                  <div key={g.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: '1px solid #e2e8f0', fontSize: '.84rem' }}>
+                    <span><b>{g.key}</b> &middot; {g.folders.length} folders &middot; files in each: {g.folders.map(f => f.files).join(', ')}</span>
+                    <button className="btn-premium" style={{ padding: '4px 12px', fontSize: '.75rem' }} onClick={() => mergeDuplicates(g.key)} disabled={dupBusy}>Merge</button>
+                  </div>
+                ))}
+              </div>
+            )
         )}
       </div>
     </SettingsCard>

@@ -7,12 +7,18 @@ import { RowDataPacket } from 'mysql2';
 const MAX_PER_EMAIL = 5, MAX_PER_IP = 30, LOCK_MINUTES = 15, WINDOW_MINUTES = 30;
 
 export const clientIp = (req: Request) => (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim().slice(0, 60);
-const keysFor = (email: string, ip: string) => [`u:${String(email || '').toLowerCase().slice(0, 150)}`, `i:${ip}`];
+// When the server cannot tell the caller's address ('unknown'), everybody would share one counter and a few wrong tries by one
+// person would lock the login for all. Then only the per-email counter is used.
+const keysFor = (email: string, ip: string) => {
+  const keys = [`u:${String(email || '').toLowerCase().slice(0, 150)}`];
+  if (ip && ip !== 'unknown') keys.push(`i:${ip}`);
+  return keys;
+};
 
 // minutes still to wait, or 0
 export async function lockedMinutes(email: string, ip: string): Promise<number> {
   try {
-    const rows = await query<RowDataPacket[]>('SELECT locked_until FROM login_attempts WHERE attempt_key IN (?,?) AND locked_until > NOW()', keysFor(email, ip));
+    const rows = await query<RowDataPacket[]>('SELECT locked_until FROM login_attempts WHERE attempt_key IN (' + keysFor(email, ip).map(() => '?').join(',') + ') AND locked_until > NOW()', keysFor(email, ip));
     if (rows.length === 0) return 0;
     const until = Math.max(...rows.map(r => new Date(r.locked_until).getTime()));
     return Math.max(1, Math.ceil((until - Date.now()) / 60000));

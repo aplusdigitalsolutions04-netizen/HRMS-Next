@@ -87,9 +87,10 @@ export function verifyPurposeToken(token: string, purpose: string): { sub: strin
 }
 
 export function generateTempPassword(length = 12): string {
-  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lower = 'abcdefghijklmnopqrstuvwxyz';
-  const digits = '0123456789';
+  // no letters or digits that look alike (I l 1, O o 0): a password read off a mail or a screen is often typed wrong otherwise
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnpqrstuvwxyz';
+  const digits = '23456789';
   const special = '!@#$%&*';
   const all = upper + lower + digits + special;
   const chars: string[] = [];
@@ -214,7 +215,7 @@ export async function authUserFromToken(token: string): Promise<AuthUser | null>
 
 export async function authenticateUser(email: string, password: string, type: 'admin' | 'employee'): Promise<{ user: AuthUser; token: string } | null> {
   if (type === 'admin') {
-    const admins = await query<HrAdminRow[]>('SELECT * FROM hr_admins WHERE email = ?', [email]);
+    const admins = await query<HrAdminRow[]>('SELECT * FROM hr_admins WHERE LOWER(email) = LOWER(?)', [email]);
     if (admins.length === 0) return null;
     const a = admins[0];
     if (!verifyLoginPassword(password, a.password)) return null;
@@ -242,12 +243,14 @@ export async function authenticateUser(email: string, password: string, type: 'a
     // Which statuses may log in is set in Settings > Status Master (Can log in).
     const loginable = inList(await employeeCodes('can_login'));
     const emps = await query<EmployeeRow[]>(
-      `SELECT * FROM employees WHERE email_id = ? AND is_deleted = 0 AND status IN ${loginable.sql}`,
+      `SELECT * FROM employees WHERE LOWER(email_id) = LOWER(?) AND is_deleted = 0 AND status IN ${loginable.sql}`,
       [email, ...loginable.params]
     );
     if (emps.length === 0) return null;
-    const e = emps[0];
-    if (!verifyLoginPassword(password, e.password)) return null;
+    // Two employee records can carry the same email (a re-invite, an old copy). The one whose password matches is the one logging
+    // in, instead of always the first record found.
+    const e = emps.find(x => verifyLoginPassword(password, x.password));
+    if (!e) return null;
     const mustChange = !!e.must_change_password || validatePassword(password, e.email_id) !== null;
     if (mustChange && !e.must_change_password) await execute('UPDATE employees SET must_change_password = 1 WHERE id = ?', [e.id]);
     e.must_change_password = mustChange ? 1 : 0;

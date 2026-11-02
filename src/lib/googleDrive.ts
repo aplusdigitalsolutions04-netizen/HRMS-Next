@@ -172,16 +172,56 @@ async function createFolder(name: string, parentId: string): Promise<string> {
   return res.data.id as string;
 }
 
+// Calls that need the same folder at the same moment (several files of one employee sent together, or two requests at once) share
+// one lookup. Without this each of them looked, found nothing, and made its own folder.
+const folderInFlight = new Map<string, Promise<string>>();
+function once(key: string, make: () => Promise<string>): Promise<string> {
+  let p = folderInFlight.get(key);
+  if (!p) { p = make().finally(() => folderInFlight.delete(key)); folderInFlight.set(key, p); }
+  return p;
+}
+
+async function folderUsable(id: string): Promise<boolean> {
+  try {
+    const drive = await getDrive();
+    const r = await drive.files.get({ fileId: id, fields: 'id,trashed,mimeType', supportsAllDrives: true });
+    return !r.data.trashed && r.data.mimeType === 'application/vnd.google-apps.folder';
+  } catch { return false; }
+}
+
+// An employee's folder is found by the employee code at the start of its name, so a change of the employee's name (or another
+// copy of the server) does not start a second folder. When there are several, the oldest is used.
+async function findEmployeeFolder(empCode: string, parentId: string): Promise<string | null> {
+  const drive = await getDrive();
+  const safe = empCode.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `name contains '${safe}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`,
+    fields: 'files(id,name,createdTime)',
+    orderBy: 'createdTime',
+    pageSize: 100,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  const hit = (res.data.files || []).find(f => f.name === empCode || (f.name || '').startsWith(empCode + ' - '));
+  return hit?.id || null;
+}
+
 export async function getEmployeeFolderId(empCode: string, employeeName?: string): Promise<string> {
   const cached = folderCache.get(empCode);
   if (cached) return cached;
-
-  const folderName = employeeName ? `${empCode} - ${employeeName}` : empCode;
-  const parentId = rootFolderId();
-  let folderId = await findFolder(folderName, parentId);
-  if (!folderId) folderId = await createFolder(folderName, parentId);
-  folderCache.set(empCode, folderId);
-  return folderId;
+  return once('emp:' + empCode, async () => {
+    // the folder remembered in the database comes first: it survives restarts and several running copies of the server
+    const saved = (await query<RowDataPacket[]>('SELECT drive_folder_id FROM employees WHERE emp_code = ? LIMIT 1', [empCode]).catch(() => []))[0]?.drive_folder_id as string | undefined;
+    let folderId: string | null = saved && (await folderUsable(saved)) ? saved : null;
+    if (!folderId) {
+      const parentId = rootFolderId();
+      folderId = await findEmployeeFolder(empCode, parentId);
+      if (!folderId) folderId = await createFolder(employeeName ? `${empCode} - ${employeeName}` : empCode, parentId);
+      await execute('UPDATE employees SET drive_folder_id = ? WHERE emp_code = ?', [folderId, empCode]).catch(() => {});
+    }
+    folderCache.set(empCode, folderId);
+    return folderId;
+  });
 }
 
 // A folder by name directly under the Drive root folder (made on first use), for files that do not belong to one employee.
@@ -189,11 +229,13 @@ export async function getNamedFolderId(name: string): Promise<string> {
   const key = 'named:' + name;
   const cached = folderCache.get(key);
   if (cached) return cached;
-  const parentId = rootFolderId();
-  let folderId = await findFolder(name, parentId);
-  if (!folderId) folderId = await createFolder(name, parentId);
-  folderCache.set(key, folderId);
-  return folderId;
+  return once(key, async () => {
+    const parentId = rootFolderId();
+    let folderId = await findFolder(name, parentId);
+    if (!folderId) folderId = await createFolder(name, parentId);
+    folderCache.set(key, folderId);
+    return folderId;
+  });
 }
 
 // Saves a file on Google Drive (never on the server's disk) and returns "drive:<file id>", the value kept in the database.
@@ -264,6 +306,89 @@ export async function saveEmployeeDocument(empCode: string, fullName: string, fi
   const fileName = `${uuidv4()}${ext}`;
   await writeFile(path.join(dir, fileName), buf);
   return `uploads/documents/${folderName}/${fileName}`;
+}
+
+// ---- tidying up folders that were made twice for one employee (the older bug) ----
+export interface DriveFolderInfo { id: string; name: string; createdTime: string; files: number }
+export interface DuplicateFolderGroup { key: string; folders: DriveFolderInfo[] }
+
+async function listRootFolders(): Promise<{ id: string; name: string; createdTime: string }[]> {
+  const drive = await getDrive();
+  const out: { id: string; name: string; createdTime: string }[] = [];
+  let pageToken: string | undefined;
+  do {
+    const res: any = await drive.files.list({
+      q: `mimeType='application/vnd.google-apps.folder' and '${rootFolderId()}' in parents and trashed=false`,
+      fields: 'nextPageToken,files(id,name,createdTime)', pageSize: 1000, pageToken, supportsAllDrives: true, includeItemsFromAllDrives: true,
+    });
+    out.push(...(res.data.files || []));
+    pageToken = res.data.nextPageToken || undefined;
+  } while (pageToken);
+  return out;
+}
+
+async function listChildren(folderId: string): Promise<{ id: string }[]> {
+  const drive = await getDrive();
+  const out: { id: string }[] = [];
+  let pageToken: string | undefined;
+  do {
+    const res: any = await drive.files.list({
+      q: `'${folderId}' in parents and trashed=false`, fields: 'nextPageToken,files(id)', pageSize: 1000, pageToken, supportsAllDrives: true, includeItemsFromAllDrives: true,
+    });
+    out.push(...(res.data.files || []));
+    pageToken = res.data.nextPageToken || undefined;
+  } while (pageToken);
+  return out;
+}
+
+// Folders under the Drive root that share the same employee code (the part of the name before " - ").
+export async function findDuplicateFolders(): Promise<DuplicateFolderGroup[]> {
+  const groups = new Map<string, { id: string; name: string; createdTime: string }[]>();
+  for (const f of await listRootFolders()) {
+    const key = String(f.name || '').split(' - ')[0].trim();
+    if (!key) continue;
+    groups.set(key, [...(groups.get(key) || []), f]);
+  }
+  const result: DuplicateFolderGroup[] = [];
+  for (const [key, list] of groups) {
+    if (list.length < 2) continue;
+    list.sort((a, b) => String(a.createdTime).localeCompare(String(b.createdTime)));
+    const folders: DriveFolderInfo[] = [];
+    for (const f of list) folders.push({ ...f, files: (await listChildren(f.id)).length });
+    result.push({ key, folders });
+  }
+  return result.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+// Moves everything from the extra folders into one folder per employee and puts the emptied folders in the Drive trash (they can
+// be restored from there). With a key only that employee code is tidied. The folder kept is the one saved on the employee, else the oldest. Files are referred to by their Drive
+// id, so moving them does not break any link in the portal.
+export async function mergeDuplicateFolders(onlyKey?: string): Promise<{ groups: number; filesMoved: number; foldersTrashed: number }> {
+  const drive = await getDrive();
+  let groupsDone = 0, filesMoved = 0, foldersTrashed = 0;
+  for (const g of await findDuplicateFolders()) {
+    if (onlyKey && g.key !== onlyKey) continue;
+    const saved = (await query<RowDataPacket[]>('SELECT drive_folder_id FROM employees WHERE emp_code = ? LIMIT 1', [g.key]).catch(() => []))[0]?.drive_folder_id as string | undefined;
+    const keep = g.folders.find(f => f.id === saved) || g.folders[0];
+    for (const extra of g.folders) {
+      if (extra.id === keep.id) continue;
+      let moved = 0;
+      for (const child of await listChildren(extra.id)) {
+        await drive.files.update({ fileId: child.id, addParents: keep.id, removeParents: extra.id, fields: 'id', supportsAllDrives: true });
+        moved++;
+      }
+      // the folder is trashed only when nothing is left in it
+      if ((await listChildren(extra.id)).length === 0) {
+        await drive.files.update({ fileId: extra.id, requestBody: { trashed: true }, fields: 'id', supportsAllDrives: true });
+        foldersTrashed++;
+      }
+      filesMoved += moved;
+    }
+    await execute('UPDATE employees SET drive_folder_id = ? WHERE emp_code = ?', [keep.id, g.key]).catch(() => {});
+    folderCache.delete(g.key);
+    groupsDone++;
+  }
+  return { groups: groupsDone, filesMoved, foldersTrashed };
 }
 
 export async function testDriveConnection(): Promise<{ folderId: string; folderName: string }> {

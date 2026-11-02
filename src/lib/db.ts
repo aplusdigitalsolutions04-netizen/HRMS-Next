@@ -15,6 +15,7 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
   },
   employees: {
     profile_edit_allowed: 'TINYINT(1) NOT NULL DEFAULT 0',
+    drive_folder_id: 'VARCHAR(120) NULL',
     reminder_count: 'INT NOT NULL DEFAULT 0',
     last_reminder_on: 'DATETIME NULL',
     manager_id: 'VARCHAR(36) NULL',

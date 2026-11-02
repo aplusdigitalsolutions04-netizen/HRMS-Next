@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return jsonError('Name, email, and mobile are required', 422);
     }
 
-    const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id = ?', [body.email_id]);
+    const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE LOWER(TRIM(email_id)) = LOWER(TRIM(?))', [body.email_id]);
     if (existing.length > 0) return jsonError('Email already registered', 409);
 
     const mobileCheck = await query<RowDataPacket[]>('SELECT id FROM employees WHERE mobile_no = ?', [body.mobile_no]);

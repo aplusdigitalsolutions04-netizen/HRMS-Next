@@ -94,7 +94,7 @@ export default function ForceChangePassword() {
           <div style={{ textAlign:'center', marginBottom:28 }}>
             <img src="/api/company-logo" alt="A Plus" style={{ height:36, marginBottom:12 }} />
             <h2 style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.25rem', color:'#0f172a', margin:0, letterSpacing:'-0.3px' }}>Create New Password</h2>
-            <p style={{ margin:'6px 0 0', fontSize:13, color:'#64748b' }}>This is your first login. Please set a new password.</p>
+            <p style={{ margin:'6px 0 0', fontSize:13, color:'#64748b' }}>Your password was set by HR. Please choose a new password of your own to continue.</p>
           </div>
 
           {error && (

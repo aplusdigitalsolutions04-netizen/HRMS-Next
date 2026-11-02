@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id = ? OR mobile_no = ?', [emailId, mobileNo]);
+      const existing = await query<RowDataPacket[]>('SELECT id FROM employees WHERE LOWER(TRIM(email_id)) = LOWER(?) OR mobile_no = ?', [emailId, mobileNo]);
       if (existing.length > 0) {
         errors.push(`Skipped ${rowLabel}: email or mobile already registered`);
         continue;
