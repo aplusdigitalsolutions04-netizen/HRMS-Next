@@ -176,9 +176,10 @@ export default function PayrollPayslipHistory() {
           <p className="pr-subtitle">Payslips are prepared as drafts. Check them, then approve - approving publishes the payslip to the employee and emails it.</p>
         </div>
         <div className="pr-header-btns">
-        {month && year && (
+        {/* a ternary, not "month && year &&": with "All Years" the year is 0 and React would print that 0 on the page */}
+        {month && year ? (
           <button className="pr-btn pr-btn-secondary" disabled={approving} onClick={saveMonthToDrive} title="Save the approved payslips of this month to Google Drive">Save month to Drive</button>
-        )}
+        ) : null}
         {drafts > 0 && (
           <button className="pr-btn pr-btn-primary" disabled={approving || !month || !year}
             title={!month || !year ? 'Pick a month and a year to approve all of its drafts at once' : ''}

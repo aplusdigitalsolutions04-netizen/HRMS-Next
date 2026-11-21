@@ -387,6 +387,15 @@ html[data-theme="dark"] .ps-note { background: rgba(245,158,11,.12); border-colo
 html[data-theme="dark"] .ps-bar.on { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.5); color: #fcd34d; }
 html[data-theme="dark"] .ps-err, html[data-theme="dark"] .ps-barerr { color: #fca5a5; }
 html[data-theme="dark"] .um-b.ps-del { color: #fca5a5; }
+html[data-theme="dark"] .page-title, html[data-theme="dark"] .pr-title, html[data-theme="dark"] .ss-title, html[data-theme="dark"] .emp-hdr-l h1, html[data-theme="dark"] .au-title { color: var(--d-ink) !important; }
+html[data-theme="dark"] .text-muted { color: var(--d-ink-3) !important; }
+html[data-theme="dark"] .pr-emp-list { background: var(--d-surface-2); border-color: var(--d-line); }
+html[data-theme="dark"] .pr-emp-name { color: var(--d-ink); }
+html[data-theme="dark"] .pr-emp-meta { color: var(--d-ink-2); }
+html[data-theme="dark"] .el-tpl-chip, html[data-theme="dark"] .tbl-view, html[data-theme="dark"] .sm-edit { color: #c4b5fd; }
+html[data-theme="dark"] .el-badge-sent, html[data-theme="dark"] .db-kpi-gr.up { color: #86efac; }
+html[data-theme="dark"] .tbl-del, html[data-theme="dark"] .sm-del, html[data-theme="dark"] .db-kpi-gr.down { color: #fca5a5; }
+html[data-theme="dark"] .lh-zone span { color: #4e3626; }
 html[data-theme="dark"] .an-b { background: var(--d-surface-2); border-color: var(--d-line); color: var(--d-ink-2); }
 html[data-theme="dark"] .profile-field span { background: var(--d-surface-2); border-color: var(--d-line); color: var(--d-ink); }
 html[data-theme="dark"] table th[style*="background"] { background: var(--d-surface-2) !important; color: var(--d-ink-2) !important; border-color: var(--d-line) !important; }

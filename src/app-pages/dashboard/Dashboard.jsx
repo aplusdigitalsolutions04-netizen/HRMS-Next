@@ -341,6 +341,7 @@ function Dashboard() {
         .db-card-bd { padding:10px 14px 14px; flex:1; display:flex; flex-direction:column; min-height:0; }
         .db-emp { text-align:center; padding:12px 10px; color:#94a3b8; font-size:.8rem; margin:auto; }
         .db-tag { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--brand-soft); color:var(--brand-dark); white-space:nowrap; }
+        .db-tag.db-tag-violet { background:#f5f3ff; color:#6d28d9; }
 
         /* ── Today's attendance ── */
         .db-today { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
@@ -920,7 +921,7 @@ function Dashboard() {
               <Item data-w="anniversaries" className="db-card s6">
                 <div className="db-card-hdr">
                   <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand-mid)' }}><Icon name="award" size={15} /></i>Work Anniversaries</span>
-                  <span className="db-tag" style={{ background: 'var(--brand-soft)', color: '#6d28d9' }}>Next 30 days</span>
+                  <span className="db-tag db-tag-violet">Next 30 days</span>
                 </div>
                 <div className="db-card-bd">
                   {ov.celebrations.anniversaries.length === 0 ? (
