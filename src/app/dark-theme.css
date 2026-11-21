@@ -396,6 +396,19 @@ html[data-theme="dark"] .el-tpl-chip, html[data-theme="dark"] .tbl-view, html[da
 html[data-theme="dark"] .el-badge-sent, html[data-theme="dark"] .db-kpi-gr.up { color: #86efac; }
 html[data-theme="dark"] .tbl-del, html[data-theme="dark"] .sm-del, html[data-theme="dark"] .db-kpi-gr.down { color: #fca5a5; }
 html[data-theme="dark"] .lh-zone span { color: #4e3626; }
+html[data-theme="dark"] .global-profile-dropdown, html[data-theme="dark"] .global-notif-dropdown { background: rgba(38,29,22,.98); border-color: var(--d-line); box-shadow: 0 18px 40px -12px rgba(0,0,0,.7); }
+html[data-theme="dark"] .dropdown-user-name, html[data-theme="dark"] .dropdown-item, html[data-theme="dark"] .notif-dd-title, html[data-theme="dark"] .notif-dropdown-header { color: var(--d-ink); }
+html[data-theme="dark"] .dropdown-user-role, html[data-theme="dark"] .dropdown-last-login, html[data-theme="dark"] .notif-dd-time, html[data-theme="dark"] .notif-dropdown-empty { color: var(--d-ink-2); }
+html[data-theme="dark"] .dropdown-item svg { color: var(--d-ink-3); }
+html[data-theme="dark"] .dropdown-last-login, html[data-theme="dark"] .notif-dropdown-header, html[data-theme="dark"] .notif-dropdown-footer { border-color: var(--d-line); }
+html[data-theme="dark"] .dropdown-divider { background: var(--d-line); }
+html[data-theme="dark"] .dropdown-item:hover, html[data-theme="dark"] .notif-dropdown-item:hover { background: var(--d-surface-2); }
+html[data-theme="dark"] .dropdown-user-avatar { background: var(--d-surface-3); color: var(--d-ink-2); }
+html[data-theme="dark"] .dropdown-logout, html[data-theme="dark"] .dropdown-logout svg { color: #f87171; }
+html[data-theme="dark"] .dropdown-logout:hover { background: rgba(239,68,68,.14); }
+html[data-theme="dark"] .notif-dd-unread { background: rgba(255,255,255,.06); }
+html[data-theme="dark"] .notif-dropdown-item:not(.notif-dd-unread) .notif-dd-dot { border-color: var(--d-ink-3); }
+html[data-theme="dark"] .notif-dropdown-footer button:hover { background: rgba(255,255,255,.07); }
 html[data-theme="dark"] .an-b { background: var(--d-surface-2); border-color: var(--d-line); color: var(--d-ink-2); }
 html[data-theme="dark"] .profile-field span { background: var(--d-surface-2); border-color: var(--d-line); color: var(--d-ink); }
 html[data-theme="dark"] table th[style*="background"] { background: var(--d-surface-2) !important; color: var(--d-ink-2) !important; border-color: var(--d-line) !important; }
