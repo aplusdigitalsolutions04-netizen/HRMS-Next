@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStatusMaster from '../shared/useStatusMaster';
 import CorrectionsPanel from './employee-dashboard/CorrectionsPanel';
+import Pagination from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -9,7 +11,7 @@ const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token')
 const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 
-function Donut({ pct, size = 120, sw = 16, color = '#2563eb', bg = '#f1f5f9' }) {
+function Donut({ pct, size = 120, sw = 16, color = 'var(--brand)', bg = '#f1f5f9' }) {
   const r = (size - sw) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
@@ -36,6 +38,7 @@ export default function EmployeeAttendance() {
   const [records, setRecords] = useState({ records: [], total: 0, page: 1, per_page: 15, total_pages: 1 });
   const [insights, setInsights] = useState(null);
   const [recordsPage, setRecordsPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(31);   // a whole month on one page
   const [corrDate, setCorrDate] = useState('');
   const [recordsSort, setRecordsSort] = useState('date');
   const [recordsOrder, setRecordsOrder] = useState('desc');
@@ -63,9 +66,9 @@ export default function EmployeeAttendance() {
   }, []);
 
   const fetchRecords = useCallback(() => {
-    fetch(`${API}/my-attendance/records?page=${recordsPage}&per_page=31&sort=${recordsSort}&order=${recordsOrder}&month=${month}&year=${year}`, { headers: auth() })
+    fetch(`${API}/my-attendance/records?page=${recordsPage}&per_page=${recordsPerPage}&sort=${recordsSort}&order=${recordsOrder}&month=${month}&year=${year}`, { headers: auth() })
       .then(r => r.json()).then(d => { if (d && Array.isArray(d.records)) setRecords(d); }).catch(() => {});
-  }, [recordsPage, recordsSort, recordsOrder, month, year]);
+  }, [recordsPage, recordsPerPage, recordsSort, recordsOrder, month, year]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
@@ -195,15 +198,15 @@ export default function EmployeeAttendance() {
         .ea-header-right { display: flex; align-items: center; gap: 10px; }
 
         .ea-month-btn { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; color: #64748b; font-size: 14px; display: flex; align-items: center; gap: 6px; font-family: inherit; }
-        .ea-month-btn:hover { border-color: #2563eb; color: #2563eb; }
+        .ea-month-btn:hover { border-color: var(--brand); color: var(--brand); }
         .ea-month-label { font-size: 16px; font-weight: 600; color: #0f172a; min-width: 120px; text-align: center; }
-        .ea-export-btn { padding: 8px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
-        .ea-export-btn:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.3); transform: translateY(-1px); }
+        .ea-export-btn { padding: 8px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-mid)); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+        .ea-export-btn:hover { box-shadow: 0 4px 12px rgba(111,78,55,0.3); transform: translateY(-1px); }
 
         .ea-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #f1f5f9; border-radius: 10px; padding: 4px; overflow-x: auto; }
         .ea-tab { padding: 8px 15px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; background: none; color: #64748b; font-family: inherit; }
         .ea-tab:hover { color: #0f172a; }
-        .ea-tab.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-weight: 600; }
+        .ea-tab.active { background: #fff; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-weight: 600; }
 
         .ea-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
         .ea-card { background: #fff; border-radius: 14px; padding: 15px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
@@ -215,7 +218,7 @@ export default function EmployeeAttendance() {
         .ea-analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
         .ea-donut-wrap { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
         .ea-donut-label { font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 8px; font-family: 'Outfit', sans-serif; }
-        .ea-donut-sub { font-size: 22px; font-weight: 700; color: #2563eb; font-family: 'Outfit', sans-serif; }
+        .ea-donut-sub { font-size: 22px; font-weight: 700; color: var(--brand); font-family: 'Outfit', sans-serif; }
         .ea-donut-legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
         .ea-donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
         .ea-donut-dot { width: 9px; height: 9px; border-radius: 4px; }
@@ -231,14 +234,14 @@ export default function EmployeeAttendance() {
         .ea-table-wrap { overflow-x: auto; }
         .ea-records .ea-table, .ea-punch .ea-table { width: 100%; border-collapse: collapse; }
         .ea-records .ea-table th, .ea-punch .ea-table th { text-align: left; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #f1f5f9; cursor: pointer; white-space: nowrap; }
-        .ea-records .ea-table th:hover, .ea-punch .ea-table th:hover { color: #2563eb; }
+        .ea-records .ea-table th:hover, .ea-punch .ea-table th:hover { color: var(--brand); }
         .ea-records .ea-table td, .ea-punch .ea-table td { padding: 10px 14px; font-size: 14px; color: #334155; border-bottom: 1px solid #f8fafc; }
         .ea-records .ea-table tr:hover td, .ea-punch .ea-table tr:hover td { background: #fafaff; }
         .ea-records .ea-status, .ea-punch .ea-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block; }
         .ea-records .ea-pagination, .ea-punch .ea-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 14px; }
         .ea-records .ea-page-btn, .ea-punch .ea-page-btn { padding: 6px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; color: #64748b; font-family: inherit; }
-        .ea-records .ea-page-btn:hover, .ea-punch .ea-page-btn:hover { border-color: #2563eb; color: #2563eb; }
-        .ea-records .ea-page-btn.active, .ea-punch .ea-page-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .ea-records .ea-page-btn:hover, .ea-punch .ea-page-btn:hover { border-color: var(--brand); color: var(--brand); }
+        .ea-records .ea-page-btn.active, .ea-punch .ea-page-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
         .ea-records .ea-page-btn:disabled, .ea-punch .ea-page-btn:disabled { opacity: 0.4; cursor: default; }
         .ea-punch .ea-grid-4 { gap: 14px; margin-bottom: 20px; }
         .ea-punch .ea-insight-card { background: #f8fafc; border-radius: 12px; padding: 14px 15px; display: flex; flex-direction: column; gap: 4px; }
@@ -263,7 +266,7 @@ export default function EmployeeAttendance() {
       <div className="ea-header">
         <div className="ea-header-left">
           <div className="ea-header-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6f4e37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </div>
           <div>
             <h1>My Attendance</h1>
@@ -415,7 +418,7 @@ export default function EmployeeAttendance() {
                       return (
                         <tr key={r.id}>
                           <td style={{ color: '#94a3b8' }}>{((records.page || 1) - 1) * (records.per_page || 31) + idx + 1}</td>
-                          <td style={{ fontWeight: 500 }}>{new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                          <td style={{ fontWeight: 500 }}>{new Date(r.date).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                           <td style={{ color: '#64748b' }}>{r.day}</td>
                           <td><span className="ea-status" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
                           <td>{r.in_time || '—'}</td>
@@ -430,15 +433,7 @@ export default function EmployeeAttendance() {
                   </tbody>
                 </table>
               </div>
-              {(records?.total_pages || 1) > 1 && (
-                <div className="ea-pagination">
-                  <button className="ea-page-btn" disabled={records.page <= 1} onClick={() => setRecordsPage(records.page - 1)}>Prev</button>
-                  {Array.from({ length: records.total_pages }, (_, i) => i + 1).slice(Math.max(0, records.page - 3), records.page + 2).map(p => (
-                    <button key={p} className={`ea-page-btn${records.page === p ? ' active' : ''}`} onClick={() => setRecordsPage(p)}>{p}</button>
-                  ))}
-                  <button className="ea-page-btn" disabled={records.page >= records.total_pages} onClick={() => setRecordsPage(records.page + 1)}>Next</button>
-                </div>
-              )}
+              {<Pagination page={records.page || 1} totalItems={records.total || 0} pageSize={recordsPerPage} itemLabel="records" onPageChange={setRecordsPage} onPageSizeChange={n => { setRecordsPerPage(n); setRecordsPage(1); }} />}
             </div>
           )}
 
@@ -479,7 +474,7 @@ export default function EmployeeAttendance() {
                           return (
                             <tr key={r.date}>
                               <td style={{ color: '#94a3b8' }}>{idx + 1}</td>
-                              <td style={{ fontWeight: 500 }}>{new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                              <td style={{ fontWeight: 500 }}>{new Date(r.date).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                               <td style={{ color: '#64748b' }}>{r.day}</td>
                               <td>{r.in_time || '—'}</td>
                               <td>{r.out_time || '—'}</td>
@@ -490,15 +485,7 @@ export default function EmployeeAttendance() {
                       </tbody>
                     </table>
                   </div>
-                  {(records?.total_pages || 1) > 1 && (
-                    <div className="ea-pagination">
-                      <button className="ea-page-btn" disabled={records.page <= 1} onClick={() => setRecordsPage(records.page - 1)}>Prev</button>
-                      {Array.from({ length: records.total_pages }, (_, i) => i + 1).slice(Math.max(0, records.page - 3), records.page + 2).map(p => (
-                        <button key={p} className={`ea-page-btn${records.page === p ? ' active' : ''}`} onClick={() => setRecordsPage(p)}>{p}</button>
-                      ))}
-                      <button className="ea-page-btn" disabled={records.page >= records.total_pages} onClick={() => setRecordsPage(records.page + 1)}>Next</button>
-                    </div>
-                  )}
+                  {<Pagination page={records.page || 1} totalItems={records.total || 0} pageSize={recordsPerPage} itemLabel="records" onPageChange={setRecordsPage} onPageSizeChange={n => { setRecordsPerPage(n); setRecordsPage(1); }} />}
                 </>
               ) : (
                 <div className="ea-empty">

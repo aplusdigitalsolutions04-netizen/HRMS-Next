@@ -1,3 +1,4 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { syncTodayPunches } from '@/lib/teamoffice';
@@ -8,7 +9,7 @@ let lastSync = 0;
 
 // Pulls today's IN/OUT punches for ALL employees so check-ins and check-outs
 // appear on the HR daily attendance page without pressing sync.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -23,3 +24,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

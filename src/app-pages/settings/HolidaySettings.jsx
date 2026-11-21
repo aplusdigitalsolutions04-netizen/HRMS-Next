@@ -95,7 +95,7 @@ export default function HolidaySettings() {
           ))}
         </tbody>
       </table>
-      <Pagination page={page} totalItems={holidays.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} pageSizeOptions={[10, 25, 50]} itemLabel="holidays" />
+      <Pagination page={page} totalItems={holidays.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="holidays" />
     </SettingsCard>
   );
 }

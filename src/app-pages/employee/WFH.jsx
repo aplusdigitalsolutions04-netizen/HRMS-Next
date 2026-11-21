@@ -5,6 +5,7 @@ import WfhApplyPage from './WfhApplyPage';
 
 const API = '/api';
 import useLiveRefresh from '@/lib/live';
+import { appLocale } from '@/lib/app-config-client';
 const PAGE_SIZE = 10;
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
@@ -17,7 +18,7 @@ const toInputDate = (d) => {
 
 const formatDT = (d) => {
   if (!d) return '\u2014';
-  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
+  try { return new Date(d).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
 };
 
 const statusBadge = (s) => {
@@ -259,7 +260,7 @@ export default function WFH() {
                       {statusBadge(req.status)}
                     </td>
                     <td style={{ padding: '14px 15px' }}>
-                      {Number(req.can_edit) === 1 && <button onClick={() => openEdit(req)} style={{ border: 'none', background: '#eff6ff', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, color: '#2563eb' }} title="Change this request">Edit</button>}
+                      {Number(req.can_edit) === 1 && <button onClick={() => openEdit(req)} style={{ border: 'none', background: 'var(--brand-soft)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--brand)' }} title="Change this request">Edit</button>}
                     </td>
                   </tr>
                 ))}

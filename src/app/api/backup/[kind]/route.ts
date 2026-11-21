@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { sqlDumpStream, excelExport, rowCounts, lastBackup, markBackup } from '@/lib/backup';
@@ -8,7 +9,7 @@ import { auditFrom } from '@/lib/audit';
 //   GET /api/backup/status  -> last backup time + row counts
 //   GET /api/backup/sql     -> full restorable .sql dump (streamed)
 //   GET /api/backup/excel   -> day-to-day data as one Excel file (no passwords / photos)
-export async function GET(req: NextRequest, { params }: { params: Promise<{ kind: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ kind: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -43,3 +44,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ kind
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);

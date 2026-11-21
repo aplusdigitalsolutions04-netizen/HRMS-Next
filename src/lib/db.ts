@@ -10,6 +10,19 @@ let schemaReady: Promise<void> | null = null;
 // is missing. Everything here is additive (ADD COLUMN / CREATE TABLE IF NOT EXISTS), so
 // it never changes or removes existing data, and a failure is logged but never blocks.
 const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
+  email_templates: {
+    cc_emails: 'TEXT NULL',
+    bcc_emails: 'TEXT NULL',
+  },
+  letterhead_settings: {
+    placement: "VARCHAR(10) NOT NULL DEFAULT 'auto'",
+  },
+  letters_issued: {
+    emailed_at: 'DATETIME NULL',
+    emailed_to: 'VARCHAR(150) NULL',
+    emailed_by: 'VARCHAR(150) NULL',
+    no_date: 'TINYINT(1) NOT NULL DEFAULT 0', // 1 = the letter is made without a date printed on it
+  },
   hr_admins: {
     must_change_password: 'TINYINT(1) NOT NULL DEFAULT 0',
   },
@@ -59,6 +72,8 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
     is_default: 'TINYINT(1) NOT NULL DEFAULT 0',
   },
   salary_structures: {
+    el_frequency_id: 'INT NULL',   // EL Frequencies master; empty = the company-wide setting
+    statutory_off: 'VARCHAR(200) NULL',   // codes of statutory deductions this employee is left out of (comma separated)
     extra_components: 'TEXT NULL',
     ctc: 'FLOAT NULL',
     ctc_period: "VARCHAR(10) NULL DEFAULT 'monthly'",
@@ -75,6 +90,58 @@ const REQUIRED_COLUMNS: Record<string, Record<string, string>> = {
   },
 };
 const REQUIRED_TABLES: string[] = [
+  // Statutory deductions (PF, ESI, TDS ...): the rules and their rates are entered by HR (Payroll > Statutory Deductions); nothing is built in.
+  `CREATE TABLE IF NOT EXISTS statutory_rules (
+    id INT AUTO_INCREMENT PRIMARY KEY, code VARCHAR(20) NOT NULL, name VARCHAR(80) NOT NULL, kind VARCHAR(10) NOT NULL DEFAULT 'percent', enabled TINYINT(1) NOT NULL DEFAULT 0,
+    wage_base VARCHAR(10) NOT NULL DEFAULT 'basic', employee_rate FLOAT NOT NULL DEFAULT 0, employer_rate FLOAT NOT NULL DEFAULT 0, wage_ceiling FLOAT NULL, eligible_below FLOAT NULL,
+    fixed_amount FLOAT NOT NULL DEFAULT 0, min_amount FLOAT NULL, rounding VARCHAR(10) NOT NULL DEFAULT 'rupee', exemption FLOAT NOT NULL DEFAULT 0, cess FLOAT NOT NULL DEFAULT 0,
+    slabs TEXT NULL, sort_order INT NOT NULL DEFAULT 100, UNIQUE KEY uq_stat_code (code))`,
+  // Letters: the text templates (offer, appointment, ...) and every letter that was made for an employee.
+  `CREATE TABLE IF NOT EXISTS letter_templates (
+    letter_type VARCHAR(30) PRIMARY KEY, name VARCHAR(80) NOT NULL, body TEXT NOT NULL, updated_by VARCHAR(150) NULL, updated_at DATETIME NULL)`,
+  // Words HR adds for the letters: a fixed text ({{hr_phone}}) or one that is asked for each time a letter is made.
+  `CREATE TABLE IF NOT EXISTS letter_variables (
+    var_key VARCHAR(40) PRIMARY KEY, label VARCHAR(80) NOT NULL, kind VARCHAR(10) NOT NULL DEFAULT 'text', value TEXT NULL,
+    updated_by VARCHAR(150) NULL, updated_at DATETIME NULL)`,
+  `CREATE TABLE IF NOT EXISTS letters_issued (
+    id INT AUTO_INCREMENT PRIMARY KEY, ref_no VARCHAR(30) NULL, employee_id VARCHAR(36) NOT NULL, emp_code VARCHAR(50) NULL, letter_type VARCHAR(30) NOT NULL,
+    title VARCHAR(100) NOT NULL, body MEDIUMTEXT NOT NULL, issued_by VARCHAR(150) NULL, issued_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_letters_emp (employee_id))`,
+  // Exit: one row for an employee who is leaving - dates, checklist and the full and final settlement.
+  `CREATE TABLE IF NOT EXISTS employee_exits (
+    id INT AUTO_INCREMENT PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, emp_code VARCHAR(50) NULL, resignation_date DATE NOT NULL, last_working_day DATE NOT NULL,
+    notice_days INT NOT NULL DEFAULT 30, reason VARCHAR(80) NULL, status VARCHAR(20) NOT NULL DEFAULT 'In Progress', checklist TEXT NULL, fnf_json TEXT NULL,
+    fnf_total FLOAT NOT NULL DEFAULT 0, remarks VARCHAR(500) NULL, created_by VARCHAR(150) NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    settled_on DATETIME NULL, completed_on DATETIME NULL, UNIQUE KEY uq_exit_emp (employee_id))`,
+  // Salary revision history: each change of a salary structure with the date it applies from, the reason, and the structure before and after.
+  `CREATE TABLE IF NOT EXISTS salary_revisions (
+    id INT AUTO_INCREMENT PRIMARY KEY, emp_code VARCHAR(50) NOT NULL, effective_from DATE NOT NULL, reason VARCHAR(40) NOT NULL DEFAULT 'Other', note VARCHAR(300) NULL,
+    old_json TEXT NULL, new_json TEXT NOT NULL, old_total FLOAT NULL, new_total FLOAT NOT NULL DEFAULT 0, revised_by VARCHAR(150) NULL, created_at DATETIME NULL,
+    INDEX idx_rev_emp (emp_code, effective_from))`,
+  // Help Desk: an employee's question to HR (a ticket) and the messages of the conversation.
+  `CREATE TABLE IF NOT EXISTS help_tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY, ticket_no VARCHAR(20) NULL, employee_id VARCHAR(36) NOT NULL, category VARCHAR(40) NOT NULL DEFAULT 'Other',
+    subject VARCHAR(150) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'Open', assigned_to VARCHAR(150) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL, INDEX idx_ht_employee (employee_id), INDEX idx_ht_status (status))`,
+  `CREATE TABLE IF NOT EXISTS help_ticket_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY, ticket_id INT NOT NULL, author_type VARCHAR(10) NOT NULL, author_name VARCHAR(150) NULL, author_email VARCHAR(150) NULL,
+    message TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_htm_ticket (ticket_id))`,
+  // Notices HR posts for every employee to see on the home page.
+  `CREATE TABLE IF NOT EXISTS announcements (
+    id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(150) NOT NULL, body TEXT NULL, is_pinned TINYINT(1) NOT NULL DEFAULT 0,
+    starts_on DATE NULL, expires_on DATE NULL, created_by VARCHAR(150) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`,
+  // Document expiry: the date an employee's document (passport, licence, certificate ...) stops being valid, and the last reminder sent.
+  `CREATE TABLE IF NOT EXISTS document_expiry (
+    id INT AUTO_INCREMENT PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, document_type VARCHAR(60) NOT NULL, expiry_date DATE NOT NULL,
+    last_notice VARCHAR(10) NULL, updated_by VARCHAR(150) NULL, updated_at DATETIME NULL, UNIQUE KEY uq_doc_expiry (employee_id, document_type))`,
+  // API log: one row per call to /api (and per call refused before reaching a route, or failed in the browser). See lib/api-log.ts.
+  `CREATE TABLE IF NOT EXISTS api_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(12) NULL, created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    source VARCHAR(10) NOT NULL DEFAULT 'server', method VARCHAR(8) NULL, path VARCHAR(300) NULL, query_string VARCHAR(500) NULL,
+    status INT NULL, duration_ms INT NULL, user_type VARCHAR(20) NULL, user_email VARCHAR(150) NULL, user_id VARCHAR(40) NULL,
+    ip VARCHAR(64) NULL, user_agent VARCHAR(250) NULL, request_body TEXT NULL, error_message TEXT NULL, error_detail TEXT NULL,
+    INDEX idx_api_logs_time (created_at), INDEX idx_api_logs_status (status), INDEX idx_api_logs_path (path(100)))`,
   `CREATE TABLE IF NOT EXISTS employee_credentials (
     id VARCHAR(36) PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, employee_name VARCHAR(150), emp_code VARCHAR(50),
     email VARCHAR(150), password VARCHAR(255), status VARCHAR(20) DEFAULT 'draft', draft_id VARCHAR(36),
@@ -126,6 +193,20 @@ const REQUIRED_TABLES: string[] = [
     id INT AUTO_INCREMENT PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, document_type VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'requested', note VARCHAR(300) NULL, requested_on DATETIME NULL,
     granted_by VARCHAR(255) NULL, granted_on DATETIME NULL, UNIQUE KEY uq_doc_perm (employee_id, document_type))`,
+  // EL (earned leave) days: every Extra Work day earns one. One row per employee and month: what was earned that month, what was
+  // credited to the balance (all at once at the end of the EL period, see el_frequencies) and the balance after it. Shown on the Salary Sheet.
+  `CREATE TABLE IF NOT EXISTS el_ledger (
+    id INT AUTO_INCREMENT PRIMARY KEY, emp_code VARCHAR(50) NOT NULL, month INT NOT NULL, year INT NOT NULL,
+    earned_days FLOAT NOT NULL DEFAULT 0, credited_days FLOAT NOT NULL DEFAULT 0, balance_days FLOAT NOT NULL DEFAULT 0,
+    period_months INT NOT NULL DEFAULT 1, updated_at DATETIME NULL, UNIQUE KEY uq_el_ledger (emp_code, month, year))`,
+  // Master list of how often EL encashment is paid with the salary (Monthly, Quarterly, Half Yearly, Yearly). months = every how many months.
+  `CREATE TABLE IF NOT EXISTS el_frequencies (
+    id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(60) NOT NULL, months INT NOT NULL DEFAULT 1, is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_el_frequency (name))`,
+  // The letterhead of the letters (one row): which header the PDF gets, the letterhead image, and the space left at the top and bottom.
+  `CREATE TABLE IF NOT EXISTS letterhead_settings (
+    id TINYINT PRIMARY KEY, mode VARCHAR(10) NOT NULL DEFAULT 'company', image MEDIUMTEXT NULL, placement VARCHAR(10) NOT NULL DEFAULT 'auto',
+    top_mm INT NOT NULL DEFAULT 40, bottom_mm INT NOT NULL DEFAULT 25, updated_by VARCHAR(150) NULL, updated_at DATETIME NULL)`,
   // Master list of leave types (Annual, Sick, ...). HR manages it; the employee forms and filters read from it.
   `CREATE TABLE IF NOT EXISTS leave_types (
     id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(60) NOT NULL, is_active TINYINT(1) NOT NULL DEFAULT 1,
@@ -143,6 +224,12 @@ const REQUIRED_TABLES: string[] = [
   // Wrong-password counts per email and per address, for the login lock.
   `CREATE TABLE IF NOT EXISTS login_attempts (
     attempt_key VARCHAR(190) PRIMARY KEY, fails INT NOT NULL DEFAULT 0, last_attempt DATETIME NULL, locked_until DATETIME NULL)`,
+  // Every sign-in, right or wrong. A right one is also an open session (sid is in the token) until it expires, is signed out or is revoked.
+  `CREATE TABLE IF NOT EXISTS login_history (
+    id INT AUTO_INCREMENT PRIMARY KEY, sid VARCHAR(40) NULL, user_type VARCHAR(12) NULL, user_id VARCHAR(40) NULL, email VARCHAR(150) NULL,
+    ip VARCHAR(60) NULL, user_agent VARCHAR(300) NULL, ok TINYINT(1) NOT NULL DEFAULT 1, reason VARCHAR(100) NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, last_seen DATETIME NULL, expires_at DATETIME NULL, revoked_at DATETIME NULL,
+    UNIQUE KEY uq_login_sid (sid), KEY ix_login_user (user_type, user_id), KEY ix_login_created (created_at))`,
   // Per-user settings: notification choices, language, dashboard widgets.
   `CREATE TABLE IF NOT EXISTS user_preferences (
     user_key VARCHAR(120) PRIMARY KEY, prefs TEXT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
@@ -247,6 +334,19 @@ export async function execute(sql: string, params?: any[]): Promise<ResultSetHea
   const p = await getPool();
   const [result] = await p.execute<ResultSetHeader>(sql, params || []);
   return result;
+}
+
+// Runs fn while holding a MySQL named lock, so two requests doing the same thing (for example making the payslip of one month) cannot overlap.
+// The lock belongs to one connection that is kept until fn ends. Returns { locked: false } when the lock could not be had within waitSeconds.
+export async function withNamedLock<T>(name: string, waitSeconds: number, fn: () => Promise<T>): Promise<{ locked: boolean; value?: T }> {
+  const p = await getPool();
+  const conn = await p.getConnection();
+  try {
+    const [rows] = await conn.query<RowDataPacket[]>('SELECT GET_LOCK(?, ?) AS got', [name.slice(0, 60), waitSeconds]);
+    if (Number(rows[0]?.got) !== 1) return { locked: false };
+    try { return { locked: true, value: await fn() }; }
+    finally { await conn.query('SELECT RELEASE_LOCK(?)', [name.slice(0, 60)]).catch(() => { }); }
+  } finally { conn.release(); }
 }
 
 export async function getConnection() {

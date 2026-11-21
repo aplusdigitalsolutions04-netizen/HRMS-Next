@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -8,7 +9,7 @@ import { canUploadDocument, usePermission, docLabel } from '@/lib/doc-permission
 import { driveErrorMessage } from '@/lib/googleDrive';
 import { auditFrom } from '@/lib/audit';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -44,3 +45,5 @@ export async function POST(req: NextRequest) {
     return friendly ? jsonError(friendly, 503) : jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

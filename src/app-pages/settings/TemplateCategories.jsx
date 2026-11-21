@@ -54,10 +54,10 @@ export default function TemplateCategories() {
     <div>
       <style>{`
         .tc-t { width:100%; border-collapse:collapse; }
-        .tc-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; }
+        .tc-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; }
         .tc-t td { padding:9px 12px; font-size:.84rem; color:#334155; border-bottom:1px solid #f4f6fa; vertical-align:middle; }
         .tc-b { height:28px; padding:0 11px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer; }
-        .tc-b:hover:not(:disabled) { border-color:#93c5fd; color:#1d4ed8; background:#f1f6ff; }
+        .tc-b:hover:not(:disabled) { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); }
         .tc-b.del:hover:not(:disabled) { border-color:#fecaca; color:#b91c1c; background:#fef2f2; }
         .tc-b:disabled { opacity:.5; cursor:not-allowed; }
       `}</style>
@@ -80,7 +80,7 @@ export default function TemplateCategories() {
         <button type="submit" className="btn-p" disabled={busy || !name.trim()}>+ Add category</button>
       </form>
 
-      <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="tc-t">
             <thead><tr><th style={{ width: 40 }}>#</th><th>Category</th><th>Used for request mails</th><th>Templates</th><th style={{ width: 180 }}>Actions</th></tr></thead>

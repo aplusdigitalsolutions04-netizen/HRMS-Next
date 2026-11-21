@@ -1,13 +1,14 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, createNotification } from '@/lib/utils';
 import { execute } from '@/lib/db';
-import { initApproval } from '@/lib/approvalEngine';
+import { initApproval, ensureManagerHrWorkflow } from '@/lib/approvalEngine';
 import { getAccount } from '@/lib/mailbox';
 import { checkWfhRequest } from '@/lib/wfh';
 import { sendRequestMail, hrRecipients, managerOf, appUrl, realEmail, canSendAs } from '@/lib/request-mail';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user || user.type !== 'employee') return jsonError('Not authenticated as employee', 401);
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
     if (body.from_account_id && !chosen) return jsonError('That email is not connected to your account', 422);
 
     // Initialize workflow (wfh)
+    await ensureManagerHrWorkflow('wfh', 'WFH Approval');
     const { workflowId, startStep } = await initApproval('wfh', String(user.id));
     const requestId = uuidv4();
 
@@ -75,3 +77,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

@@ -1,6 +1,7 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, now, checkPermission, hasAnyPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { getSplitComponents, BUILTIN_SPLIT, CUSTOM_KEY } from '@/lib/payroll-calc';
@@ -9,11 +10,12 @@ import { getSplitComponents, BUILTIN_SPLIT, CUSTOM_KEY } from '@/lib/payroll-cal
 // "Apply Split" on a salary structure. The four built-in columns always exist (their % can
 // change); HR can add columns of their own. Everything else (insurance, other deductions,
 // incentives, EL encashment) is always filled in by hand. Editable via "Configure Split".
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_payroll', 'manage_salary_structures', 'generate_payslips'])) return jsonError('Insufficient permissions', 403);
 
     const components = await getSplitComponents();
     // The four old percent keys are still returned for anything that reads them.
@@ -23,11 +25,12 @@ export async function GET(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_payroll', 'manage_salary_structures', 'generate_payslips'])) return jsonError('Insufficient permissions', 403);
     if (!checkPermission(user, 'manage_salary_structures')) return jsonError('Insufficient permissions', 403);
 
     const body = await req.json();
@@ -72,3 +75,6 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ message: 'Payroll settings saved' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);

@@ -95,6 +95,52 @@ HR Team
   await markSeeded('document_request_template_seeded');
 }
 
+// The reminder mail for a candidate who did not answer the interview call or mail (No Response page). The popup offers every
+// template in the "Candidate Follow-up" category; this one is put there once so the feature works from the start, then HR owns it.
+export const FOLLOW_UP_CATEGORY = 'Candidate Follow-up';
+export const FOLLOW_UP_TEMPLATE = 'No Response Follow-up';
+export async function ensureFollowUpTemplate() {
+  if (await seeded('follow_up_template_seeded')) return;
+  await execute('INSERT IGNORE INTO template_categories (name, request_kind, is_system) VALUES (?, NULL, 0)', [FOLLOW_UP_CATEGORY]);
+  const has = await query<RowDataPacket[]>('SELECT id FROM email_templates WHERE name = ? LIMIT 1', [FOLLOW_UP_TEMPLATE]);
+  if (has.length === 0) {
+    const body = `Dear {{candidate_name}},
+
+We tried to reach you regarding your interview for the {{position}} position, but could not connect with you.
+Please reply to this mail or call us to confirm a suitable time.
+
+Regards,
+HR Team
+{{company_name}}`;
+    await execute('INSERT INTO email_templates (id, name, subject, body, variables, template_type, created_on) VALUES (UUID(),?,?,?,?,?,NOW())',
+      [FOLLOW_UP_TEMPLATE, 'Reminder: your interview with {{company_name}}', body, JSON.stringify(['candidate_name', 'position', 'interview_round', 'interview_date', 'company_name']), FOLLOW_UP_CATEGORY]);
+  }
+  await markSeeded('follow_up_template_seeded');
+}
+
+// For each request (leave, work from home, missed punch, late coming) and each step of its mail, one starter template in the request's
+// category, written like the standard mail. They are put in once so the Request Mails dropdown has something to choose; after that they
+// belong to HR (edit, delete, add more in Template Management). Nothing is chosen for HR: the standard mail stays in use until a
+// template is picked on Settings > Request Mails.
+export async function ensureRequestMailTemplates() {
+  if (await seeded('request_mail_templates_seeded')) return;
+  await ensureTemplateCategories();
+  const { MAIL_EVENTS, MAIL_KINDS, starterTemplate } = await import('./request-mail');
+  const cats = await query<RowDataPacket[]>('SELECT name, request_kind FROM template_categories WHERE request_kind IS NOT NULL');
+  for (const c of cats) {
+    const kindName = MAIL_KINDS[c.request_kind];
+    if (!kindName) continue; // only the four requests that have their own wording
+    for (const ev of Object.keys(MAIL_EVENTS)) {
+      const t = starterTemplate(c.request_kind, ev, kindName);
+      const has = await query<RowDataPacket[]>('SELECT id FROM email_templates WHERE name = ? AND template_type = ? LIMIT 1', [t.name, c.name]);
+      if (has.length) continue;
+      await execute('INSERT INTO email_templates (id, name, subject, body, variables, template_type, created_on) VALUES (UUID(),?,?,?,?,?,NOW())',
+        [t.name, t.subject, t.body, JSON.stringify(t.variables), c.name]);
+    }
+  }
+  await markSeeded('request_mail_templates_seeded');
+}
+
 // ── Request Types master ──
 // [key, name]. The four have their approval flow in the app (is_system). The names here are only the starting values; after the
 // first use the table owns them (rename, add more).
@@ -109,4 +155,12 @@ export async function getMailKinds(onlyActive = true): Promise<Record<string, st
   await ensureRequestTypes();
   const r = await query<RowDataPacket[]>('SELECT type_key, name FROM request_types' + (onlyActive ? ' WHERE is_active = 1' : '') + ' ORDER BY is_system DESC, name');
   return Object.fromEntries(r.map(x => [x.type_key, x.name]));
+}
+
+// EL payout frequencies: written once the first time the master is used; after that HR owns the list.
+const DEFAULT_EL_FREQUENCIES: [string, number][] = [['Monthly', 1], ['Quarterly', 3], ['Half Yearly', 6], ['Yearly', 12]];
+export async function ensureElFrequencies() {
+  if (await seeded('el_frequencies_seeded')) return;
+  for (const [name, months] of DEFAULT_EL_FREQUENCIES) await execute('INSERT IGNORE INTO el_frequencies (name, months, is_active) VALUES (?,?,1)', [name, months]);
+  await markSeeded('el_frequencies_seeded');
 }

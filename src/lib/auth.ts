@@ -4,7 +4,9 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { query, execute } from './db';
 import { employeeCodes, inList } from './status-master';
+import { getConfig } from './app-config';
 import { validatePassword } from './password-policy';
+import { recordLogin, sessionRevoked } from './login-history';
 import { RowDataPacket } from 'mysql2';
 
 function randomIndex(max: number): number {
@@ -19,7 +21,9 @@ function getSecret(): string {
   return s;
 }
 // a login lasts one working day, not longer
-const EXPIRE_MINUTES = 60 * 8;
+// How long a sign-in lasts is set in Settings > Rules & Limits; applySessionConfig() reads it before a token is made.
+let sessionMinutes = 60 * 8;
+export async function applySessionConfig() { sessionMinutes = Math.max(1, Math.round((await getConfig()).session_hours * 60)); }
 
 export interface TokenPayload {
   sub: string;
@@ -29,6 +33,8 @@ export interface TokenPayload {
   must_change_password?: boolean;
   // fingerprint of the password the token was made with: changing the password makes every older token useless
   pf?: string;
+  // id of the login_history row of this sign-in; ending that session makes the token useless
+  sid?: string;
   iat?: number;
   exp?: number;
 }
@@ -55,7 +61,7 @@ export function verifyLoginPassword(plain: string, hashed: string): boolean {
 }
 
 export function createToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, getSecret(), { algorithm: 'HS256', expiresIn: EXPIRE_MINUTES * 60 });
+  return jwt.sign(payload, getSecret(), { algorithm: 'HS256', expiresIn: sessionMinutes * 60 });
 }
 
 export function decodeToken(token: string): TokenPayload | null {
@@ -145,6 +151,8 @@ export interface AuthUser {
   email: string;
   name: string;
   role: string;
+  role_id?: string;   // the id of the role made on the Roles page, when the person has one
+  role_name?: string;
   type: 'admin' | 'employee';
   profile_photo?: string;
   last_login?: Date;
@@ -158,45 +166,65 @@ export interface AuthUser {
   hr_remarks?: string;
 }
 
-function parsePermissions(raw: string | null): Record<string, boolean> {
+// Permissions come as text (hr_admins.permissions) or already as an object (system_roles.permissions is a JSON column, which the
+// database driver reads into an object), and some were once saved as a list of names.
+function parsePermissions(raw: any): Record<string, boolean> {
   if (!raw) return {};
-  try { return JSON.parse(raw); } catch { return {}; }
+  let v = raw;
+  if (typeof raw === 'string') { try { v = JSON.parse(raw); } catch { return {}; } }
+  if (Array.isArray(v)) { const o: Record<string, boolean> = {}; v.forEach(k => { if (typeof k === 'string') o[k] = true; }); return o; }
+  return v && typeof v === 'object' ? v : {};
+}
+
+// What an administrator account may do. A role made on the Roles page gives its permissions, and the person is treated as HR staff
+// everywhere a role is checked (the role id is kept in role_id and its name in role_name). Permissions saved for the person on
+// their own are added on top of the role's.
+async function adminAccess(a: HrAdminRow): Promise<{ role: string; role_id?: string; role_name?: string; permissions: Record<string, boolean> }> {
+  let rolePerms: Record<string, boolean> = {};
+  let role = a.role || 'HR_STAFF', roleId: string | undefined, roleName: string | undefined;
+  if (a.role && !['ADMIN', 'HR', 'HR_STAFF'].includes(a.role)) {
+    const roles = await query<RowDataPacket[]>('SELECT name, permissions FROM system_roles WHERE id = ?', [a.role]).catch(() => []);
+    if (roles.length > 0) {
+      rolePerms = parsePermissions(roles[0].permissions);
+      role = 'HR_STAFF'; roleId = a.role; roleName = roles[0].name;
+    }
+  }
+  return { role, role_id: roleId, role_name: roleName, permissions: { ...rolePerms, ...parsePermissions(a.permissions) } };
 }
 
 export async function authUserFromToken(token: string): Promise<AuthUser | null> {
   const payload = decodeToken(token);
   if (!payload) return null;
+  if (payload.sid && await sessionRevoked(payload.sid)) return null;
   if (payload.type === 'admin') {
     const admins = await query<HrAdminRow[]>('SELECT * FROM hr_admins WHERE id = ?', [payload.sub]);
     if (admins.length === 0) return null;
     const a = admins[0];
     if (!a.is_active || payload.pf !== passwordFingerprint(a.password)) return null;
     
-    let rolePerms: Record<string, boolean> = {};
-    if (a.role && a.role !== 'ADMIN') {
-      const roles = await query<RowDataPacket[]>('SELECT permissions FROM system_roles WHERE id = ?', [a.role]).catch(() => []);
-      if (roles.length > 0 && roles[0].permissions) {
-        rolePerms = parsePermissions(roles[0].permissions);
-      }
-    }
-    const finalPerms = { ...rolePerms, ...parsePermissions(a.permissions) };
+    const acc = await adminAccess(a);
 
     return {
       id: a.id,
       email: a.email,
       name: a.full_name || a.email,
-      role: a.role || 'HR_STAFF',
+      role: acc.role,
+      role_id: acc.role_id,
+      role_name: acc.role_name,
       type: 'admin',
       profile_photo: a.profile_photo,
       last_login: a.last_login,
       must_change_password: !!a.must_change_password,
-      permissions: finalPerms,
+      permissions: acc.permissions,
     };
   } else {
     const emps = await query<EmployeeRow[]>('SELECT * FROM employees WHERE id = ? AND is_deleted = 0', [payload.sub]);
     if (emps.length === 0) return null;
     const e = emps[0];
     if (payload.pf !== passwordFingerprint(e.password)) return null;
+    // someone who has left (status Dropped, or any status that may not log in) loses an open session at once
+    const loginOk = await employeeCodes('can_login');
+    if (loginOk.length > 0 && !loginOk.includes(e.status)) return null;
     return {
       id: e.id,
       email: e.email_id,
@@ -213,7 +241,7 @@ export async function authUserFromToken(token: string): Promise<AuthUser | null>
   }
 }
 
-export async function authenticateUser(email: string, password: string, type: 'admin' | 'employee'): Promise<{ user: AuthUser; token: string } | null> {
+export async function authenticateUser(email: string, password: string, type: 'admin' | 'employee', meta?: { ip?: string; ua?: string }): Promise<{ user: AuthUser; token: string } | null> {
   if (type === 'admin') {
     const admins = await query<HrAdminRow[]>('SELECT * FROM hr_admins WHERE LOWER(email) = LOWER(?)', [email]);
     if (admins.length === 0) return null;
@@ -221,17 +249,21 @@ export async function authenticateUser(email: string, password: string, type: 'a
     if (!verifyLoginPassword(password, a.password)) return null;
     if (!a.is_active) return null;
     // a password that breaks the password rules (such as 123456) has to be changed at this login
-    const mustChange = !!a.must_change_password || validatePassword(password, a.email) !== null;
+    const mustChange = !!a.must_change_password || (await validatePassword(password, a.email)) !== null;
     if (mustChange && !a.must_change_password) await execute('UPDATE hr_admins SET must_change_password = 1 WHERE id = ?', [a.id]);
-    const token = createToken({ sub: a.id, email: a.email, role: a.role || 'HR_STAFF', type: 'admin', must_change_password: mustChange, pf: passwordFingerprint(a.password) });
+    await applySessionConfig();
+    const sid = crypto.randomUUID();
+    const acc = await adminAccess(a);
+    const token = createToken({ sub: a.id, email: a.email, role: acc.role, type: 'admin', must_change_password: mustChange, pf: passwordFingerprint(a.password), sid });
+    await recordLogin({ sid, userType: 'admin', userId: a.id, email: a.email, ip: meta?.ip || '', ua: meta?.ua || '', expiresAt: new Date(Date.now() + sessionMinutes * 60000) });
     await execute('UPDATE hr_admins SET last_login = NOW() WHERE id = ?', [a.id]);
     return {
       user: {
         id: a.id, email: a.email, name: a.full_name || a.email,
-        role: a.role || 'HR_STAFF', type: 'admin',
+        role: acc.role, role_id: acc.role_id, role_name: acc.role_name, type: 'admin',
         profile_photo: a.profile_photo, last_login: new Date(),
         must_change_password: mustChange,
-        permissions: parsePermissions(a.permissions),
+        permissions: acc.permissions,
       },
       token,
     };
@@ -251,13 +283,16 @@ export async function authenticateUser(email: string, password: string, type: 'a
     // in, instead of always the first record found.
     const e = emps.find(x => verifyLoginPassword(password, x.password));
     if (!e) return null;
-    const mustChange = !!e.must_change_password || validatePassword(password, e.email_id) !== null;
+    const mustChange = !!e.must_change_password || (await validatePassword(password, e.email_id)) !== null;
     if (mustChange && !e.must_change_password) await execute('UPDATE employees SET must_change_password = 1 WHERE id = ?', [e.id]);
     e.must_change_password = mustChange ? 1 : 0;
+    await applySessionConfig();
+    const sid = crypto.randomUUID();
     const token = createToken({
       sub: e.id, email: e.email_id, role: 'USER', type: 'employee',
-      must_change_password: mustChange, pf: passwordFingerprint(e.password),
+      must_change_password: mustChange, pf: passwordFingerprint(e.password), sid,
     });
+    await recordLogin({ sid, userType: 'employee', userId: e.id, email: e.email_id, ip: meta?.ip || '', ua: meta?.ua || '', expiresAt: new Date(Date.now() + sessionMinutes * 60000) });
     await execute('UPDATE employees SET last_login = NOW() WHERE id = ?', [e.id]);
     return {
       user: {

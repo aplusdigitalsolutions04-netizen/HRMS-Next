@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -23,7 +24,7 @@ async function ensureSoftDeleteColumns() {
   softDeleteReady = true;
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -38,12 +39,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const freeIdentity = !!body.free_identity;
 
     if (freeIdentity) {
-      // email_id/emp_code are UNIQUE and email_id is NOT NULL, so to let HR
-      // re-invite the same email/ID right away, tombstone them instead of
-      // just flipping the is_deleted flag - a real re-insert with the same
-      // values would otherwise hit the unique constraint.
+      // email_id is UNIQUE and NOT NULL, so to let HR invite the same email again right away it is tombstoned instead of just
+      // flipping the is_deleted flag. The employee ID (emp_code) is NOT changed: attendance, payroll, payslips, letters and other
+      // history are tied to it (and the database holds foreign keys on it), so it stays with this record and cannot be given to
+      // anyone else. Changing it used to make the delete fail with a foreign key error and cut the history loose.
       await execute(
-        "UPDATE employees SET is_deleted = 1, deleted_at = NOW(), exit_date = COALESCE(exit_date, CURDATE()), email_id = LEFT(CONCAT('deleted_', UNIX_TIMESTAMP(), '_', email_id), 150), emp_code = LEFT(CONCAT('del', UNIX_TIMESTAMP(), '_', COALESCE(emp_code, '')), 50) WHERE id = ?",
+        "UPDATE employees SET is_deleted = 1, deleted_at = NOW(), exit_date = COALESCE(exit_date, CURDATE()), email_id = LEFT(CONCAT('deleted_', UNIX_TIMESTAMP(), '_', email_id), 150) WHERE id = ?",
         [id]
       );
     } else {
@@ -57,3 +58,5 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return jsonError(e, 500);
   }
 }
+
+export const DELETE = withApiLog(DELETE_handler);

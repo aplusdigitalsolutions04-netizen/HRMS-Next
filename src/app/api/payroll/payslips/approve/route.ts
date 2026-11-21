@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -10,7 +11,7 @@ import { auditFrom } from '@/lib/audit';
 // Approve draft payslips (the ones listed in `ids`, or every draft of month/year) and email them.
 // Approving is what makes a payslip visible to the employee; the email goes out in the same step
 // unless send_email is false. One failed email never undoes the approval - it is reported back.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -58,3 +59,5 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

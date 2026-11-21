@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Swal from 'sweetalert2';
 import Pagination from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -17,14 +18,14 @@ const fmtDate = (d) => {
   if (!d) return '';
   const x = new Date(d); if (isNaN(x.getTime())) return '';
   const t = new Date();
-  return x.toDateString() === t.toDateString() ? x.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : x.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: x.getFullYear() === t.getFullYear() ? undefined : 'numeric' });
+  return x.toDateString() === t.toDateString() ? x.toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' }) : x.toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: x.getFullYear() === t.getFullYear() ? undefined : 'numeric' });
 };
 const who = (p) => (p && (p.name || p.address)) || '';
 const sizeText = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
 
 const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' };
 const lab = { display: 'block', fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.3px' };
-const card = { background: '#fff', border: '1px solid #e8edf6', borderRadius: 12 };
+const card = { background: 'var(--glass, #fff)', border: '1px solid var(--glass-line, #eadfd5)', borderRadius: 14 };
 
 /* ───────── connect your email ───────── */
 function Setup({ account, onDone, onCancel }) {
@@ -62,10 +63,10 @@ function Setup({ account, onDone, onCancel }) {
       <p style={{ margin: '0 0 14px', fontSize: 13, color: '#64748b' }}>Mail you send from here goes out from your own address, and your Inbox and Sent box show up on this page. We check the details with your mail server before saving.</p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         {PRESETS.map(p => (
-          <button key={p.key} type="button" onClick={() => pick(p)} style={{ padding: '6px 14px', borderRadius: 20, border: '1px solid ' + (preset === p.key ? '#2563eb' : '#e2e8f0'), background: preset === p.key ? '#2563eb' : '#fff', color: preset === p.key ? '#fff' : '#475569', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{p.label}</button>
+          <button key={p.key} type="button" onClick={() => pick(p)} style={{ padding: '6px 14px', borderRadius: 20, border: '1px solid ' + (preset === p.key ? 'var(--brand)' : '#e2e8f0'), background: preset === p.key ? 'var(--brand)' : '#fff', color: preset === p.key ? '#fff' : '#475569', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{p.label}</button>
         ))}
       </div>
-      {hint && <div style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, padding: '7px 11px', fontSize: 12.5, marginBottom: 12 }}>{hint}</div>}
+      {hint && <div style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)', borderRadius: 8, padding: '7px 11px', fontSize: 12.5, marginBottom: 12 }}>{hint}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
         <div><label style={lab}>Your name (shown to people)</label><input style={inp} value={f.sender_name} onChange={set('sender_name')} placeholder="e.g. Rahul Sharma" /></div>
@@ -182,7 +183,7 @@ function Compose({ account, accounts, initial, onClose, onSent }) {
             <div><label style={lab}>Cc</label><input style={inp} value={f.cc} onChange={set('cc')} /></div>
             <div><label style={lab}>Bcc</label><input style={inp} value={f.bcc} onChange={set('bcc')} /></div>
           </div>
-        ) : <button type="button" onClick={() => setMore(true)} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: 0 }}>+ Cc / Bcc</button>}
+        ) : <button type="button" onClick={() => setMore(true)} style={{ border: 'none', background: 'none', color: 'var(--brand)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: 0 }}>+ Cc / Bcc</button>}
         <div><label style={lab}>Subject</label><input style={inp} value={f.subject} onChange={set('subject')} /></div>
         <div><label style={lab}>Message</label><textarea style={{ ...inp, resize: 'vertical', lineHeight: 1.6, minHeight: 220 }} rows={12} value={f.body} onChange={set('body')} /></div>
         <div>
@@ -227,7 +228,7 @@ function Reader({ folder, uid, accountId, onBack, onReply, onForward }) {
 
   // The body is shown in a locked box: no scripts, no outside pictures unless the person allows them.
   const csp = `default-src 'none'; img-src data: ${images ? 'https: http:' : ''}; style-src 'unsafe-inline'`;
-  const base = 'body{font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.55;margin:0;word-wrap:break-word}img{max-width:100%;height:auto}a{color:#2563eb}pre{white-space:pre-wrap}';
+  const base = 'body{font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.55;margin:0;word-wrap:break-word}img{max-width:100%;height:auto}a{color:var(--brand)}pre{white-space:pre-wrap}';
   const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const content = m.html || `<pre>${esc(m.text)}</pre>`;
   const doc = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>${base}</style></head><body>${content}</body></html>`;
@@ -244,9 +245,9 @@ function Reader({ folder, uid, accountId, onBack, onReply, onForward }) {
       <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.7, paddingBottom: 10, borderBottom: '1px solid #eef2f7', marginBottom: 12 }}>
         <div><b style={{ color: '#0f172a' }}>{who(m.from)}</b> <span style={{ color: '#94a3b8' }}>&lt;{m.from.address}&gt;</span></div>
         <div>To: {m.to.map(x => who(x)).join(', ') || '-'}{m.cc.length > 0 && <> &middot; Cc: {m.cc.map(x => who(x)).join(', ')}</>}</div>
-        <div style={{ color: '#94a3b8' }}>{m.date ? new Date(m.date).toLocaleString('en-IN') : ''}</div>
+        <div style={{ color: '#94a3b8' }}>{m.date ? new Date(m.date).toLocaleString(appLocale()) : ''}</div>
       </div>
-      {hasRemote && !images && <div style={{ background: '#fffbeb', color: '#92400e', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, marginBottom: 10 }}>Pictures from the internet are blocked. <button onClick={() => setImages(true)} style={{ border: 'none', background: 'none', color: '#1d4ed8', fontWeight: 700, cursor: 'pointer' }}>Show pictures</button></div>}
+      {hasRemote && !images && <div style={{ background: '#fffbeb', color: '#92400e', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, marginBottom: 10 }}>Pictures from the internet are blocked. <button onClick={() => setImages(true)} style={{ border: 'none', background: 'none', color: 'var(--brand-dark)', fontWeight: 700, cursor: 'pointer' }}>Show pictures</button></div>}
       <iframe title="mail" sandbox="allow-popups allow-popups-to-escape-sandbox" srcDoc={doc} style={{ width: '100%', minHeight: 420, border: '1px solid #eef2f7', borderRadius: 8, background: '#fff' }}
         onLoad={e => { try { const h = e.target.contentDocument.documentElement.scrollHeight; e.target.style.height = Math.min(Math.max(h + 20, 300), 1600) + 'px'; } catch { /* locked */ } }} />
       {m.attachments.filter(a => !a.inline).length > 0 && (
@@ -271,7 +272,7 @@ export default function MyMail() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
   const [view, setView] = useState({ name: 'list' }); // list | read | compose | account
   const searchTimer = useRef();
@@ -318,7 +319,7 @@ export default function MyMail() {
     loadAccount();
   };
 
-  const quote = (m) => `\n\n--- On ${m.date ? new Date(m.date).toLocaleString('en-IN') : ''}, ${who(m.from)} <${m.from.address}> wrote ---\n` + String(m.text || '').split('\n').map(l => '> ' + l).join('\n');
+  const quote = (m) => `\n\n--- On ${m.date ? new Date(m.date).toLocaleString(appLocale()) : ''}, ${who(m.from)} <${m.from.address}> wrote ---\n` + String(m.text || '').split('\n').map(l => '> ' + l).join('\n');
   const reply = (m) => setView({ name: 'compose', initial: { to: m.from.address, subject: /^re:/i.test(m.subject) ? m.subject : 'Re: ' + m.subject, body: quote(m), in_reply_to: m.messageId || '', references: [...(m.references || []), m.messageId].filter(Boolean).join(' ') } });
   const forward = (m) => setView({ name: 'compose', initial: { subject: /^fwd?:/i.test(m.subject) ? m.subject : 'Fwd: ' + m.subject, body: `\n\n--- Forwarded mail ---\nFrom: ${who(m.from)} <${m.from.address}>\nSubject: ${m.subject}\n\n${m.text || ''}` } });
 
@@ -337,7 +338,7 @@ export default function MyMail() {
 
   if (!account) return (
     <div style={{ width: '100%' }}>{head}
-      <div style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: 10, padding: '9px 14px', fontSize: 13, marginBottom: 12 }}>After you connect your email you can <b>Compose</b> new mail, read your <b>Inbox</b> and see your <b>Sent</b> box on this page.</div>
+      <div style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)', borderRadius: 10, padding: '9px 14px', fontSize: 13, marginBottom: 12 }}>After you connect your email you can <b>Compose</b> new mail, read your <b>Inbox</b> and see your <b>Sent</b> box on this page.</div>
       <Setup onDone={loadAccount} />
     </div>
   );
@@ -364,7 +365,7 @@ export default function MyMail() {
         </button>
         <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 10 }}>
           {[['inbox', 'Inbox'], ['sent', 'Sent']].map(([k, l]) => (
-            <button key={k} onClick={() => switchFolder(k)} style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: folder === k ? '#fff' : 'transparent', boxShadow: folder === k ? '0 1px 3px rgba(0,0,0,.1)' : 'none', color: folder === k ? '#1d4ed8' : '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{l}</button>
+            <button key={k} onClick={() => switchFolder(k)} style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: folder === k ? '#fff' : 'transparent', boxShadow: folder === k ? '0 1px 3px rgba(0,0,0,.1)' : 'none', color: folder === k ? 'var(--brand-dark)' : '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{l}</button>
           ))}
         </div>
         {accounts.length > 1 && (
@@ -379,19 +380,33 @@ export default function MyMail() {
       <div style={{ ...card, overflow: 'hidden' }}>
         {err ? <div style={{ padding: 24, color: '#b91c1c', fontSize: 13.5 }}>{err}</div> : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="mm-table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <colgroup><col style={{ width: 52 }} /><col style={{ width: '28%' }} /><col /><col style={{ width: 110 }} /></colgroup>
+              <thead>
+                <tr style={{ background: 'rgba(111,78,55,.06)', textAlign: 'left' }}>
+                  <th style={{ padding: '9px 14px', fontSize: 12, color: '#64748b', fontWeight: 700 }}>#</th>
+                  <th style={{ padding: '9px 14px', fontSize: 12, color: '#64748b', fontWeight: 700 }}>{folder === 'sent' ? 'To' : 'From'}</th>
+                  <th style={{ padding: '9px 14px', fontSize: 12, color: '#64748b', fontWeight: 700 }}>Subject</th>
+                  <th style={{ padding: '9px 14px', fontSize: 12, color: '#64748b', fontWeight: 700, textAlign: 'right' }}>Date</th>
+                </tr>
+              </thead>
               <tbody>
-                {loading && list.messages.length === 0 ? <tr><td style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>Loading your mail...</td></tr>
-                  : list.messages.length === 0 ? <tr><td style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>{search ? 'No mail matches your search.' : folder === 'inbox' ? 'Your inbox is empty.' : 'Nothing sent yet.'}</td></tr>
-                  : list.messages.map(m => (
-                    <tr key={m.uid} onClick={() => setView({ name: 'read', uid: m.uid })} style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: !m.seen && folder === 'inbox' ? '#f8fbff' : '#fff' }}>
-                      <td style={{ padding: '10px 14px', width: 220, maxWidth: 220, fontSize: 13, fontWeight: !m.seen && folder === 'inbox' ? 700 : 500, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {folder === 'sent' ? 'To: ' + (m.to.map(who).join(', ') || '-') : who(m.from) || '-'}
-                      </td>
-                      <td style={{ padding: '10px 14px', fontSize: 13, color: '#334155', fontWeight: !m.seen && folder === 'inbox' ? 700 : 400, maxWidth: 480, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.subject}</td>
-                      <td style={{ padding: '10px 14px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(m.date)}</td>
-                    </tr>
-                  ))}
+                {loading && list.messages.length === 0 ? <tr><td colSpan="4" style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>Loading your mail...</td></tr>
+                  : list.messages.length === 0 ? <tr><td colSpan="4" style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>{search ? 'No mail matches your search.' : folder === 'inbox' ? 'Your inbox is empty.' : 'Nothing sent yet.'}</td></tr>
+                  : list.messages.map((m, i) => {
+                    const unread = !m.seen && folder === 'inbox';
+                    const who1 = folder === 'sent' ? (m.to.map(who).join(', ') || '-') : (who(m.from) || '-');
+                    return (
+                      <tr key={m.uid} className="mm-row" onClick={() => setView({ name: 'read', uid: m.uid })} style={{ cursor: 'pointer', borderTop: '1px solid var(--glass-line, #eee6df)', background: unread ? 'var(--brand-soft)' : 'transparent' }}>
+                        <td style={{ padding: '11px 14px', fontSize: 12.5, color: '#94a3b8' }}>{(page - 1) * pageSize + i + 1}</td>
+                        <td title={who1} style={{ padding: '11px 14px', fontSize: 13, fontWeight: unread ? 700 : 500, color: 'var(--ink, #0f172a)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {unread && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--brand)', marginRight: 7, verticalAlign: 'middle' }} />}{who1}
+                        </td>
+                        <td title={m.subject} style={{ padding: '11px 14px', fontSize: 13, color: 'var(--ink-soft, #334155)', fontWeight: unread ? 700 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.subject || '(no subject)'}</td>
+                        <td style={{ padding: '11px 14px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(m.date)}</td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

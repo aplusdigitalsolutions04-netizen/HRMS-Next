@@ -89,7 +89,7 @@ export default function ContactHRTab() {
             disabled={isSending}
             style={{ 
               display: 'flex', alignItems: 'center', gap: 8,
-              background: 'linear-gradient(135deg, #1d4ed8, #2563eb)', 
+              background: 'linear-gradient(135deg, var(--brand-dark), var(--brand))', 
               color: '#fff', border: 'none', padding: '12px 18px', 
               borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: isSending ? 'not-allowed' : 'pointer',
               opacity: isSending ? 0.7 : 1, transition: 'all 0.2s'

@@ -11,6 +11,8 @@ export const NOTIF_GROUPS: Record<string, { label: string; hint: string; categor
   attendance: { label: 'Attendance corrections', hint: 'Missed-punch requests and their decisions', categories: ['regularization', 'regularization_request'] },
   assets:     { label: 'Company assets', hint: 'When an asset is assigned to you', categories: ['asset'] },
   payroll:    { label: 'Payroll', hint: 'Payslip drafts waiting for review', categories: ['payroll_draft'] },
+  helpdesk:   { label: 'Help Desk', hint: 'New questions to HR and the answers to them', categories: ['helpdesk'] },
+  documents:  { label: 'Document expiry', hint: 'Documents that are about to expire or have expired', categories: ['document_expiry', 'letter'] },
 };
 
 export interface Prefs { lang: 'en' | 'hi'; notif_muted: string[]; dashboard_hidden: string[] }

@@ -6,7 +6,7 @@ const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token')
 
 const STATUS_BADGE = {
     no_email: { bg: '#f1f5f9', c: '#64748b', l: 'No Email' },
-    draft_saved: { bg: '#dbeafe', c: '#1d4ed8', l: 'Draft' },
+    draft_saved: { bg: 'var(--brand-soft-2)', c: 'var(--brand-dark)', l: 'Draft' },
     reminder_active: { bg: '#fef3c7', c: '#92400e', l: 'Reminder' },
     overdue: { bg: '#fee2e2', c: '#991b1b', l: 'Overdue' },
     email_sent: { bg: '#dcfce7', c: '#166534', l: 'Sent' },
@@ -106,7 +106,7 @@ const CandidateEmailActionModal = ({
                                     {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
                             </div>
-                            {templateSubject && <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '.85rem', color: '#1e40af', fontWeight: 600 }}>Subject: {templateSubject}</div>}
+                            {templateSubject && <div style={{ background: 'var(--brand-soft)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '.85rem', color: 'var(--brand-dark)', fontWeight: 600 }}>Subject: {templateSubject}</div>}
                             <div style={{ marginBottom: 16 }}>
                                 <label className="em-label" style={{ marginBottom: 6, fontSize: '.72rem' }}>📤 From (Sender) — company email</label>
                                 <div style={{ display: 'flex', gap: 6 }}>
@@ -124,8 +124,8 @@ const CandidateEmailActionModal = ({
 
                     {status.status === 'draft_saved' && status.draft && (
                         <>
-                            <div style={{ background: '#eff6ff', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
-                                <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Template</div>
+                            <div style={{ background: 'var(--brand-soft)', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+                                <div style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--brand-dark)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Template</div>
                                 <div style={{ fontSize: '.88rem', fontWeight: 600 }}>{status.draft.template_name || '—'}</div>
                                 <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: 10, marginBottom: 4 }}>Subject</div>
                                 <div style={{ fontSize: '.85rem' }}>{status.draft.subject || '—'}</div>

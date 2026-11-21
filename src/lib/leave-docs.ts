@@ -8,12 +8,13 @@ import { saveToDriveFolder, downloadFileFromDrive, getDriveFileMeta, driveErrorM
 // website does not serve; it is only handed out through /api/leave/<id>/document to the people who may see the request.
 const DIR = path.join(process.cwd(), 'storage', 'leave-docs');
 export const LEAVE_DOC_TYPES: Record<string, string> = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' };
-export const LEAVE_DOC_MAX = 5 * 1024 * 1024;
+import { getConfig, mb } from './app-config';
 
-export function checkLeaveDoc(file: any): string | null {
+export async function checkLeaveDoc(file: any): Promise<string | null> {
   const ext = path.extname(String(file?.name || '')).toLowerCase();
   if (!LEAVE_DOC_TYPES[ext]) return 'The supporting document must be a PDF, JPG or PNG file';
-  if ((file.size || 0) > LEAVE_DOC_MAX) return 'The supporting document must be smaller than 5 MB';
+  const limit = (await getConfig()).leave_doc_max_mb;
+  if ((file.size || 0) > mb(limit)) return `The supporting document must be smaller than ${limit} MB`;
   return null;
 }
 
@@ -21,7 +22,7 @@ export function checkLeaveDoc(file: any): string | null {
 export async function saveLeaveDoc(file: File): Promise<string> {
   const ext = path.extname(file.name).toLowerCase();
   try {
-    return await saveToDriveFolder('Leave Documents', `${uuidv4()}${ext}`, Buffer.from(await file.arrayBuffer()), LEAVE_DOC_TYPES[ext] || 'application/octet-stream');
+    return await saveToDriveFolder((await getConfig()).drive_folder_leave_docs, `${uuidv4()}${ext}`, Buffer.from(await file.arrayBuffer()), LEAVE_DOC_TYPES[ext] || 'application/octet-stream');
   } catch (e: any) {
     throw new Error(driveErrorMessage(e) || e?.message || 'The document could not be saved on Google Drive');
   }

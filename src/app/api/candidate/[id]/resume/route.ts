@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -8,11 +9,11 @@ import { auditFrom } from '@/lib/audit';
 
 const EXTS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
 const MIME: Record<string, string> = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
-const MAX = 10 * 1024 * 1024;
+import { getConfig, mb } from '@/lib/app-config';
 
 // Puts a resume file on a candidate that already exists (the old file is gone from the server, or a newer resume came in).
 // The details of the candidate are not touched, the file is not read again; it is only saved on Google Drive and linked.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -25,11 +26,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!file || typeof file === 'string' || !file.size) return jsonError('Choose a resume file', 422);
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!EXTS.includes(ext)) return jsonError('Upload a PDF, Word (doc/docx) or image (jpg/png) file', 422);
-    if (file.size > MAX) return jsonError('The resume must be smaller than 10 MB', 422);
+    const limit = (await getConfig()).upload_max_mb;
+    if (file.size > mb(limit)) return jsonError(`The resume must be smaller than ${limit} MB`, 422);
 
     let path: string;
     try {
-      path = await saveToDriveFolder('Candidate Resumes', `resume_${String(c.contact_number || 'candidate').replace(/[^0-9A-Za-z]/g, '')}_${Date.now()}.${ext}`, Buffer.from(await file.arrayBuffer()), MIME[ext]);
+      path = await saveToDriveFolder((await getConfig()).drive_folder_resumes, `resume_${String(c.contact_number || 'candidate').replace(/[^0-9A-Za-z]/g, '')}_${Date.now()}.${ext}`, Buffer.from(await file.arrayBuffer()), MIME[ext]);
     } catch (e: any) {
       return jsonError(driveErrorMessage(e) || e?.message || 'The resume could not be saved on Google Drive', 503);
     }
@@ -40,3 +42,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonSuccess({ message: 'Resume uploaded', resume_pdf_path: path });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

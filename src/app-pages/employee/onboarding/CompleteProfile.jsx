@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { DOC_OPTIONS } from '@/lib/documents';
-import { shrinkImage, readIntoMemory, MAX_UPLOAD_BYTES, MAX_TOTAL_BYTES, mb } from '@/lib/shrink-upload';
+import { shrinkImage, readIntoMemory, maxUploadBytes, maxTotalBytes, mb } from '@/lib/shrink-upload';
 import { useNavigate } from 'react-router-dom';
 
 const s = {
@@ -18,8 +18,8 @@ const s = {
     label: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 },
     input: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' },
     textarea: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', background: '#fff' },
-    sectionTitle: { fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid #eff6ff', fontFamily: "'Outfit', sans-serif" },
-    submitBtn: { padding: '12px 24px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
+    sectionTitle: { fontSize: 15, fontWeight: 700, color: '#1e293b', marginTop: 24, marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--brand-soft)', fontFamily: "'Outfit', sans-serif" },
+    submitBtn: { padding: '12px 24px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, var(--brand), var(--brand-mid))', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
 };
 
 const DOCS = DOC_OPTIONS.map(d => ({ label: d.label, name: d.key }));
@@ -30,7 +30,7 @@ const CSS = `
 .cp-file { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 12px; border-radius: 10px; box-sizing: border-box; width: 100%; text-align: left; font-family: inherit; }
 .cp-file-empty { border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; }
 .cp-file-ok { border: 1.5px solid #86efac; background: #f0fdf4; color: #166534; }
-.cp-file-old { border: 1.5px solid #bfdbfe; background: #eff6ff; color: #1e40af; }
+.cp-file-old { border: 1.5px solid var(--brand-line); background: var(--brand-soft); color: var(--brand-dark); }
 .cp-file b { font-weight: 600; word-break: break-all; }
 .cp-file small { display: block; font-size: 11.5px; opacity: .8; }
 .cp-file-btn { margin-left: auto; flex-shrink: 0; border: 1.5px solid currentColor; background: #fff; color: inherit; border-radius: 8px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
@@ -149,8 +149,8 @@ export default function CompleteProfile({ onSubmitted }) {
         try {
             for (const f of picked) {
                 const g = await shrinkImage(f);
-                if (g.size > MAX_UPLOAD_BYTES) {
-                    Swal.fire({ icon: 'warning', title: 'File is too big', text: '"' + f.name + '" is ' + mb(f.size) + '. Please upload a file smaller than ' + mb(MAX_UPLOAD_BYTES) + ' (a photo of the document, or a smaller PDF).' });
+                if (g.size > maxUploadBytes()) {
+                    Swal.fire({ icon: 'warning', title: 'File is too big', text: '"' + f.name + '" is ' + mb(f.size) + '. Please upload a file smaller than ' + mb(maxUploadBytes()) + ' (a photo of the document, or a smaller PDF).' });
                     input.value = '';
                     return;
                 }
@@ -184,8 +184,8 @@ export default function CompleteProfile({ onSubmitted }) {
             return;
         }
         const totalBytes = Object.values(files).reduce((n, v) => n + (Array.isArray(v) ? v.reduce((a, f) => a + (f ? f.size : 0), 0) : (v ? v.size : 0)), 0);
-        if (totalBytes > MAX_TOTAL_BYTES) {
-            Swal.fire({ icon: 'warning', title: 'Files are too big together', text: 'The files add up to ' + mb(totalBytes) + '. Please keep them under ' + mb(MAX_TOTAL_BYTES) + ' in total (smaller photos or PDFs).' });
+        if (totalBytes > maxTotalBytes()) {
+            Swal.fire({ icon: 'warning', title: 'Files are too big together', text: 'The files add up to ' + mb(totalBytes) + '. Please keep them under ' + mb(maxTotalBytes()) + ' in total (smaller photos or PDFs).' });
             return;
         }
         setSubmitting(true);
@@ -237,7 +237,7 @@ export default function CompleteProfile({ onSubmitted }) {
                     title: 'Details Saved',
                     text: 'Your details have been submitted to HR. You can use the portal once HR reviews and activates your account.',
                     confirmButtonText: 'OK',
-                    confirmButtonColor: '#1e40af',
+                    confirmButtonColor: 'var(--brand-dark)',
                 });
                 onSubmitted && onSubmitted();
             } else {
@@ -246,7 +246,7 @@ export default function CompleteProfile({ onSubmitted }) {
         } catch (err) {
             const dropped = /failed to fetch|networkerror|load failed/i.test(String(err && err.message));
             Swal.fire({ icon: 'error', title: 'Connection error', text: dropped
-                ? 'Your details could not reach the server. Please check your internet connection and try again. If it keeps happening, use smaller files (under ' + mb(MAX_UPLOAD_BYTES) + ' each) or try again on a faster connection. (' + err.message + ')'
+                ? 'Your details could not reach the server. Please check your internet connection and try again. If it keeps happening, use smaller files (under ' + mb(maxUploadBytes()) + ' each) or try again on a faster connection. (' + err.message + ')'
                 : 'Failed to connect to the server: ' + err.message });
         } finally {
             setSubmitting(false);

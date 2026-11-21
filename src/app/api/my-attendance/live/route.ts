@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { syncTodayPunches } from '@/lib/teamoffice';
@@ -11,7 +12,7 @@ const lastSync = new Map<string, number>();
 
 // Pulls today's punch for the logged-in employee so a fresh check-in shows up
 // without any manual sync.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -29,3 +30,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

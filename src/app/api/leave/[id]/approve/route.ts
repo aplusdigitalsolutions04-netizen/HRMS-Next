@@ -1,11 +1,14 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
+import { getConfig } from '@/lib/app-config';
 import { RowDataPacket } from 'mysql2';
 import { sendRequestMail, hrRecipients, managerOf, appUrl, ymd } from '@/lib/request-mail';
 import { getStep, getMaxStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { logAudit } from '@/lib/audit';
+import { markLeaveDays } from '@/lib/leave-attendance';
 
 const fd = ymd;
 const mailVars = (lr: any, mgr: any, note: string) => ({
@@ -13,7 +16,7 @@ const mailVars = (lr: any, mgr: any, note: string) => ({
   reason: lr.reason || '-', manager_name: mgr?.full_name || '', remarks: note, review_link: `${appUrl()}/leave/admin/requests`,
 });
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -96,9 +99,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // Final step - the request is fully approved.
     await execute("UPDATE leave_requests SET status='Approved', reviewed_by=?, reviewed_on=NOW() WHERE id=?", [user.email || user.id, id]);
 
+    // The days of the leave go into attendance: the month's CL first, the rest Unpaid Leave (used by the Salary Sheet).
+    const marked = await markLeaveDays(lr.employee_id, lr.start_date, lr.end_date, lr.duration, user.email || String(user.id)).catch(e => { console.error('[leave] could not mark attendance:', e?.message); return null; });
+
     await createNotification(
       `Leave Approved: ${lr.leave_type}`,
-      `Your ${lr.leave_type} leave request (${new Date(lr.start_date).toLocaleDateString('en-IN')} - ${new Date(lr.end_date).toLocaleDateString('en-IN')}) has been approved.`,
+      `Your ${lr.leave_type} leave request (${new Date(lr.start_date).toLocaleDateString((await getConfig()).locale)} - ${new Date(lr.end_date).toLocaleDateString((await getConfig()).locale)}) has been approved.`,
       'leave_approved',
       String(id),
       false,
@@ -116,6 +122,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       details: { leave_type: lr.leave_type, employee_id: lr.employee_id }
     });
 
-    return jsonSuccess({ message: 'Leave approved successfully' });
+    return jsonSuccess({ message: 'Leave approved successfully' + (marked ? ` (${[marked.cl && `${marked.cl} CL`, marked.upl && `${marked.upl} unpaid`, marked.half && `${marked.half} half day`, marked.sandwich && `${marked.sandwich} of them sandwich days`].filter(Boolean).join(', ') || 'no working days to mark'})` : '') });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const PUT = withApiLog(PUT_handler);

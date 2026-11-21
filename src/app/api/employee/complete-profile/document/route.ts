@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -13,13 +14,13 @@ const DOC_COLUMNS = {
   InternshipCertificate: 'internship_certificate', Photograph: 'photograph', BankDocument: 'bank_document',
 };
 const EXTS = ['pdf', 'jpg', 'jpeg', 'png'];
-const MAX = 10 * 1024 * 1024;
+import { getConfig, mb } from '@/lib/app-config';
 
 // One document of the employee's own profile, sent on its own. The profile form used to send every file in one request, which
 // ran long (each file is saved on Google Drive one after the other) and the hosting proxy cut it off ("Failed to fetch").
 // With one file per request each call is short, the form can show how far it is, and the files that already went are not sent
 // again when the employee presses Submit a second time. The profile itself is still submitted with PUT /complete-profile.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -37,7 +38,8 @@ export async function POST(req: NextRequest) {
     if (!file || typeof file === 'string' || !file.size) return jsonError('Choose a file', 422);
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!EXTS.includes(ext)) return jsonError('Upload a PDF, JPG or PNG file', 422);
-    if (file.size > MAX) return jsonError(`"${file.name}" is too big. Please upload a file smaller than 10 MB.`, 422);
+    const limit = (await getConfig()).upload_max_mb;
+    if (file.size > mb(limit)) return jsonError(`"${file.name}" is too big. Please upload a file smaller than ${limit} MB.`, 422);
 
     let path: string;
     try {
@@ -65,3 +67,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

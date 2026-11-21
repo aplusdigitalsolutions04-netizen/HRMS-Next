@@ -1,5 +1,6 @@
 import React from 'react';
 import Swal from 'sweetalert2';
+import { appLocale } from '@/lib/app-config-client';
 
 const EmailComposeModal = ({
     isOpen, candidateName, candidateEmail, applyPost, roundSelect, interviewDate, modeSelect,
@@ -56,7 +57,7 @@ const EmailComposeModal = ({
                     <div className="em-tabs">
                         <button className={`em-tab${emailTab === 'compose' ? ' active' : ''}`} onClick={() => setEmailTab('compose')}>✉️ Compose</button>
                         <button className={`em-tab${emailTab === 'history' ? ' active' : ''}`} onClick={() => { setEmailTab('history'); loadEmailHistory(); }}>
-                            📋 Email History {emailHistory.length > 0 && <span style={{ background: '#1e40af', color: '#fff', borderRadius: 50, padding: '1px 7px', fontSize: '.72rem', marginLeft: 5 }}>{emailHistory.length}</span>}
+                            📋 Email History {emailHistory.length > 0 && <span style={{ background: 'var(--brand-dark)', color: '#fff', borderRadius: 50, padding: '1px 7px', fontSize: '.72rem', marginLeft: 5 }}>{emailHistory.length}</span>}
                         </button>
                     </div>
 
@@ -70,8 +71,8 @@ const EmailComposeModal = ({
                                         {candidateEmail && <span style={{ color: '#64748b', fontSize: '.83rem' }}>&lt;{candidateEmail}&gt;</span>}
                                     </div>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {applyPost && <span className="var-chip-small" style={{ background: '#dbeafe', color: '#1d4ed8' }}>Post: {applyPost}</span>}
-                                        {roundSelect && <span className="var-chip-small" style={{ background: '#dbeafe', color: '#2563eb' }}>Round: {roundSelect}</span>}
+                                        {applyPost && <span className="var-chip-small" style={{ background: 'var(--brand-soft-2)', color: 'var(--brand-dark)' }}>Post: {applyPost}</span>}
+                                        {roundSelect && <span className="var-chip-small" style={{ background: 'var(--brand-soft-2)', color: 'var(--brand)' }}>Round: {roundSelect}</span>}
                                         {interviewDate && <span className="var-chip-small" style={{ background: '#dcfce7', color: '#166534' }}>Date: {interviewDate}</span>}
                                         {modeSelect && <span className="var-chip-small" style={{ background: '#fef3c7', color: '#b45309' }}>Mode: {modeSelect}</span>}
                                     </div>
@@ -82,7 +83,7 @@ const EmailComposeModal = ({
                                     {emailTemplates.length === 0 ? (
                                         <div className="no-tpl-hint">
                                             No templates saved yet.&nbsp;
-                                            <a href="/templates" target="_blank" style={{ color: '#1e40af', textDecoration: 'underline' }}>
+                                            <a href="/templates" target="_blank" style={{ color: 'var(--brand-dark)', textDecoration: 'underline' }}>
                                                 Create one here →
                                             </a>
                                         </div>
@@ -100,8 +101,8 @@ const EmailComposeModal = ({
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                         <label className="em-label" style={{ margin: 0 }}>📨 To (Recipient)</label>
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button type="button" onClick={() => setShowCC(!showCC)} style={{ background: 'none', border: 'none', color: showCC ? '#1e40af' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Cc</button>
-                                            <button type="button" onClick={() => setShowBCC(!showBCC)} style={{ background: 'none', border: 'none', color: showBCC ? '#1e40af' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Bcc</button>
+                                            <button type="button" onClick={() => setShowCC(!showCC)} style={{ background: 'none', border: 'none', color: showCC ? 'var(--brand-dark)' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Cc</button>
+                                            <button type="button" onClick={() => setShowBCC(!showBCC)} style={{ background: 'none', border: 'none', color: showBCC ? 'var(--brand-dark)' : '#64748b', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>Bcc</button>
                                         </div>
                                     </div>
                                     <div className="em-to-badge" style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
@@ -166,7 +167,7 @@ const EmailComposeModal = ({
 
                                 {emailSending === 'sending' && (
                                     <div className="status-banner sending">
-                                        <span className="spinner" style={{ borderTopColor: '#2563eb', borderColor: 'rgba(37,99,235,.3)' }} />
+                                        <span className="spinner" style={{ borderTopColor: 'var(--brand)', borderColor: 'rgba(111,78,55,.3)' }} />
                                         Sending email via SMTP…
                                     </div>
                                 )}
@@ -189,16 +190,16 @@ const EmailComposeModal = ({
                                         {emailSubject}
                                     </h2>
                                     <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#dbeafe', color: '#5b21b6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem', border: '1.5px solid #c4b5fd' }}>H</div>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--brand-soft-2)', color: '#5b21b6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem', border: '1.5px solid #c4b5fd' }}>H</div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                                                <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>APDS HR Team</strong>
+                                                <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>{senderEmail || 'Sender'}</strong>
                                                 <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
-                                                    {new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date().toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                             <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
-                                                <div><span style={{ color: '#94a3b8' }}>from:</span> &lt;hr@apds.com&gt;</div>
+                                                <div><span style={{ color: '#94a3b8' }}>from:</span> &lt;{senderEmail}&gt;</div>
                                                 <div><span style={{ color: '#94a3b8' }}>to:</span> {emailTo}</div>
                                                 {(showCC && (emailCCList.length > 0 || emailCC)) && <div><span style={{ color: '#94a3b8' }}>cc:</span> {emailCCList.join(', ')}{emailCC ? (emailCCList.length > 0 ? ', ' : '') + emailCC : ''}</div>}
                                                 {(showBCC && (emailBCCList.length > 0 || emailBCC)) && <div><span style={{ color: '#94a3b8' }}>bcc:</span> {emailBCCList.join(', ')}{emailBCC ? (emailBCCList.length > 0 ? ', ' : '') + emailBCC : ''}</div>}
@@ -212,7 +213,7 @@ const EmailComposeModal = ({
 
                                 {emailSending === 'sending' && (
                                     <div className="status-banner sending" style={{ marginTop: '16px' }}>
-                                        <span className="spinner" style={{ borderTopColor: '#2563eb', borderColor: 'rgba(37,99,235,.3)' }} />
+                                        <span className="spinner" style={{ borderTopColor: 'var(--brand)', borderColor: 'rgba(111,78,55,.3)' }} />
                                         Sending email via SMTP…
                                     </div>
                                 )}
@@ -246,11 +247,11 @@ const EmailComposeModal = ({
                                             {emailHistory.map(log => (
                                                 <tr key={log.id}>
                                                     <td style={{ whiteSpace: 'nowrap' }}>
-                                                        {log.sent_at ? new Date(log.sent_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                                                        {log.sent_at ? new Date(log.sent_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                                                     </td>
                                                     <td>{log.to_email}</td>
                                                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.subject}>{log.subject || '—'}</td>
-                                                    <td><span style={{ background: '#dbeafe', color: '#5b21b6', padding: '2px 8px', borderRadius: 50, fontSize: '.75rem', fontWeight: 700 }}>{log.template_name || 'Custom'}</span></td>
+                                                    <td><span style={{ background: 'var(--brand-soft-2)', color: '#5b21b6', padding: '2px 8px', borderRadius: 50, fontSize: '.75rem', fontWeight: 700 }}>{log.template_name || 'Custom'}</span></td>
                                                     <td>{log.job_role || '—'}</td>
                                                     <td>{log.interview_round || '—'}</td>
                                                     <td>

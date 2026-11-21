@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import HomeWidgets from './HomeWidgets';
 import useStatusMaster, { pillStyle } from '../../shared/useStatusMaster';
 
 const API = '/api';
@@ -8,9 +9,19 @@ const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate(
 const toMins = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(String(t || '')); return m ? +m[1] * 60 + +m[2] : null; };
 const fmtHM = (mins) => (mins === null || mins < 0 ? '--' : `${Math.floor(mins / 60)}h ${pad(Math.round(mins % 60))}m`);
 
+// where an employee goes most often from the home page (keys are the sidebar pages)
+const QUICK = [
+  { key: 'leave', label: 'Apply for leave', hint: 'Casual, sick and more', path: <><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></> },
+  { key: 'wfh', label: 'Work from home', hint: 'Request a WFH day', path: <><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></> },
+  { key: 'attendance', label: 'My attendance', hint: 'Records and corrections', path: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></> },
+  { key: 'payslips', label: 'My payslips', hint: 'View and download', path: <><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></> },
+  { key: 'helpdesk', label: 'Ask HR', hint: 'Raise a question', path: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></> },
+  { key: 'letters', label: 'My letters', hint: 'Offer, experience, more', path: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></> },
+];
+
 // Today's check-in / check-out and the last 7 days. It re-reads by itself every 30 seconds, because
 // the server pulls punches from TeamOffice in the background - nothing to click.
-function TodayCard() {
+function TodayCard({ goTo }) {
   const sm = useStatusMaster();
   const [recs, setRecs] = useState({});
   const [now, setNow] = useState(new Date());
@@ -72,6 +83,19 @@ function TodayCard() {
           );
         })}
       </div>
+      {goTo && (
+        <div className="td-quick">
+          <div className="td-quick-t">Quick actions</div>
+          <div className="td-actions">
+            {QUICK.map(q => (
+              <button key={q.key} type="button" className="td-act" onClick={() => goTo(q.key)}>
+                <span className="td-act-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{q.path}</svg></span>
+                <span><b>{q.label}</b><small>{q.hint}</small></span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -120,7 +144,16 @@ const homeStyles = `
 .td-day { display:flex; flex-direction:column; align-items:center; gap:4px; }
 .td-day span { font-size:.68rem; color:#94a3b8; font-weight:600; }
 .td-dot { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; background:#f1f5f9; color:#94a3b8; border:1.5px solid #e2e8f0; }
-.td-dot.today { box-shadow:0 0 0 3px #dbeafe; }
+.td-dot.today { box-shadow:0 0 0 3px var(--brand-soft-2); }
+.td-quick { border-top:1px solid var(--glass-line, #f1f5f9); margin-top:16px; padding-top:14px; }
+.td-quick-t { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#94a3b8; margin-bottom:10px; }
+.td-actions { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+.td-act { display:flex; align-items:center; gap:11px; text-align:left; padding:10px 12px; border-radius:12px; border:1px solid var(--glass-line, #e8edf6); background:color-mix(in srgb, var(--brand, #8a5a36) 7%, transparent); color:var(--ink, #0f172a); cursor:pointer; font-family:inherit; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
+.td-act:hover { transform:translateY(-2px); border-color:var(--brand-line); background:var(--brand-soft); box-shadow:0 8px 18px -12px rgba(111,78,55,.45); }
+.td-act b { display:block; font-size:.84rem; font-weight:600; }
+.td-act small { display:block; font-size:.72rem; color:#94a3b8; margin-top:1px; }
+.td-act-ic { width:34px; height:34px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--brand-soft-2); color:var(--brand-dark); transition:transform .18s ease; }
+.td-act:hover .td-act-ic { transform:scale(1.08) rotate(-4deg); }
 .td-hol { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid #f8fafc; }
 .td-hol:last-child { border-bottom:none; }
 .td-hol-d { width:44px; text-align:center; border-radius:10px; padding:4px 0 5px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; flex-shrink:0; }
@@ -131,7 +164,7 @@ const homeStyles = `
 
 const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export default function DashboardHome({ greeting, empName, presentDays, totalAttDays, leaveDays, docCount, notificationsCount, monthlyAtt, attMonthIdx, setAttMonthIdx, hasAttData, maxAtt, absentDays }) {
+export default function DashboardHome({ goTo, greeting, empName, presentDays, totalAttDays, leaveDays, docCount, notificationsCount, monthlyAtt, attMonthIdx, setAttMonthIdx, hasAttData, maxAtt, absentDays }) {
   return (
     <>
       <div className="emp-banner">
@@ -145,8 +178,8 @@ export default function DashboardHome({ greeting, empName, presentDays, totalAtt
       <div className="emp-stats">
         <div className="emp-stat-card">
           <div className="emp-stat-header">
-            <div className="emp-stat-icon" style={{ background: '#eff6ff' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div className="emp-stat-icon" style={{ background: 'var(--brand-soft)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6f4e37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
           </div>
           <div className="emp-stat-value">{presentDays} / {totalAttDays} Days</div>
@@ -163,8 +196,8 @@ export default function DashboardHome({ greeting, empName, presentDays, totalAtt
         </div>
         <div className="emp-stat-card">
           <div className="emp-stat-header">
-            <div className="emp-stat-icon" style={{ background: '#dbeafe' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <div className="emp-stat-icon" style={{ background: 'var(--brand-soft-2)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a6a52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </div>
           </div>
           <div className="emp-stat-value">{docCount}</div>
@@ -183,9 +216,11 @@ export default function DashboardHome({ greeting, empName, presentDays, totalAtt
 
       <style>{homeStyles}</style>
       <div className="td-row">
-        <TodayCard />
+        <TodayCard goTo={goTo} />
         <HolidaysCard />
       </div>
+
+      <HomeWidgets goTo={goTo} />
 
       <div className="emp-card" style={{ marginBottom: 28 }}>
         <div className="emp-card-header">

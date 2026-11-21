@@ -1,3 +1,4 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUrl } from '@/lib/googleDrive';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
@@ -10,7 +11,7 @@ import { signPurposeToken } from '@/lib/auth';
 // logs/history/Referer headers), this is a normal header-authenticated POST
 // that hands back the one-time Google URL to navigate to - the session
 // token itself never appears in any URL.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -27,3 +28,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e?.message || 'Failed to start Google authorization', 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

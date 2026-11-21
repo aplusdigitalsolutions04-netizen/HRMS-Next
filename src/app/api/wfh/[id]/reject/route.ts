@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -7,7 +8,7 @@ import { sendRequestMail, ymd } from '@/lib/request-mail';
 import { getStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { logAudit } from '@/lib/audit';
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -72,3 +73,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonError(e, 500);
   }
 }
+
+export const PUT = withApiLog(PUT_handler);

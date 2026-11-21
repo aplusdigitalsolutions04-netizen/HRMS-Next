@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -7,9 +8,9 @@ import { activeLeaveTypes } from '@/lib/masters';
 import { getAccount } from '@/lib/mailbox';
 import { checkLeaveDoc, saveLeaveDoc } from '@/lib/leave-docs';
 import { sendRequestMail, hrRecipients, managerOf, appUrl, realEmail, canSendAs, parseAddressList } from '@/lib/request-mail';
-import { initApproval, getStep } from '@/lib/approvalEngine';
+import { initApproval, getStep, ensureManagerHrWorkflow } from '@/lib/approvalEngine';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     // the attached supporting document (optional): checked before anything is saved
     const docFile = body.supporting_doc && typeof body.supporting_doc !== 'string' && body.supporting_doc.size > 0 ? body.supporting_doc : null;
-    if (docFile) { const bad = checkLeaveDoc(docFile); if (bad) return jsonError(bad, 422); }
+    if (docFile) { const bad = await checkLeaveDoc(docFile); if (bad) return jsonError(bad, 422); }
 
     // Cc / Bcc: several addresses are fine; every one must be a real address
     const ccP = parseAddressList(body.cc), bccP = parseAddressList(body.bcc);
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
 
     // Resolve the approval workflow - starts at the reporting manager if the
     // employee has one, otherwise skips straight to HR.
+    await ensureManagerHrWorkflow('leave', 'Leave Approval');
     const { workflowId, startStep } = await initApproval('leave', emp[0].id);
     if (workflowId) {
       await execute('UPDATE leave_requests SET workflow_id=?, current_step=? WHERE id=?', [workflowId, startStep, leaveId]);
@@ -116,3 +118,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

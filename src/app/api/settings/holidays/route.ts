@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -27,7 +28,7 @@ const GAZETTED: Record<number, string[][]> = {
   ],
 };
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
 
 // Body: { date, name, holiday_type? }  -> add one holiday
 //       { preset: 'government', year }  -> add the government holiday list for that year
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -90,3 +91,7 @@ export async function DELETE(req: NextRequest) {
     return jsonSuccess({ message: 'Holiday removed' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);
+export const DELETE = withApiLog(DELETE_handler);

@@ -4,11 +4,12 @@ import LeaveApplyPage from './LeaveApplyPage';
 
 const API = '/api';
 import useLiveRefresh from '@/lib/live';
+import { appLocale } from '@/lib/app-config-client';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const formatDT = (d) => {
   if (!d) return '\u2014';
-  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
+  try { return new Date(d).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
 };
 
 // <input type="date"> value from a date that came back from the API (local parts, so the day never shifts)
@@ -278,7 +279,7 @@ export default function EmployeeLeave() {
         <div className="el-card" style={{ padding: '15px 18px', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg, var(--brand), var(--brand-mid))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(111,78,55,0.25)' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="3" />
                   <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="2" y1="10" x2="22" y2="10" />
@@ -290,7 +291,7 @@ export default function EmployeeLeave() {
                 <p style={{ margin: '2px 0 0', fontSize: 13, color: '#94a3b8' }}>Apply for leave and track the status of your requests.</p>
               </div>
             </div>
-            <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: 'none', background: 'var(--brand)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               <Icon name="plus" size={16} color="#fff" /> Apply Leave
             </button>
             <style>{`.el-card{border-radius:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #e8f0ff}`}</style>
@@ -300,7 +301,7 @@ export default function EmployeeLeave() {
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 16 }}>
           {[
-            { label: 'Total Requests', value: stats.total, color: '#2563eb', bg: '#eff6ff' },
+            { label: 'Total Requests', value: stats.total, color: 'var(--brand)', bg: 'var(--brand-soft)' },
             { label: 'Pending', value: stats.pending, color: '#d97706', bg: '#fffbeb' },
             { label: 'Approved', value: stats.approved, color: '#16a34a', bg: '#f0fdf4' },
             { label: 'Rejected', value: stats.rejected, color: '#dc2626', bg: '#fef2f2' },
@@ -315,7 +316,7 @@ export default function EmployeeLeave() {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid #e2e8f0', paddingBottom: 0, flexWrap: 'wrap' }}>
           {['all', 'pending', 'approved', 'rejected', 'cancelled'].map(t => (
-            <button key={t} onClick={() => handleTab(t)} style={{ padding: '8px 16px', border: 'none', background: 'none', fontSize: 13, fontWeight: 600, color: tab === t ? '#2563eb' : '#94a3b8', cursor: 'pointer', borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent', textTransform: 'capitalize' }}>
+            <button key={t} onClick={() => handleTab(t)} style={{ padding: '8px 16px', border: 'none', background: 'none', fontSize: 13, fontWeight: 600, color: tab === t ? 'var(--brand)' : '#94a3b8', cursor: 'pointer', borderBottom: tab === t ? '2px solid var(--brand)' : '2px solid transparent', textTransform: 'capitalize' }}>
               {t === 'all' ? 'All Requests' : t}
             </button>
           ))}
@@ -354,9 +355,9 @@ export default function EmployeeLeave() {
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => setSelectedReq(r)} style={{ border: 'none', background: '#f1f5f9', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: '#475569' }} title="View Details">View</button>
                           {Number(r.can_edit) === 1 && (
-                            <button onClick={() => openEdit(r)} style={{ border: 'none', background: '#eff6ff', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: '#2563eb' }} title="Change this request">Edit</button>
+                            <button onClick={() => openEdit(r)} style={{ border: 'none', background: 'var(--brand-soft)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--brand)' }} title="Change this request">Edit</button>
                           )}
-                          {(r.status || '').toLowerCase() === 'pending' && (
+                          {((r.status || '').toLowerCase() === 'pending' || ((r.status || '').toLowerCase() === 'approved' && String(r.start_date).slice(0, 10) > new Date().toLocaleDateString('en-CA'))) && (
                             <button onClick={() => handleCancel(r.id)} style={{ border: 'none', background: '#fef2f2', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: '#dc2626' }} title="Cancel">Cancel</button>
                           )}
                         </div>
@@ -376,7 +377,7 @@ export default function EmployeeLeave() {
         {/* Leave Balance Card */}
         <div className="el-card" style={{ padding: '15px' }}>
           <h4 style={{ margin: '0 0 16px', fontSize: 15, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6f4e37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" />
             </svg>
             Leave Balance
@@ -391,7 +392,7 @@ export default function EmployeeLeave() {
                 const remaining = Math.max(0, b.remaining);
                 const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0;
                 const fmtNum = (n) => Number.isInteger(n) ? n.toString() : n.toFixed(1);
-                const barColor = remaining <= 2 ? '#ef4444' : remaining <= 5 ? '#f59e0b' : '#2563eb';
+                const barColor = remaining <= 2 ? '#ef4444' : remaining <= 5 ? '#f59e0b' : 'var(--brand)';
                 return (
                   <div key={b.id ?? idx}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
@@ -444,7 +445,7 @@ export default function EmployeeLeave() {
               )}
               {selectedReq.supporting_doc && (
                 <div style={{ padding: '8px 0' }}>
-                  <a href="#" onClick={async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/leave/${selectedReq.id}/document`, { headers: auth() }); if (!res.ok) throw new Error((await res.json()).detail || 'Could not open the document'); window.open(URL.createObjectURL(await res.blob()), '_blank'); } catch (err) { alert(err.message); } }} style={{ color: '#2563eb', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>View Supporting Document &darr;</a>
+                  <a href="#" onClick={async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/leave/${selectedReq.id}/document`, { headers: auth() }); if (!res.ok) throw new Error((await res.json()).detail || 'Could not open the document'); window.open(URL.createObjectURL(await res.blob()), '_blank'); } catch (err) { alert(err.message); } }} style={{ color: 'var(--brand)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>View Supporting Document &darr;</a>
                 </div>
               )}
             </div>
@@ -458,8 +459,8 @@ export default function EmployeeLeave() {
                   { label: (selectedReq.status || '').toLowerCase() === 'approved' ? 'Approved' : (selectedReq.status || '').toLowerCase() === 'rejected' ? 'Rejected' : 'Approved / Rejected', done: ['approved','rejected'].includes((selectedReq.status || '').toLowerCase()), active: false, isRejected: (selectedReq.status || '').toLowerCase() === 'rejected' },
                 ].map((step, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingBottom: i < 2 ? 20 : 0, position: 'relative' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: step.done ? (step.isRejected ? '#dc2626' : '#2563eb') : '#e2e8f0', flexShrink: 0, marginTop: 3, boxShadow: step.active ? '0 0 0 4px #eff6ff' : 'none' }} />
-                    {i < 2 && <div style={{ position: 'absolute', left: 4, top: 13, width: 2, height: 28, background: step.done ? '#2563eb' : '#e2e8f0' }} />}
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: step.done ? (step.isRejected ? '#dc2626' : 'var(--brand)') : '#e2e8f0', flexShrink: 0, marginTop: 3, boxShadow: step.active ? '0 0 0 4px var(--brand-soft)' : 'none' }} />
+                    {i < 2 && <div style={{ position: 'absolute', left: 4, top: 13, width: 2, height: 28, background: step.done ? 'var(--brand)' : '#e2e8f0' }} />}
                     <div style={{ fontSize: 13, color: step.done ? '#0f172a' : '#94a3b8', fontWeight: step.active ? 600 : step.done ? 500 : 400 }}>{step.label}</div>
                   </div>
                 ))}

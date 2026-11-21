@@ -9,13 +9,16 @@ const AvailableVariables = lazy(() => import('./template-management/AvailableVar
 
 const API = '/api';
 const authHeaders = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
-const BLANK = { name: '', subject: '', body: '', variables: [], template_type: 'General', manual: true };
+const BLANK = { name: '', subject: '', body: '', variables: [], template_type: 'General', cc_emails: '', bcc_emails: '', manual: true };
 
 // One full page to create an email template, to edit one (?id=...), or to review what AI read from a file.
 export default function TemplateEditor() {
     const navigate = useNavigate();
     const [params] = useSearchParams();
     const id = params.get('id');
+    // opened from Settings > Request Mails: the category is chosen already, and Back / Save return there
+    const category = params.get('category');
+    const backTo = params.get('from') === 'request-mails' ? '/settings/request-mails' : '/settings/templates';
     const [preview, setPreview] = useState(null);
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -32,20 +35,20 @@ export default function TemplateEditor() {
                     if (!t) { Swal.fire({ icon: 'error', title: 'Template not found' }); navigate('/settings/templates'); return; }
                     let vars = [];
                     try { vars = JSON.parse(t.variables || '[]'); } catch { vars = []; }
-                    if (alive) setPreview({ id: t.id, name: t.name || '', subject: t.subject || '', body: t.body || '', variables: Array.isArray(vars) ? vars : [], template_type: t.template_type || 'General' });
+                    if (alive) setPreview({ id: t.id, name: t.name || '', subject: t.subject || '', body: t.body || '', variables: Array.isArray(vars) ? vars : [], cc_emails: t.cc_emails || '', bcc_emails: t.bcc_emails || '', template_type: t.template_type || 'General' });
                 } catch { navigate('/settings/templates'); return; }
             } else {
                 let draft = null;
                 try { draft = JSON.parse(sessionStorage.getItem('tpl_draft') || 'null'); } catch { draft = null; }
-                if (alive) setPreview(draft ? { ...draft, manual: false } : { ...BLANK });
+                if (alive) setPreview(draft ? { ...draft, manual: draft.manual === true } : { ...BLANK, ...(category ? { template_type: category } : {}) });
             }
             if (alive) setLoading(false);
         };
         open();
         return () => { alive = false; };
-    }, [id]);
+    }, [id]); // eslint-disable-line
 
-    const back = () => { sessionStorage.removeItem('tpl_draft'); navigate('/settings/templates'); };
+    const back = () => { sessionStorage.removeItem('tpl_draft'); navigate(backTo); };
 
     const saveTemplate = async () => {
         if (!preview) return;
@@ -61,13 +64,14 @@ export default function TemplateEditor() {
                 body: JSON.stringify({
                     name: preview.name, subject: preview.subject, body: preview.body,
                     variables: JSON.stringify(preview.variables), template_type: preview.template_type || 'General',
+                    cc_emails: preview.cc_emails || '', bcc_emails: preview.bcc_emails || '',
                 }),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.detail || 'Save failed');
             await Swal.fire({ icon: 'success', title: isEditing ? 'Template Updated!' : 'Template Saved!', text: `"${preview.name}" has been saved.`, timer: 1600, showConfirmButton: false });
             sessionStorage.removeItem('tpl_draft');
-            navigate('/settings/templates');
+            navigate(backTo);
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Save Failed', text: err.message });
         } finally {
@@ -107,7 +111,7 @@ export default function TemplateEditor() {
                 <SettingsCard
                     title={title}
                     desc={preview && preview.fromFile ? `AI read "${preview.fromFile}". Check the details, fix anything, pick the category and save.` : 'Write the email, pick the category it is for, and save it.'}
-                    actions={<button className="reset-btn" onClick={back}>&larr; Back to Templates</button>}
+                    actions={<button className="reset-btn" onClick={back}>&larr; {backTo === '/settings/request-mails' ? 'Back to Request Mails' : 'Back to Templates'}</button>}
                 >
                     {loading ? <div className="p-4 text-center">Loading...</div> : (
                         <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>

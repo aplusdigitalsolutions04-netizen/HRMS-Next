@@ -17,20 +17,20 @@ const OrgNode = ({ node, childrenMap, searchQuery }) => {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 6px' }}>
       <div style={{
         padding: '8px 10px',
-        border: `1.5px solid ${isMatch ? '#3b82f6' : '#e2e8f0'}`,
+        border: `1.5px solid ${isMatch ? 'var(--brand-mid)' : '#e2e8f0'}`,
         borderRadius: '10px',
-        background: isMatch ? '#eff6ff' : '#fff',
+        background: isMatch ? 'var(--brand-soft)' : '#fff',
         minWidth: '124px',
         textAlign: 'center',
         position: 'relative',
-        boxShadow: isMatch ? '0 0 0 4px rgba(59, 130, 246, 0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+        boxShadow: isMatch ? '0 0 0 4px rgba(138,106,82, 0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
         transition: 'all 0.2s ease'
       }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#eff6ff', margin: '0 auto 6px', overflow: 'hidden', border: '1.5px solid #dbeafe' }}>
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--brand-soft)', margin: '0 auto 6px', overflow: 'hidden', border: '1.5px solid var(--brand-soft-2)' }}>
           {node.profile_photo ? (
              <img src={/^(data:|https?:|\/)/.test(node.profile_photo) ? node.profile_photo : `/${node.profile_photo}`} alt={node.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', fontSize: 13, fontWeight: 'bold' }}>
+             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand)', fontSize: 13, fontWeight: 'bold' }}>
                {(node.full_name||'').charAt(0).toUpperCase()}
              </div>
           )}
@@ -141,7 +141,7 @@ export default function OrgChart() {
 
   return (
     <div style={{ padding: 0, background: 'transparent', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, background: '#fff', padding: '12px 16px', borderRadius: 12, border: '1px solid #e8edf6' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, background: '#fff', padding: '12px 16px', borderRadius: 12, border: '1px solid #eadfd5' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontFamily: 'Outfit, sans-serif', color: '#0f172a' }}>Organization Chart</h2>
           <p style={{ margin: '2px 0 0 0', fontSize: 12.5, color: '#64748b' }}>Visual reporting hierarchy</p>
@@ -178,7 +178,7 @@ export default function OrgChart() {
 const DeptSection = ({ dept, count, roots, childrenMap, searchQuery }) => {
   const [open, setOpen] = useState(true);
   return (
-    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e8edf6', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #eadfd5', overflow: 'hidden' }}>
       <button
         onClick={() => setOpen(!open)}
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: '#f8fafc', border: 'none', borderBottom: open ? '1px solid #e2e8f0' : 'none', cursor: 'pointer', textAlign: 'left' }}

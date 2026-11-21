@@ -1,11 +1,12 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { attendanceWeightSql, attendanceCountSql } from '@/lib/status-master';
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -27,3 +28,5 @@ export async function GET(req: NextRequest) {
     return jsonSuccess(rows[0]);
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);

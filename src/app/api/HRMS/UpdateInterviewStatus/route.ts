@@ -1,13 +1,15 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, now } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, now, hasAnyPermission } from '@/lib/utils';
 import { execute } from '@/lib/db';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_candidates', 'add_candidate', 'send_candidate_emails'])) return jsonError('Insufficient permissions', 403);
     const body = await req.json();
     if ((!body.interview_id && !body.candidate_id) || !body.status) return jsonError('Interview ID and status required', 422);
 
@@ -27,3 +29,5 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ message: 'Interview status updated' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

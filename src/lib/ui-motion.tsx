@@ -168,12 +168,12 @@ export function Tabs({ tabs, value, onChange, id = 'tabs', className }) {
       {tabs.map(t => (
         <button
           key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}
-          style={{ position: 'relative', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: value === t.id ? '#2563eb' : '#64748b' }}
+          style={{ position: 'relative', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: value === t.id ? 'var(--brand)' : '#64748b' }}
         >
           {t.label}
           {value === t.id && (
             <motion.span layoutId={`${id}-ind`} transition={{ duration: DUR.base, ease: EASE }}
-              style={{ position: 'absolute', left: 8, right: 8, bottom: -1, height: 2, borderRadius: 2, background: '#2563eb' }} />
+              style={{ position: 'absolute', left: 8, right: 8, bottom: -1, height: 2, borderRadius: 2, background: 'var(--brand)' }} />
           )}
         </button>
       ))}

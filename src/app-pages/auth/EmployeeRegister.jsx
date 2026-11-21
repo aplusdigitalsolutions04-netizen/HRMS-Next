@@ -1,3 +1,4 @@
+import { appConfig, MBYTES } from '@/lib/app-config-client';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -51,8 +52,8 @@ export default function EmployeeRegister() {
                     e.target.value = "";
                     return;
                 }
-                if (file.size > 2 * 1024 * 1024) {
-                    alert("PDF file size must be 2 MB or less.");
+                if (file.size > appConfig().register_pdf_mb * MBYTES) {
+                    alert(`File size must be ${appConfig().register_pdf_mb} MB or less.`);
                     e.target.value = "";
                     return;
                 }
@@ -63,8 +64,8 @@ export default function EmployeeRegister() {
                     e.target.value = "";
                     return;
                 }
-                if (file.size > 100 * 1024) {
-                    alert("Photo size must be 100 KB or less.");
+                if (file.size > appConfig().register_photo_kb * 1024) {
+                    alert(`Photo size must be ${appConfig().register_photo_kb} KB or less.`);
                     e.target.value = "";
                     return;
                 }
@@ -75,8 +76,8 @@ export default function EmployeeRegister() {
                     e.target.value = "";
                     return;
                 }
-                if (file.size > 5 * 1024 * 1024) {
-                    alert("Document size must be 5 MB or less.");
+                if (file.size > appConfig().register_doc_mb * MBYTES) {
+                    alert(`Document size must be ${appConfig().register_doc_mb} MB or less.`);
                     e.target.value = "";
                     return;
                 }
@@ -130,11 +131,11 @@ export default function EmployeeRegister() {
         inputGroup: { display: 'flex', alignItems: 'stretch' },
         inputGroupText: { padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRight: 'none', borderRadius: '10px 0 0 10px', fontSize: 14, color: '#64748b', background: '#f8fafc' },
         inputGroupInput: { flex: 1, padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '0 10px 10px 0', fontSize: 14, outline: 'none', fontFamily: 'inherit' },
-        sectionTitle: { fontSize: 16, fontWeight: 700, color: '#1e293b', marginTop: 28, marginBottom: 16, paddingBottom: 8, borderBottom: '2px solid #eff6ff', fontFamily: "'Outfit', sans-serif" },
+        sectionTitle: { fontSize: 16, fontWeight: 700, color: '#1e293b', marginTop: 28, marginBottom: 16, paddingBottom: 8, borderBottom: '2px solid var(--brand-soft)', fontFamily: "'Outfit', sans-serif" },
         fileInput: { width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fafbfc' },
         fileLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 },
         checkLabel: { fontSize: 12, color: '#64748b', cursor: 'pointer', userSelect: 'none' },
-        submitBtn: { width: '50%', padding: '12px 18px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
+        submitBtn: { width: '50%', padding: '12px 18px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, var(--brand), var(--brand-mid))', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
         backBtn: { padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' },
         errorText: { color: '#ef4444', fontSize: 12, marginTop: 4 },
         grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
@@ -147,7 +148,7 @@ export default function EmployeeRegister() {
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <div style={{ background: '#fff', borderRadius: 16, padding: '18px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #eff6ff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--brand-soft)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                         <button type="button" style={s.backBtn} onClick={() => navigate(-1)}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 4 }}><polyline points="15 18 9 12 15 6"/></svg>

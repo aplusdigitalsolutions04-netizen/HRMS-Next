@@ -1,13 +1,15 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, now } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, now, hasAnyPermission } from '@/lib/utils';
 import { execute } from '@/lib/db';
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_candidates', 'add_candidate', 'send_candidate_emails'])) return jsonError('Insufficient permissions', 403);
     const { id } = await params;
     const body = await req.json();
 
@@ -19,3 +21,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonSuccess({ success: true, id });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const PUT = withApiLog(PUT_handler);

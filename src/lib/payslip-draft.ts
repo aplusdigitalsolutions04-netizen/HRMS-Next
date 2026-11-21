@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { query, execute } from './db';
+import { query, execute, withNamedLock } from './db';
 import { uuidv4 } from './utils';
 import { RowDataPacket } from 'mysql2';
 import { ensurePayslipColumns } from './payroll-calc';
@@ -15,7 +15,10 @@ export async function insertPayslipRow(r: any, month: number, year: number, gene
     `INSERT INTO payslips (id, emp_code, month, year, basic_pay, hra, conveyance_allowance, food_vouchers, medical_insurance, other_deductions, incentives, el_encashment, gross_salary, total_deductions, total_adjustments, net_salary, paid_days, extra_work_days, extra_work_pay, variable_pay, extra_components, leave_availed, casual_leave, earned_leave, generated_by, generated_at, email_sent_at, status)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,0,?,NOW(),NULL,?)`,
     [id, r.emp_code, month, year, r.basic_pay, r.hra, r.conveyance_allowance, r.food_vouchers, r.insurance, r.other_deductions, r.incentive, r.el_pay, r.net_payable, r.total_deductions, r.total_adjustments, r.final_salary, r.paid_days, r.extra_work_days, r.extra_work_pay, r.variable_pay,
-      r.extra_components && r.extra_components.length ? JSON.stringify(r.extra_components.map((x: any) => ({ label: x.label, amount: x.amount, type: x.type }))) : null,
+      (() => {
+        const lines = [...(r.extra_components || []), ...(r.statutory || []).map((s: any) => ({ label: s.name, amount: s.employee, type: 'deduction' }))];
+        return lines.length ? JSON.stringify(lines.map((x: any) => ({ label: x.label, amount: x.amount, type: x.type }))) : null;
+      })(),
       generatedBy, status]
   );
   return id;
@@ -23,6 +26,13 @@ export async function insertPayslipRow(r: any, month: number, year: number, gene
 
 // One payslip for every active employee with a salary structure who does not have one for the month yet.
 export async function generatePayslipsForMonth(month: number, year: number, generatedBy: string, status: 'DRAFT' | 'APPROVED' = 'DRAFT') {
+  // one payslip run per month at a time, so a double click or two people pressing the button cannot make two payslips for one employee
+  const r = await withNamedLock(`payslips:${year}-${month}`, 30, () => generatePayslipsLocked(month, year, generatedBy, status));
+  if (!r.locked) throw new Error('Another payslip run for this month is in progress. Try again in a moment.');
+  return r.value!;
+}
+
+async function generatePayslipsLocked(month: number, year: number, generatedBy: string, status: 'DRAFT' | 'APPROVED') {
   const sheet = await computeSalarySheet(month, year);
   await ensurePayslipColumns();
   const results: { emp_code: string; status: string }[] = [];

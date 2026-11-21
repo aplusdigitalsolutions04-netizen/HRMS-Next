@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { readFile } from 'fs/promises';
@@ -15,7 +16,7 @@ const TYPES: Record<string, string> = {
 // A candidate's resume, read from disk at request time. A file put in /public after the build is not served by a
 // production Next.js server (the live site answered with the app's HTML page, which then "downloaded" as a broken PDF),
 // so resumes go through here instead. ?path=uploads/documents/<file>&download=1
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -57,3 +58,5 @@ export async function GET(req: NextRequest) {
     });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);

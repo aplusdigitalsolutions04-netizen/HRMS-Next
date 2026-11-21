@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import Pagination, { paginate } from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -19,7 +20,7 @@ const statusBadge = (status) => {
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(dateStr).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch {
     return dateStr;
   }
@@ -77,7 +78,7 @@ const EmployeeCredentials = () => {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Resend',
-      confirmButtonColor: '#1e40af',
+      confirmButtonColor: 'var(--brand-dark)',
     }).then(res => {
       if (!res.isConfirmed) return;
       setResendingId(row.id);
@@ -104,7 +105,7 @@ const EmployeeCredentials = () => {
       </div>`,
       showCancelButton: true,
       confirmButtonText: 'Change password',
-      confirmButtonColor: '#1e40af',
+      confirmButtonColor: 'var(--brand-dark)',
       focusConfirm: false,
       preConfirm: () => {
         const password = document.getElementById('rp-pass').value.trim();
@@ -180,7 +181,7 @@ const EmployeeCredentials = () => {
                       <button
                         onClick={() => toggleReveal(r)}
                         title={revealedId === r.id ? 'Hide' : 'Show'}
-                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', fontSize: 13 }}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--brand)', fontSize: 13 }}
                       >
                         {revealedId === r.id ? '🙈' : '👁️'}
                       </button>

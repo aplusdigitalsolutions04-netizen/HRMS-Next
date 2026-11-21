@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -11,7 +12,7 @@ import { auditFrom } from '@/lib/audit';
 // then offers only the templates of that category for that mail.
 const canManage = (user: any) => user.type === 'admin' && checkPermission(user, 'settings_templates');
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Rename (templates of that category follow) and/or link it to a request mail.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -77,7 +78,7 @@ export async function PUT(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -92,3 +93,8 @@ export async function DELETE(req: NextRequest) {
     return jsonSuccess({ message: 'Category deleted' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);
+export const PUT = withApiLog(PUT_handler);
+export const DELETE = withApiLog(DELETE_handler);

@@ -1,8 +1,9 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, checkPermission } from '@/lib/utils';
 import { getTeamOfficeApiUrl, getTeamOfficeApiKey } from '@/lib/teamoffice';
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return NextResponse.json({ detail: 'Not authenticated' }, { status: 401 });
@@ -35,3 +36,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ Error: true, Msg: error.message }, { status: 500 });
   }
 }
+
+export const GET = withApiLog(GET_handler);

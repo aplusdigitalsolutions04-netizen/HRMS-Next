@@ -50,6 +50,47 @@ export const MAIL_VARIABLES: [string, string][] = [
   ['company_name', 'Company name'],
 ];
 
+// The short name of each step, used in the names of the starter templates
+export const MAIL_EVENT_SHORT: Record<string, string> = { submitted: 'request sent', to_hr: 'manager approved', approved: 'approved', rejected: 'rejected' };
+
+// The wording of the standard mail as a template: the same table and reading as the built-in mail, with {placeholders} in place of the
+// employee's details. HR gets one for every request and step to start from; after that they are ordinary templates (Template Management).
+export function starterTemplate(kind: string, event: string, kindName: string): { name: string; subject: string; body: string; variables: string[] } {
+  const what = kindName || 'Request';
+  const lower = what.toLowerCase();
+  const subjects: Record<string, string> = {
+    submitted: `${what} request awaiting your approval - {employee_name}`,
+    to_hr: `${what} request approved by manager - {employee_name}`,
+    approved: `${what} request approved`,
+    rejected: `${what} request rejected`,
+  };
+  const heads: Record<string, [string, string]> = {
+    submitted: [`${what} request awaiting your approval`, '#0f172a'],
+    to_hr: [`${what} request awaiting HR approval`, '#0f172a'],
+    approved: [`${what} request approved`, '#16a34a'],
+    rejected: [`${what} request rejected`, '#dc2626'],
+  };
+  const intro: Record<string, string> = {
+    submitted: `{employee_name} has sent a ${lower} request.`,
+    to_hr: `The reporting manager has approved this request. It now needs HR approval.`,
+    approved: `Dear {employee_name}, your ${lower} request has been approved.`,
+    rejected: `Dear {employee_name}, your ${lower} request has been rejected.`,
+  };
+  const rowsOf = (ROWS[kind] || [['Employee', 'employee_name'], ['Reason', 'reason']]) as [string, string][];
+  const cell = 'padding:8px 12px;border:1px solid #e2e8f0;';
+  const rows = rowsOf.map(([label, k]) => `<tr><td style="${cell}color:#64748b;font-size:13px">${label}</td><td style="${cell}color:#0f172a;${k === 'reason' ? '' : 'font-weight:600'}">{${k}}</td></tr>`).join('');
+  const note = event === 'rejected' ? `<tr><td style="${cell}color:#64748b;font-size:13px">Rejection reason</td><td style="${cell}color:#0f172a">{remarks}</td></tr>`
+    : event === 'approved' ? `<tr><td style="${cell}color:#64748b;font-size:13px">Note</td><td style="${cell}color:#0f172a">{remarks}</td></tr>` : '';
+  const button = (event === 'submitted' || event === 'to_hr') ? `<p style="margin-top:20px"><a href="{review_link}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Review request</a></p>` : '';
+  const body = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+<h2 style="color:${heads[event][1]}">${heads[event][0]}</h2>
+<p style="color:#475569">${intro[event]}</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">${rows}${note}</table>${button}
+<p style="color:#64748b;font-size:13px;margin-top:24px">This is an automated message from {company_name}.</p></div>`;
+  const used = [...new Set([...(body + subjects[event]).matchAll(/\{([a-z_]+)\}/g)].map(m => m[1]))];
+  return { name: `${what} - ${MAIL_EVENT_SHORT[event] || event}`, subject: subjects[event], body, variables: used };
+}
+
 const MAP_KEY = 'request_mail_templates';
 
 export async function getMailTemplateMap(): Promise<Record<string, string>> {
@@ -89,6 +130,16 @@ export function parseAddressList(input: any): { list: string[]; bad?: string } {
     if (!list.some(x => x.toLowerCase() === p.toLowerCase())) list.push(p);
   }
   return { list: list.slice(0, 20) };
+}
+// two comma lists joined, without repeats and without anyone who is already in To
+export function mergeAddresses(a: any, b: any, to?: any): string {
+  const skip = new Set(String(to || '').toLowerCase().split(/[,;\s]+/).filter(Boolean));
+  const out: string[] = [];
+  for (const x of [...String(a || '').split(/[,;\s]+/), ...String(b || '').split(/[,;\s]+/)].map(v => v.trim()).filter(Boolean)) {
+    if (skip.has(x.toLowerCase()) || out.some(y => y.toLowerCase() === x.toLowerCase())) continue;
+    out.push(x);
+  }
+  return out.join(',');
 }
 export const appUrl = () => process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
 
@@ -177,7 +228,7 @@ export async function sendRequestMail(o: RequestMailOptions): Promise<boolean> {
 
     let subject = '', html = '';
     const tplId = (await getMailTemplateMap())[`${o.kind}.${o.event}`];
-    const tpl = tplId ? (await query<RowDataPacket[]>('SELECT subject, body FROM email_templates WHERE id = ?', [tplId]).catch(() => []))[0] : null;
+    const tpl = tplId ? (await query<RowDataPacket[]>('SELECT subject, body, cc_emails, bcc_emails FROM email_templates WHERE id = ?', [tplId]).catch(() => []))[0] : null;
     if (tpl && (tpl.body || tpl.subject)) {
       let body = fill(tpl.body || '', vars, true);
       if (!/<[a-z][\s\S]*>/i.test(body)) body = esc(body).replace(/\n/g, '<br>'); // plain-text template
@@ -194,7 +245,9 @@ export async function sendRequestMail(o: RequestMailOptions): Promise<boolean> {
       ({ subject, html } = defaultMail(o.kind, o.event, vars, !!o.updated, kindName));
     }
     if (o.subject && o.event === 'submitted' && !o.updated) subject = o.subject;
-    return await sendEmail(o.to, subject, html, { cc: o.cc || undefined, bcc: o.bcc || undefined, replyTo: o.replyTo || undefined, asUser: o.asUser });
+    // the people a template always copies (set on the template) are added to the Cc / Bcc of the mail
+    const mergedCc = mergeAddresses(o.cc, tpl?.cc_emails, o.to), mergedBcc = mergeAddresses(o.bcc, tpl?.bcc_emails, o.to);
+    return await sendEmail(o.to, subject, html, { cc: mergedCc || undefined, bcc: mergedBcc || undefined, replyTo: o.replyTo || undefined, asUser: o.asUser });
   } catch (e: any) {
     console.error('[request-mail] failed:', e?.message || e);
     return false;

@@ -146,10 +146,10 @@ export async function generatePDF(p: PayslipData): Promise<Buffer> {
     </head>
     <body>
       <div class="slip">
-      <div class="watermark">${p.company_logo && /^(data:image\/|https?:\/\/)/.test(p.company_logo) ? `<img src="${p.company_logo}" />` : `<span>${esc(p.company_name || 'A PLUS DIGITAL SOLUTIONS')}</span>`}</div>
+      <div class="watermark">${p.company_logo && /^(data:image\/|https?:\/\/)/.test(p.company_logo) ? `<img src="${p.company_logo}" />` : `<span>${esc(p.company_name || '')}</span>`}</div>
       <div class="header">
         <div>
-          <div class="company-name">${esc(p.company_name || 'A PLUS DIGITAL SOLUTIONS')}</div>
+          <div class="company-name">${esc(p.company_name || '')}</div>
           <div class="company-address">${esc(p.company_address)}</div>
         </div>
         ${p.company_logo ? `<img class="logo" src="${p.company_logo}" />` : ''}
@@ -266,7 +266,7 @@ async function drawPayslipWithPdfKit(p: PayslipData, t: { earnings: [string, str
   if (mark) { try { doc.opacity(0.07); doc.image(mark, X + W * 0.17, 330, { fit: [W * 0.66, 190], align: 'center', valign: 'center' }); marked = true; } catch { marked = false; } }
   if (!marked) {
     doc.fillColor(GREEN).fillOpacity(0.06).font('Helvetica-Bold').fontSize(54);
-    doc.text(latin(p.company_name || 'A PLUS DIGITAL SOLUTIONS').toUpperCase(), X - 60, 400, { width: W + 120, align: 'center', lineBreak: false });
+    doc.text(latin(p.company_name || '').toUpperCase(), X - 60, 400, { width: W + 120, align: 'center', lineBreak: false });
   }
   doc.restore();
   doc.fillOpacity(1).opacity(1);
@@ -276,7 +276,7 @@ async function drawPayslipWithPdfKit(p: PayslipData, t: { earnings: [string, str
   y += 5;
   const logo = await dataImage(p.company_logo);
   doc.fillColor(INK).font('Helvetica-Bold').fontSize(19);
-  txt(p.company_name || 'A PLUS DIGITAL SOLUTIONS', X + 20, y + 18, W - 230);
+  txt(p.company_name || '', X + 20, y + 18, W - 230);
   doc.fillColor(MUTED).font('Helvetica').fontSize(8.5);
   doc.text(latin(p.company_address || ''), X + 20, y + 44, { width: W - 230, height: 34 });
   if (logo) { try { doc.image(logo, X + W - 170, y + 14, { fit: [150, 52], align: 'right' }); } catch { /* a logo that cannot be read is left out */ } }

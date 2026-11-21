@@ -52,11 +52,11 @@ export default function Preferences() {
     finally { setSaving(false); }
   };
 
-  const card = { background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, padding: 16, marginBottom: 14 };
+  const card = { background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, padding: 16, marginBottom: 14 };
   const row = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderBottom: '1px solid #f4f6fa' };
   const Switch = ({ on, onChange, label }) => (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onChange}
-      style={{ width: 40, height: 22, borderRadius: 20, border: 'none', background: on ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer', transition: 'background-color .15s', flexShrink: 0 }}>
+      style={{ width: 40, height: 22, borderRadius: 20, border: 'none', background: on ? 'var(--brand)' : '#cbd5e1', position: 'relative', cursor: 'pointer', transition: 'background-color .15s', flexShrink: 0 }}>
       <span style={{ position: 'absolute', top: 2, left: on ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
     </button>
   );
@@ -79,7 +79,7 @@ export default function Preferences() {
         <div style={{ display: 'flex', gap: 8 }} data-no-translate>
           {[['en', 'English'], ['hi', 'हिन्दी']].map(([k, l]) => (
             <button key={k} type="button" onClick={() => setLang(k)} aria-pressed={lang === k}
-              style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid ' + (lang === k ? '#2563eb' : '#e2e8f0'), background: lang === k ? '#2563eb' : '#fff', color: lang === k ? '#fff' : '#475569', fontWeight: 600, fontSize: '.85rem', cursor: 'pointer' }}>{l}</button>
+              style={{ padding: '8px 18px', borderRadius: 20, border: '1px solid ' + (lang === k ? 'var(--brand)' : '#e2e8f0'), background: lang === k ? 'var(--brand)' : '#fff', color: lang === k ? '#fff' : '#475569', fontWeight: 600, fontSize: '.85rem', cursor: 'pointer' }}>{l}</button>
           ))}
         </div>
       </div>

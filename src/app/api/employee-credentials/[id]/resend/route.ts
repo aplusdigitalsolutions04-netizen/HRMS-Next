@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -12,7 +13,7 @@ import { auditFrom } from '@/lib/audit';
 // - Still on the temporary password: the saved mail goes out again (that password still works).
 // - Already chose their own password: the old mail would show a temporary password that no longer works, so a fresh mail is made
 //   from the same template with "the password you set yourself" in its place, and nothing is changed on the account.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -76,3 +77,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

@@ -57,8 +57,8 @@ export default function InviteEmployee() {
         label: { display: 'block', fontSize: 12.5, fontWeight: 600, color: '#374151', marginBottom: 5 },
         input: { width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: 13.5, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' },
         backBtn: { padding: '9px 16px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: 13.5, fontWeight: 600, textDecoration: 'none' },
-        submitBtn: { padding: '9px 20px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-        link: { border: 'none', background: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0 },
+        submitBtn: { padding: '9px 20px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, var(--brand), var(--brand-mid))', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+        link: { border: 'none', background: 'none', color: 'var(--brand)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0 },
     };
 
     // Everything fits on one screen: details on the left, the compulsory documents on the right, buttons below.
@@ -97,10 +97,10 @@ export default function InviteEmployee() {
                             <button type="button" style={s.link} onClick={() => setReqDocs([])}>Clear</button>
                         </span>
                     </div>
-                    <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#64748b' }}>The employee cannot submit their profile without the documents you tick here.{reqDocs.length > 0 && <b style={{ color: '#2563eb' }}> {reqDocs.length} selected</b>}</p>
+                    <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#64748b' }}>The employee cannot submit their profile without the documents you tick here.{reqDocs.length > 0 && <b style={{ color: 'var(--brand)' }}> {reqDocs.length} selected</b>}</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
                         {DOC_OPTIONS.map(d => (
-                            <label key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', border: '1px solid ' + (reqDocs.includes(d.key) ? '#2563eb' : '#e2e8f0'), background: reqDocs.includes(d.key) ? '#eff6ff' : '#fff', borderRadius: 9, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>
+                            <label key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', border: '1px solid ' + (reqDocs.includes(d.key) ? 'var(--brand)' : '#e2e8f0'), background: reqDocs.includes(d.key) ? 'var(--brand-soft)' : '#fff', borderRadius: 9, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>
                                 <input type="checkbox" checked={reqDocs.includes(d.key)} onChange={() => toggleDoc(d.key)} />
                                 {d.label}
                             </label>

@@ -50,10 +50,10 @@ export default function RequestTypes() {
     <div>
       <style>{`
         .rt-t { width:100%; border-collapse:collapse; }
-        .rt-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; }
+        .rt-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; }
         .rt-t td { padding:9px 12px; font-size:.84rem; color:#334155; border-bottom:1px solid #f4f6fa; vertical-align:middle; }
         .rt-b { height:28px; padding:0 11px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer; }
-        .rt-b:hover:not(:disabled) { border-color:#93c5fd; color:#1d4ed8; background:#f1f6ff; }
+        .rt-b:hover:not(:disabled) { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); }
         .rt-b.del:hover:not(:disabled) { border-color:#fecaca; color:#b91c1c; background:#fef2f2; }
         .rt-b:disabled { opacity:.5; cursor:not-allowed; }
       `}</style>
@@ -72,7 +72,7 @@ export default function RequestTypes() {
         <button type="submit" className="btn-p" disabled={busy || !name.trim()}>+ Add request type</button>
       </form>
 
-      <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="rt-t">
             <thead><tr><th style={{ width: 40 }}>#</th><th>Request type</th><th>Template categories</th><th>Status</th><th style={{ width: 230 }}>Actions</th></tr></thead>

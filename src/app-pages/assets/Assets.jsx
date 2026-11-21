@@ -8,7 +8,7 @@ import useStatusMaster from '../shared/useStatusMaster';
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const JH = () => ({ ...auth(), 'Content-Type': 'application/json' });
-const STATUS_COLORS = { Available: ['#f0fdf4', '#15803d'], Assigned: ['#eff6ff', '#1d4ed8'], 'In repair': ['#fffbeb', '#b45309'], Lost: ['#fef2f2', '#b91c1c'], Retired: ['#f1f5f9', '#475569'] };
+const STATUS_COLORS = { Available: ['#f0fdf4', '#15803d'], Assigned: ['var(--brand-soft)', 'var(--brand-dark)'], 'In repair': ['#fffbeb', '#b45309'], Lost: ['#fef2f2', '#b91c1c'], Retired: ['#f1f5f9', '#475569'] };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fmt = (d) => { if (!d) return ''; try { return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; } };
 
@@ -50,7 +50,7 @@ function EmployeeSelect({ value, onPick }) {
   // chosen: show who, with a way to change - no floating list, so nothing opens on top of the form
   if (value) {
     return (
-      <div style={{ ...inp, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#eff6ff', borderColor: '#93c5fd' }}>
+      <div style={{ ...inp, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--brand-soft)', borderColor: 'var(--brand-line)' }}>
         <b style={{ color: '#0f172a' }}>{value.label}</b>
         <button type="button" className="as-b" onClick={() => onPick(null)}>Change</button>
       </div>
@@ -68,7 +68,7 @@ function EmployeeSelect({ value, onPick }) {
               <button key={e.id} type="button" role="option" onMouseDown={ev => ev.preventDefault()}
                 onClick={() => { onPick({ id: e.id, label: `${e.full_name} (${e.emp_code})` }); setQ(''); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '6px 12px', border: 'none', borderBottom: '1px solid #f8fafc', background: 'none', cursor: 'pointer', fontSize: 13 }}>
-                <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#e0e7ff', color: '#3730a3', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{String(e.full_name || '?').trim().charAt(0).toUpperCase()}</span>
+                <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--brand-soft-2)', color: 'var(--brand-dark)', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{String(e.full_name || '?').trim().charAt(0).toUpperCase()}</span>
                 <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   <b style={{ color: '#0f172a' }}>{e.full_name}</b>
                   <span style={{ color: '#94a3b8', fontSize: 12 }}>{e.designation ? ' - ' + e.designation : ''}</span>
@@ -217,12 +217,12 @@ export default function Assets() {
     <div>
       <style>{`
         .as-t { width:100%; border-collapse:collapse; }
-        .as-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; white-space:nowrap; }
+        .as-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; white-space:nowrap; }
         .as-t td { padding:8px 12px; font-size:.82rem; color:#334155; border-bottom:1px solid #f4f6fa; vertical-align:middle; }
         .as-b { height:28px; padding:0 10px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer; }
-        .as-b:hover { border-color:#93c5fd; color:#1d4ed8; background:#f1f6ff; }
-        .as-b.pri { background:#2563eb; border-color:#2563eb; color:#fff; } .as-b.pri:hover { background:#1d4ed8; color:#fff; }
-        .as-card { background:#fff; border:1px solid #e8edf6; border-radius:12px; overflow:hidden; }
+        .as-b:hover { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); }
+        .as-b.pri { background:var(--brand); border-color:var(--brand); color:#fff; } .as-b.pri:hover { background:var(--brand-dark); color:#fff; }
+        .as-card { background:#fff; border:1px solid #eadfd5; border-radius:12px; overflow:hidden; }
       `}</style>
 
       <div className="ph">
@@ -345,7 +345,7 @@ export default function Assets() {
                   {history.length === 0 ? <p style={{ color: '#94a3b8', fontSize: 13 }}>Nobody has held this asset yet.</p> : (
                     <table className="as-t"><thead><tr><th>Employee</th><th>Given</th><th>Returned</th><th>Condition</th></tr></thead>
                       <tbody>{history.map(h => (
-                        <tr key={h.id}><td>{h.full_name} <span style={{ color: '#94a3b8' }}>({h.emp_code})</span></td><td>{fmt(h.assigned_on)}</td><td>{h.returned_on ? fmt(h.returned_on) : <b style={{ color: '#1d4ed8' }}>Still with them</b>}</td><td>{[h.condition_out, h.condition_in].filter(Boolean).join(' → ') || '-'}</td></tr>
+                        <tr key={h.id}><td>{h.full_name} <span style={{ color: '#94a3b8' }}>({h.emp_code})</span></td><td>{fmt(h.assigned_on)}</td><td>{h.returned_on ? fmt(h.returned_on) : <b style={{ color: 'var(--brand-dark)' }}>Still with them</b>}</td><td>{[h.condition_out, h.condition_in].filter(Boolean).join(' → ') || '-'}</td></tr>
                       ))}</tbody></table>
                   )}
                 </div>

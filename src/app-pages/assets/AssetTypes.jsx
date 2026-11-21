@@ -49,10 +49,10 @@ export default function AssetTypes() {
     <div>
       <style>{`
         .at-t { width:100%; border-collapse:collapse; }
-        .at-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; }
+        .at-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; }
         .at-t td { padding:9px 12px; font-size:.84rem; color:#334155; border-bottom:1px solid #f4f6fa; vertical-align:middle; }
         .at-b { height:28px; padding:0 11px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer; }
-        .at-b:hover:not(:disabled) { border-color:#93c5fd; color:#1d4ed8; background:#f1f6ff; }
+        .at-b:hover:not(:disabled) { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); }
         .at-b.del:hover:not(:disabled) { border-color:#fecaca; color:#b91c1c; background:#fef2f2; }
         .at-b:disabled { opacity:.5; cursor:not-allowed; }
       `}</style>
@@ -71,7 +71,7 @@ export default function AssetTypes() {
         <button type="submit" className="btn-p" disabled={busy || !name.trim()}>+ Add type</button>
       </form>
 
-      <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
         <table className="at-t">
           <thead><tr><th style={{ width: 40 }}>#</th><th>Type</th><th>Assets</th><th>Status</th><th style={{ width: 180 }}>Actions</th></tr></thead>
           <tbody>
@@ -86,7 +86,7 @@ export default function AssetTypes() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <button type="button" role="switch" aria-checked={t.is_active} aria-label={`${t.name} active`} disabled={busy}
                         onClick={() => call(`${API}/asset-types`, 'PUT', { id: t.id, is_active: !t.is_active })}
-                        style={{ display: 'block', flexShrink: 0, width: 40, height: 22, padding: 0, margin: 0, borderRadius: 20, border: 'none', background: t.is_active ? '#2563eb' : '#cbd5e1', position: 'relative', cursor: 'pointer', transition: 'background-color .15s' }}>
+                        style={{ display: 'block', flexShrink: 0, width: 40, height: 22, padding: 0, margin: 0, borderRadius: 20, border: 'none', background: t.is_active ? 'var(--brand)' : '#cbd5e1', position: 'relative', cursor: 'pointer', transition: 'background-color .15s' }}>
                         <span style={{ position: 'absolute', top: 2, left: t.is_active ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.25)', transition: 'left .15s' }} />
                       </button>
                       <span style={{ fontSize: '.78rem', lineHeight: 1, color: t.is_active ? '#15803d' : '#94a3b8', fontWeight: 600 }}>{t.is_active ? 'Active' : 'Off'}</span>

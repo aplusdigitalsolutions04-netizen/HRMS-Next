@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -6,7 +7,7 @@ import { RowDataPacket } from 'mysql2';
 import { getPayslipSignatories } from '@/lib/payroll-calc';
 import { generatePDF } from '@/lib/payslip-pdf';
 
-export async function GET(req, { params }) {
+async function GET_handler(req, { params }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -36,3 +37,5 @@ export async function GET(req, { params }) {
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);

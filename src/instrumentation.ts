@@ -9,4 +9,10 @@ export async function register() {
   startAttendanceAutoSync();
   const { startPayslipAutoDraft } = await import('./lib/payslip-auto-draft');
   startPayslipAutoDraft();
+  const { startApiLogPurge } = await import('./lib/api-log');
+  startApiLogPurge();
+  const { startDocumentExpiryJob } = await import('./lib/document-expiry');
+  startDocumentExpiryJob();
+  const { startBackupJob } = await import('./lib/backup-auto');
+  startBackupJob();
 }

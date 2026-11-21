@@ -27,7 +27,21 @@ const PAGES = [
   ['Upload Attendance', '/attendance/upload', 'attendance import excel'],
   ['Leave Management', '/leave/manage', 'leave requests'],
   ['Audit Log', '/audit-log', 'who changed what history log'],
+  ['Login Activity', '/login-activity', 'login history sessions devices sign out security'],
   ['Backup & Export', '/backup', 'backup download database export restore'],
+  ['API Logs', '/api-logs', 'api log error request history debug'],
+  ['Help Desk', '/helpdesk/manage', 'help desk tickets questions employees answer'],
+  ['Directory', '/directory', 'employee directory people phone email birthday anniversary'],
+  ['Document Expiry', '/documents/expiry', 'document expiry valid till passport licence reminder'],
+  ['Make a letter', '/letters/make', 'letters offer appointment experience relieving confirmation letter pdf issue generate'],
+  ['Letters made', '/letters/made', 'letters made issued list reference edit delete email pdf'],
+  ['Letter texts', '/letters/texts', 'letter text template wording offer appointment edit add new letter'],
+  ['Letter words', '/letters/words', 'letter words placeholders variables name designation salary'],
+  ['Letterhead', '/letters/letterhead', 'letterhead header logo image company letters print paper'],
+  ['Exit & Full and Final', '/exits', 'exit resignation notice period full and final settlement fnf checklist'],
+  ['Salary Revisions', '/payroll/revisions', 'salary revision history hike appraisal increment promotion'],
+  ['Guide', '/guide', 'guide help how to use pages steps formula salary leave attendance settings manual'],
+  ['Statutory Deductions', '/payroll/statutory', 'pf esi tds professional tax statutory deduction provident fund income tax'],
   ['Asset Types', '/masters/asset-types', 'asset type master laptop id card'],
   ['Leave Types', '/masters/leave-types', 'master leave type annual sick casual'],
   ['Template Categories', '/masters/template-categories', 'master email template category leave interview'],
@@ -44,6 +58,7 @@ const PAGES = [
   ['Designations', '/masters/designations', 'master designation'],
   ['Email Log', '/email-log', 'communication email'],
   ['Drafts', '/drafts', 'communication email draft'],
+  ['Announcements', '/announcements', 'notice board post announcement employees home page'],
   ['Notifications', '/notifications', 'alerts'],
   ['Company Settings', '/settings/company', 'settings company'],
   ['Status Master', '/settings/status-master', 'settings status'],
@@ -82,7 +97,7 @@ export default function GlobalSearch() {
   // one flat, keyboard-navigable list: [group, label, sub, path]
   const results = useMemo(() => {
     const t = q.trim().toLowerCase();
-    const pages = (t ? PAGES.filter(([label, , kw]) => (label + ' ' + kw).toLowerCase().includes(t)) : PAGES).slice(0, t ? 5 : 6)
+    const pages = (t ? PAGES.filter(([label, , kw]) => (label + ' ' + kw).toLowerCase().includes(t)) : PAGES).slice(0, t ? 5 : 8)
       .map(([label, path]) => ['Pages', label, path, path]);
     const emps = remote.employees.map(e => ['Employees', e.full_name, [e.emp_code, e.designation].filter(Boolean).join(' · ') || e.email_id, '/employees/detail/' + e.id]);
     const cands = remote.candidates.map(c => ['Candidates', c.candidate_name, c.email_id || c.contact_number || '', '/candidates/view/' + c.id]);
@@ -115,7 +130,8 @@ export default function GlobalSearch() {
         onChange={e => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onKeyDown={onKeyDown}
       />
       <kbd className="gs-kbd">Ctrl K</kbd>
-      <Menu open={open && q.trim().length > 0} className="gs-menu">
+      <Menu open={open} className="gs-menu">
+        {q.trim().length === 0 && <div className="gs-grp">Quick open · type to search employees, candidates and pages</div>}
         {results.length === 0 ? <div className="gs-empty">{busy ? 'Searching…' : 'No matching result'}</div> : results.map(([group, label, sub, path], i) => (
           <div key={group + path + i}>
             {(i === 0 || results[i - 1][0] !== group) && <div className="gs-grp">{group}</div>}

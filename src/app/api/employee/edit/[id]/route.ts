@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { validatePassword } from '@/lib/password-policy';
 import { encryptSecret } from '@/lib/mailbox';
@@ -8,6 +9,7 @@ import { execute, query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { saveEmployeeDocument } from '@/lib/googleDrive';
 import { auditFrom } from '@/lib/audit';
+import { renameEmployeeCode } from '@/lib/employee-code';
 
 const allowedFields = ['emp_code', 'full_name', 'email_id', 'mobile_no', 'father_spouse_name', 'dob', 'present_address',
   'permanent_address', 'college_name', 'course_name', 'specialization', 'course_duration', 'cgpa',
@@ -17,7 +19,7 @@ const allowedFields = ['emp_code', 'full_name', 'email_id', 'mobile_no', 'father
 const docColumns = ['identity_proof', 'address_proof', 'resume_path', 'ug_document', 'marksheet10', 'marksheet12',
   'offer_letter', 'pg_document', 'appointment_letter', 'internship_certificate', 'photograph', 'bank_document'];
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -46,6 +48,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (body.manager_id === id) return jsonError('An employee cannot be their own reporting manager', 422);
 
+    // A changed Employee ID is carried through every table first (before any document is saved under the new ID).
+    if (body.emp_code !== undefined) {
+      const cur = (await query<RowDataPacket[]>('SELECT emp_code FROM employees WHERE id = ?', [id]))[0];
+      if (!cur) return jsonError('Employee not found', 404);
+      const newCode = String(body.emp_code).trim();
+      if (newCode !== cur.emp_code) {
+        const r = await renameEmployeeCode(cur.emp_code, newCode);
+        if (!r.ok) return jsonError(r.error || 'Could not change the Employee ID', r.error === 'Employee ID already exists' ? 409 : 422);
+        await auditFrom(user, 'employee_code_changed', 'employee', id, { from: cur.emp_code, to: newCode, tables: r.tables });
+      }
+      body.emp_code = newCode;
+    }
+
     const dateFields = new Set(['dob', 'date_of_joining']);
     const sets: string[] = [];
     const vals: any[] = [];
@@ -58,7 +73,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
     if (body.password) {
-      const pwErr = validatePassword(body.password, body.email_id);
+      const pwErr = await validatePassword(body.password, body.email_id);
       if (pwErr) return jsonError(pwErr, 422);
       sets.push('password = ?'); vals.push(hashPassword(body.password));
     }
@@ -114,3 +129,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonError(e, 500);
   }
 }
+
+export const PUT = withApiLog(PUT_handler);

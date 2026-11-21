@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { encryptSecret } from '@/lib/mailbox';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } from '@/lib/utils';
@@ -8,7 +9,7 @@ import { hashPassword } from '@/lib/auth';
 import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
 import { sendDraftById } from '@/lib/draft-send';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -136,3 +137,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

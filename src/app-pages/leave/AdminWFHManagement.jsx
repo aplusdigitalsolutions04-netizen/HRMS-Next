@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Pagination from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const formatDT = (d) => {
   if (!d) return '\u2014';
-  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
+  try { return new Date(d).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
 };
 
 const statusBadge = (s) => {
@@ -24,7 +25,7 @@ export default function AdminWFHManagement() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [perPage, setPerPage] = useState(15);
+  const [perPage, setPerPage] = useState(10);
   const perPageRef = useRef(15);
 
   const fetchRequests = (p = 1) => {

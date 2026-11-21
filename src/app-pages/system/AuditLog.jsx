@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Pagination from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const pad = (n) => String(n).padStart(2, '0');
 const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const nice = (s) => String(s || '').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
-const when = (v) => { try { return new Date(v).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return v; } };
+const when = (v) => { try { return new Date(v).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return v; } };
 
 // readable one-line summary of the stored details
 function summarize(d) {
@@ -17,7 +18,7 @@ function summarize(d) {
   return Object.entries(d).filter(([, v]) => v !== null && v !== undefined && v !== '').map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', ');
 }
 
-const TONE = (a) => /deleted|removed|rejected|failed/.test(a) ? ['#fef2f2', '#b91c1c'] : /approved|verified|created|added|assigned|invited/.test(a) ? ['#f0fdf4', '#15803d'] : ['#eff6ff', '#1d4ed8'];
+const TONE = (a) => /deleted|removed|rejected|failed/.test(a) ? ['#fef2f2', '#b91c1c'] : /approved|verified|created|added|assigned|invited/.test(a) ? ['#f0fdf4', '#15803d'] : ['var(--brand-soft)', 'var(--brand-dark)'];
 
 export default function AuditLog() {
   const P = [{ l: 'Today', f: ymd(new Date()), t: ymd(new Date()) }, { l: 'Last 7 days', f: ymd(new Date(Date.now() - 6 * 864e5)), t: ymd(new Date()) }, { l: 'Last 30 days', f: ymd(new Date(Date.now() - 29 * 864e5)), t: ymd(new Date()) }];
@@ -28,7 +29,7 @@ export default function AuditLog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [f, setF] = useState({ search: '', action: '', entity: '', from: '', to: '' });
   const ready = useRef(false);
 
@@ -55,10 +56,10 @@ export default function AuditLog() {
     <div>
       <style>{`
         .al-t { width:100%; border-collapse:collapse; }
-        .al-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; white-space:nowrap; }
+        .al-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; white-space:nowrap; }
         .al-t td { padding:8px 12px; font-size:.8rem; color:#334155; border-bottom:1px solid #f4f6fa; vertical-align:top; }
         .al-chip { border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:.76rem; font-weight:600; padding:5px 11px; border-radius:20px; cursor:pointer; }
-        .al-chip:hover { border-color:#93c5fd; color:#1d4ed8; }
+        .al-chip:hover { border-color:var(--brand-line); color:var(--brand-dark); }
       `}</style>
       <div className="ph">
         <div>
@@ -82,7 +83,7 @@ export default function AuditLog() {
 
       {error && <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '10px 14px', borderRadius: 10, marginBottom: 12, fontSize: '.85rem' }}>{error}</div>}
 
-      <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="al-t">
             <thead><tr><th style={{ width: 40 }}>#</th><th>When</th><th>Who</th><th>Action</th><th>On</th><th>Details</th></tr></thead>
@@ -106,7 +107,7 @@ export default function AuditLog() {
           </table>
         </div>
         <div style={{ padding: '0 14px 12px' }}>
-          <Pagination page={page} totalItems={total} pageSize={pageSize} itemLabel="entries" onPageChange={p => load(p)} onPageSizeChange={n => { setPageSize(n); load(1, { perPage: n }); }} pageSizeOptions={[10, 25, 50, 100]} />
+          <Pagination page={page} totalItems={total} pageSize={pageSize} itemLabel="entries" onPageChange={p => load(p)} onPageSizeChange={n => { setPageSize(n); load(1, { perPage: n }); }}  />
         </div>
       </div>
     </div>

@@ -1,10 +1,11 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -14,3 +15,5 @@ export async function DELETE(req: NextRequest) {
     return jsonSuccess({ message: 'Read notifications cleared' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const DELETE = withApiLog(DELETE_handler);

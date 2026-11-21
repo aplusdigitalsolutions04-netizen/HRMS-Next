@@ -1,13 +1,15 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, uuidv4 } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, uuidv4, hasAnyPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['settings_templates', 'send_candidate_emails', 'view_drafts', 'manage_drafts', 'add_candidate'])) return jsonError('Insufficient permissions', 403);
 
     const variables = await query<RowDataPacket[]>('SELECT id, name, description, created_at FROM template_variables ORDER BY created_at ASC');
     return jsonSuccess(variables);
@@ -16,11 +18,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['settings_templates', 'send_candidate_emails', 'view_drafts', 'manage_drafts', 'add_candidate'])) return jsonError('Insufficient permissions', 403);
 
     const body = await req.json();
     let { name, description } = body;
@@ -50,3 +53,6 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);

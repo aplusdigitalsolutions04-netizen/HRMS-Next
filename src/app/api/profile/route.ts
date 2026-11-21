@@ -1,10 +1,11 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { parseRequiredDocs, DOC_OPTIONS } from '@/lib/documents';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -117,3 +118,6 @@ export async function PUT(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);
+export const PUT = withApiLog(PUT_handler);

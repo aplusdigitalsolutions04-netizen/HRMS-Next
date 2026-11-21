@@ -58,7 +58,7 @@ export default function CorrectionsPanel({ prefillDate }) {
       if (!x.isConfirmed) return;
       note = x.value.trim();
     } else {
-      const x = await Swal.fire({ icon: 'question', title: 'Approve and send to HR?', showCancelButton: true, confirmButtonText: 'Approve', confirmButtonColor: '#2563eb' });
+      const x = await Swal.fire({ icon: 'question', title: 'Approve and send to HR?', showCancelButton: true, confirmButtonText: 'Approve', confirmButtonColor: 'var(--brand)' });
       if (!x.isConfirmed) return;
     }
     setBusy(r.id);
@@ -81,7 +81,7 @@ export default function CorrectionsPanel({ prefillDate }) {
   const when = (r) => (r.request_type === 'Late coming' ? `Arrived ${r.in_time}` : `${r.in_time} - ${r.out_time}`);
   const inp = { height: 36, padding: '0 11px', border: '1px solid #e2e8f0', borderRadius: 9, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' };
   const lab = { display: 'block', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 };
-  const th = { textAlign: 'left', padding: '8px 12px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.4px', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e8edf6' };
+  const th = { textAlign: 'left', padding: '8px 12px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.4px', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #eadfd5' };
   const td = { padding: '8px 12px', fontSize: 13, borderBottom: '1px solid #f4f6fa' };
 
   return (
@@ -114,14 +114,14 @@ export default function CorrectionsPanel({ prefillDate }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) 1fr', gap: 14, alignItems: 'start' }} className="corr-grid">
         <style>{`@media (max-width: 900px) { .corr-grid { grid-template-columns: 1fr !important; } }`}</style>
-        <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, padding: 16 }}>
+        <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, padding: 16 }}>
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             {TYPES.map(([k, l]) => (
               <button key={k} type="button" onClick={() => !editId && setForm(f => ({ ...f, request_type: k }))} disabled={!!editId && form.request_type !== k} aria-pressed={form.request_type === k}
-                style={{ flex: 1, padding: '7px 10px', borderRadius: 20, border: '1px solid ' + (form.request_type === k ? '#2563eb' : '#e2e8f0'), background: form.request_type === k ? '#2563eb' : '#fff', color: form.request_type === k ? '#fff' : '#475569', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{l}</button>
+                style={{ flex: 1, padding: '7px 10px', borderRadius: 20, border: '1px solid ' + (form.request_type === k ? 'var(--brand)' : '#e2e8f0'), background: form.request_type === k ? 'var(--brand)' : '#fff', color: form.request_type === k ? '#fff' : '#475569', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>{l}</button>
             ))}
           </div>
-          {editId && <div style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontWeight: 600, marginBottom: 10 }}>Editing your request <button type="button" onClick={stopEdit} style={{ float: 'right', border: 'none', background: 'none', color: '#1d4ed8', cursor: 'pointer', fontWeight: 700 }}>Cancel</button></div>}
+          {editId && <div style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)', borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontWeight: 600, marginBottom: 10 }}>Editing your request <button type="button" onClick={stopEdit} style={{ float: 'right', border: 'none', background: 'none', color: 'var(--brand-dark)', cursor: 'pointer', fontWeight: 700 }}>Cancel</button></div>}
           <h3 style={{ margin: '0 0 4px', fontSize: '.95rem' }}>{late ? 'Came late?' : 'Missed a punch?'}</h3>
           <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#64748b' }}>
             {late ? 'Tell the day, the time you arrived and why. Your reporting manager approves first, then HR.' : 'Tell the day and the times you were in. Your reporting manager approves first, then HR. Once approved, that day\'s attendance is corrected.'}
@@ -135,7 +135,7 @@ export default function CorrectionsPanel({ prefillDate }) {
           <button type="submit" className="btn-p" disabled={saving} style={{ width: '100%' }}>{saving ? 'Sending...' : editId ? 'Save changes' : 'Send request'}</button>
         </form>
 
-        <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
           <div style={{ padding: '12px 14px', fontWeight: 700, fontSize: '.9rem', borderBottom: '1px solid #eef2f7' }}>My requests</div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

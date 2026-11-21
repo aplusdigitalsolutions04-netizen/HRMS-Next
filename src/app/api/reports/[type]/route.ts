@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -7,7 +8,7 @@ import { REPORT_TYPES, buildReport, validRange, reportToXlsx, reportToPdf } from
 import { auditFrom } from '@/lib/audit';
 
 // GET /api/reports/<attendance|leave|headcount|attrition>?from=YYYY-MM-DD&to=YYYY-MM-DD&format=json|xlsx|pdf
-export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -44,3 +45,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ type
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);

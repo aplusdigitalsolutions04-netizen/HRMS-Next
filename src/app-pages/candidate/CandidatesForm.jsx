@@ -94,6 +94,8 @@ const CandidatesForm = () => {
             setLoaderShow(false);
             if (res.success && res.data) {
                 setRawCandidateData(res.data);
+                // the resume is saved even when it could not be read; the details are then typed in below
+                if (res.parse_warning) Swal.fire({ icon: 'warning', title: res.parse_title || 'Resume uploaded', text: res.parse_warning });
                 setShowCandidateInfo(true);
                 setBtnUploadDisabled(true);
                 setBtnGetDisabled(true);
@@ -166,6 +168,10 @@ const CandidatesForm = () => {
             Swal.fire("Error", err.message || "Save failed", "error");
         });
     };
+
+    // the details found in the resume can be corrected, and typed in when the resume could not be read
+    const setField = (k, v) => setRawCandidateData(d => ({ ...(d || {}), [k]: v }));
+    const cellInput = (k, props = {}) => <input className="form-control form-control-sm" value={rawCandidateData?.[k] || ''} onChange={e => setField(k, e.target.value)} {...props} />;
 
     const viewResume = () => {
         openResume(rawCandidateData && rawCandidateData.resume_pdf_path);
@@ -290,35 +296,35 @@ const CandidatesForm = () => {
                                     <tbody>
                                         <tr>
                                             <th width="25%">Candidate Name</th>
-                                            <td width="25%" id="candidateName">{rawCandidateData?.candidate_name || ""}</td>
+                                            <td width="25%" id="candidateName">{cellInput('candidate_name', { placeholder: 'Full name' })}</td>
                                             <th width="25%">Mobile Number</th>
                                             <td width="25%" id="contactNumber">{rawCandidateData?.contact_number || ""}</td>
                                         </tr>
                                         <tr>
                                             <th>Email ID</th>
-                                            <td id="emailId">{rawCandidateData?.email_id || ""}</td>
+                                            <td id="emailId">{cellInput('email_id', { type: 'email', placeholder: 'name@example.com' })}</td>
                                             <th>Date of Birth</th>
-                                            <td id="dob">{rawCandidateData?.date_of_birth || ""}</td>
+                                            <td id="dob">{cellInput('date_of_birth', { type: 'date', value: String(rawCandidateData?.date_of_birth || '').slice(0, 10) })}</td>
                                         </tr>
                                         <tr>
                                             <th>Qualification</th>
-                                            <td id="qualification">{rawCandidateData?.qualification || ""}</td>
+                                            <td id="qualification">{cellInput('qualification')}</td>
                                             <th>Work Experience</th>
-                                            <td id="experience">{rawCandidateData?.work_experience || ""}</td>
+                                            <td id="experience">{cellInput('work_experience')}</td>
                                         </tr>
                                         <tr>
                                             <th>Location</th>
-                                            <td id="location">{rawCandidateData?.location || ""}</td>
+                                            <td id="location">{cellInput('location')}</td>
                                             <th>Skills</th>
-                                            <td id="skills">{rawCandidateData?.skills || ""}</td>
+                                            <td id="skills">{cellInput('skills')}</td>
                                         </tr>
                                         <tr>
                                             <th>Career Objective</th>
-                                            <td colSpan="3" id="careerObjective">{rawCandidateData?.career_objective || ""}</td>
+                                            <td colSpan="3" id="careerObjective">{cellInput('career_objective')}</td>
                                         </tr>
                                         <tr>
                                             <th>Certificates</th>
-                                            <td colSpan="3" id="certificates">{rawCandidateData?.certificates || ""}</td>
+                                            <td colSpan="3" id="certificates">{cellInput('certificates')}</td>
                                         </tr>
                                     </tbody>
                                 </table>

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -8,7 +9,7 @@ import { auditFrom } from '@/lib/audit';
 const STATUSES = ['Available', 'Assigned', 'In repair', 'Lost', 'Retired'];
 
 // One asset with its full history (every person who held it).
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // Edit the details of an asset, or set a status by hand (In repair / Lost / Retired / Available).
 // An asset that is with somebody cannot be marked Available until it is returned.
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -63,7 +64,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -77,3 +78,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return jsonSuccess({ message: 'Asset deleted' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const PUT = withApiLog(PUT_handler);
+export const DELETE = withApiLog(DELETE_handler);

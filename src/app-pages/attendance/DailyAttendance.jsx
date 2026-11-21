@@ -13,14 +13,14 @@ const s = {
   sub: { fontSize: 14, color: '#64748b', margin: '4px 0 0 0' },
   ctrls: { display: 'flex', gap: 12, alignItems: 'center' },
   sel: { height: 36, padding: '0 28px 0 11px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 13, color: '#334155', background: '#fff', outline: 'none', cursor: 'pointer' },
-  card: { background: '#fff', borderRadius: 12, border: '1px solid #e8edf6', overflow: 'hidden' },
+  card: { background: '#fff', borderRadius: 12, border: '1px solid #eadfd5', overflow: 'hidden' },
   tableWrap: { width: '100%', overflowX: 'auto' },
-  th: { padding: '9px 12px', background: '#f8fafc', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: '1px solid #e8edf6', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 },
+  th: { padding: '9px 12px', background: '#f8fafc', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: '1px solid #eadfd5', textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 },
   td: { padding: '8px 12px', fontSize: 13, color: '#334155', borderBottom: '1px solid #f4f6fa', whiteSpace: 'nowrap' },
   tr: { transition: 'background 0.2s', cursor: 'pointer' },
-  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 13px', borderRadius: 9, border: '1px solid #bfdbfe', background: '#fff', color: '#2563eb', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' },
+  backBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 13px', borderRadius: 9, border: '1px solid var(--brand-line)', background: '#fff', color: 'var(--brand)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' },
   empHdr: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' },
-  empAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 },
+  empAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,var(--brand),var(--brand-mid))', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 },
   countPill: (color, bg) => ({
     padding: '2px 9px', borderRadius: 14, fontSize: 11.5, fontWeight: 600, background: bg, color
   }),
@@ -265,7 +265,7 @@ export default function DailyAttendance() {
           {sm.attendance.map(st => (
             <span key={st.code} style={pillStyle(st.color)} title={st.description + (st.used_for ? ' - ' + st.used_for : '')}>{st.code} = {st.label}</span>
           ))}
-          <Link to="/settings/statuses" style={{ fontSize: 12, color: '#2563eb', fontWeight: 600 }}>What do these mean?</Link>
+          <Link to="/settings/statuses" style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 600 }}>What do these mean?</Link>
         </div>
       )}
 

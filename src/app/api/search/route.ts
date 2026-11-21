@@ -1,3 +1,4 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -6,7 +7,7 @@ import { RowDataPacket } from 'mysql2';
 // Read-only lookup behind the top-bar search. Each group is only searched when the caller already has
 // the permission to view that data (same permissions the matching list pages use), and every group fails
 // on its own, so one problem never hides the others.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -37,3 +38,5 @@ export async function GET(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);

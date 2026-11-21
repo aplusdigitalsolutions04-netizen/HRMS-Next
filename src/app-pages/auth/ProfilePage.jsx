@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -182,7 +183,7 @@ export default function ProfilePage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 20px rgba(37,99,235, 0.15);
+          box-shadow: 0 8px 20px rgba(111,78,55, 0.15);
           overflow: hidden;
           border: 2px solid white;
         }
@@ -299,7 +300,7 @@ export default function ProfilePage() {
               <div className="profile-field"><label>Department</label><span>{profile.department || '—'}</span></div>
               <div className="profile-field"><label>Designation</label><span>{profile.designation || '—'}</span></div>
               {profile.last_login && (
-                <div className="profile-field" style={{ gridColumn: '1 / -1' }}><label>Last Login</label><span>{new Date(profile.last_login).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+                <div className="profile-field" style={{ gridColumn: '1 / -1' }}><label>Last Login</label><span>{new Date(profile.last_login).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
               )}
             </div>
             <button className="btn-premium" onClick={() => setEditing(true)}>Edit Profile</button>

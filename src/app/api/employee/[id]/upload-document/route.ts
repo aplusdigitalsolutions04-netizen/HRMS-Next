@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -8,11 +9,11 @@ import { saveEmployeeDocument, deleteFileFromDrive, driveErrorMessage } from '@/
 import { auditFrom } from '@/lib/audit';
 
 const EXTS = ['pdf', 'jpg', 'jpeg', 'png'];
-const MAX = 10 * 1024 * 1024;
+import { getConfig, mb } from '@/lib/app-config';
 
 // HR/Admin uploads one document into an employee's profile (the file comes in a request of its own, like the employee form).
 // A document that is already there is replaced; "Additional" adds one more paper to the extra documents.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -31,7 +32,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!file || typeof file === 'string' || !file.size) return jsonError('Choose a file', 422);
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!EXTS.includes(ext)) return jsonError('Upload a PDF, JPG or PNG file', 422);
-    if (file.size > MAX) return jsonError(`"${file.name}" is too big. Please upload a file smaller than 10 MB.`, 422);
+    const limit = (await getConfig()).upload_max_mb;
+    if (file.size > mb(limit)) return jsonError(`"${file.name}" is too big. Please upload a file smaller than ${limit} MB.`, 422);
 
     let path: string;
     try {
@@ -57,3 +59,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

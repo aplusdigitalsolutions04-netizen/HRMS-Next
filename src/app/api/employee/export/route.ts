@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -46,7 +47,7 @@ async function fetchDoc(storedPath: string): Promise<{ buf: Buffer; ext: string 
   return { buf, ext: path.extname(storedPath) || '' };
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -134,3 +135,5 @@ export async function GET(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);

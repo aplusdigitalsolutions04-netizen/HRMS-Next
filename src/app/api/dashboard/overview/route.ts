@@ -1,3 +1,5 @@
+import { getConfig } from '@/lib/app-config';
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -33,7 +35,7 @@ function daysUntilNext(dateStr: string, today: Date): { days: number; next: stri
   return { days: Math.round((next.getTime() - t0.getTime()) / 86400000), next: ymd(next) };
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -116,8 +118,9 @@ export async function GET(req: NextRequest) {
         return out;
       }),
 
-      // ---- Birthdays and work anniversaries (next 30 days) ----------------------
+      // ---- Birthdays and work anniversaries (the next days set in Rules & Limits) ----------------------
       section(can('view_employees'), async () => {
+        const upcomingDays = (await getConfig()).dashboard_upcoming_days;
         const rows = await query<RowDataPacket[]>(
           `SELECT full_name, emp_code, designation,
                   DATE_FORMAT(dob, '%Y-%m-%d') AS dob, DATE_FORMAT(date_of_joining, '%Y-%m-%d') AS doj
@@ -127,9 +130,9 @@ export async function GET(req: NextRequest) {
         const birthdays: any[] = [], anniversaries: any[] = [];
         for (const r of rows) {
           const b = r.dob ? daysUntilNext(r.dob, today) : null;
-          if (b && b.days <= 30) birthdays.push({ full_name: r.full_name, designation: r.designation, date: b.next, days: b.days });
+          if (b && b.days <= upcomingDays) birthdays.push({ full_name: r.full_name, designation: r.designation, date: b.next, days: b.days });
           const a = r.doj ? daysUntilNext(r.doj, today) : null;
-          if (a && a.days <= 30) {
+          if (a && a.days <= upcomingDays) {
             const years = parseInt(a.next.slice(0, 4)) - parseInt(String(r.doj).slice(0, 4));
             if (years >= 1) anniversaries.push({ full_name: r.full_name, designation: r.designation, date: a.next, days: a.days, years });
           }
@@ -236,3 +239,5 @@ export async function GET(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);

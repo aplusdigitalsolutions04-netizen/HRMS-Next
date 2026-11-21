@@ -89,8 +89,14 @@ export async function resolveAttendanceStatus(o: {
   let weeklyOff = false;
   if (o.date && /^\d{4}-\d{2}-\d{2}$/.test(o.date)) weeklyOff = (await getWeeklyOffDays()).includes(new Date(o.date + 'T00:00:00Z').getUTCDay());
 
-  const offDay = weeklyOff || o.isHoliday || behavior === 'week_off' || behavior === 'holiday'
-    || existing?.behavior === 'week_off' || existing?.behavior === 'extra_work';
+  // Week offs and holidays come only from Settings (Attendance Settings > Weekly off days, Holiday Settings). A "week off" or
+  // "holiday" code from one person's TeamOffice roster does not make a normal working day an off day: that day follows the punches.
+  const knownDate = !!(o.date && /^\d{4}-\d{2}-\d{2}$/.test(o.date));
+  if (knownDate && !weeklyOff && !o.isHoliday && (behavior === 'week_off' || behavior === 'holiday')) {
+    behavior = (o.live ? punched : complete) ? 'present' : 'absent';
+  }
+  const offDay = weeklyOff || o.isHoliday
+    || (!knownDate && (behavior === 'week_off' || behavior === 'holiday' || existing?.behavior === 'week_off' || existing?.behavior === 'extra_work'));
   if (offDay && punched) return { status: await code('extra_work', 'EW'), recognized };
   if (weeklyOff && !o.isHoliday) return { status: await code('week_off', 'WO'), recognized };
   if (o.isHoliday && behavior === 'absent') return { status: await code('holiday', 'HOL'), recognized };

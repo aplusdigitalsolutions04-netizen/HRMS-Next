@@ -1,16 +1,17 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
-import { hashPassword, verifyPassword, createToken, passwordFingerprint } from '@/lib/auth';
+import { hashPassword, verifyPassword, createToken, passwordFingerprint, applySessionConfig } from '@/lib/auth';
 import { validatePassword } from '@/lib/password-policy';
 import { encryptSecret } from '@/lib/mailbox';
 import { execute, query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   return handleChangePassword(req);
 }
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   return handleChangePassword(req);
 }
 
@@ -21,7 +22,7 @@ async function handleChangePassword(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     const { current_password, new_password } = await req.json();
     if (!new_password) return jsonError('New password required', 422);
-    const rule = validatePassword(new_password, user.email);
+    const rule = await validatePassword(new_password, user.email);
     if (rule) return jsonError(rule, 422);
 
     const table = user.type === 'admin' ? 'hr_admins' : 'employees';
@@ -42,9 +43,13 @@ async function handleChangePassword(req: NextRequest) {
       // kept encrypted, so HR can see it in Employee Credentials
       await execute('UPDATE employee_credentials SET password = ? WHERE employee_id = ? ORDER BY created_at DESC LIMIT 1', [encryptSecret(new_password), user.id]).catch(() => {});
     }
+    await applySessionConfig();
     const access_token = createToken({ sub: String(user.id), email: user.email, role: user.role, type: user.type, must_change_password: false, pf: passwordFingerprint(hashed) });
     return NextResponse.json({ message: 'Password changed successfully', access_token });
   } catch (e: any) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);
+export const PUT = withApiLog(PUT_handler);

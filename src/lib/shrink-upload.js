@@ -2,8 +2,11 @@
 // connection or behind the hosting proxy it fails with "Failed to fetch". Pictures are made smaller here, in the browser,
 // before they are sent; the readable detail of a document photo stays.
 
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // one file, after shrinking
-export const MAX_TOTAL_BYTES = 20 * 1024 * 1024; // everything in one submit
+import { appConfig, MBYTES } from './app-config-client';
+
+// The limits come from Settings > Rules & Limits.
+export const maxUploadBytes = () => appConfig().upload_one_file_mb * MBYTES; // one file, after shrinking
+export const maxTotalBytes = () => appConfig().upload_total_mb * MBYTES; // everything in one submit
 
 export const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1) + ' MB';
 
@@ -18,11 +21,11 @@ const loadBitmap = (file) => {
   });
 };
 
-// A JPEG/PNG over ~1.2 MB becomes a JPEG with the longest side at most maxSide. If anything goes wrong, or the result is not
+// A JPEG/PNG over the size set in Rules & Limits becomes a JPEG with the longest side at most maxSide. If anything goes wrong, or the result is not
 // smaller, the original file is used as it is. PDFs and small pictures are returned untouched.
 export async function shrinkImage(file, maxSide = 1800, quality = 0.82) {
   try {
-    if (!file || !/^image\/(jpeg|jpg|png)$/i.test(file.type) || file.size <= 1.2 * 1024 * 1024) return file;
+    if (!file || !/^image\/(jpeg|jpg|png)$/i.test(file.type) || file.size <= appConfig().upload_shrink_above_mb * MBYTES) return file;
     const bmp = await loadBitmap(file);
     const w = bmp.width, h = bmp.height;
     const scale = Math.min(1, maxSide / Math.max(w, h));

@@ -61,6 +61,16 @@ const DEFAULTS: Omit<StatusRow, 'id'>[] = [
     description: 'The employee worked on a week off or a holiday.', used_for: 'Each Extra Work day adds one day\'s pay (times the Extra Work rate in Payslip Settings) to the salary. Shown as its own count, not as a normal present day.',
     can_login: 0, is_working: 0, in_attendance: 0, is_system: 1, is_active: 1, sort_order: 70 },
 
+  { group_key: 'attendance', code: 'CL', label: 'Casual Leave', color: '#0d9488', behavior: 'other', present_weight: 0, unpaid_weight: 0, extra_pay: 0, source_codes: 'CL',
+    description: 'A day of Casual Leave (1 day a month, see Attendance Settings).', used_for: 'A paid day: no salary is cut. Set automatically when a leave request is fully approved. Counted against the yearly CL days on the Salary Sheet.',
+    can_login: 0, is_working: 0, in_attendance: 0, is_system: 0, is_active: 1, sort_order: 80 },
+  { group_key: 'attendance', code: 'CL/2', label: 'Half Casual Leave', color: '#14b8a6', behavior: 'other', present_weight: 0.5, unpaid_weight: 0, extra_pay: 0, source_codes: 'CL/2',
+    description: 'Half a day of Casual Leave (the other half the employee worked).', used_for: 'A paid day. Counts as half a CL day on the Salary Sheet.',
+    can_login: 0, is_working: 0, in_attendance: 0, is_system: 0, is_active: 1, sort_order: 85 },
+  { group_key: 'attendance', code: 'UPL', label: 'Unpaid Leave', color: '#be123c', behavior: 'other', present_weight: 0, unpaid_weight: 1, extra_pay: 0, source_codes: 'UPL',
+    description: 'Leave beyond the month\'s Casual Leave.', used_for: 'The whole day is unpaid in the salary sheet (salary is cut for it). Set automatically when an approved leave goes past the CL of the month.',
+    can_login: 0, is_working: 0, in_attendance: 0, is_system: 0, is_active: 1, sort_order: 90 },
+
   // ---- Employee -------------------------------------------------------------
   { group_key: 'employee', code: 'active', label: 'Active', color: '#15803d', behavior: '', present_weight: 0, unpaid_weight: 0, extra_pay: 0, source_codes: '',
     description: 'A current employee whose profile HR has approved.', used_for: 'Can log in. Counted as a working employee in payroll, the dashboard and attendance totals. Gets a row on the salary sheet.',
@@ -111,6 +121,8 @@ async function ensureTable() {
       [d.group_key, d.code, d.label, d.color, d.description, d.used_for, d.behavior, d.present_weight, d.unpaid_weight, d.extra_pay, d.source_codes, d.can_login, d.is_working, d.in_attendance, d.is_system, d.is_active, d.sort_order]
     );
   }
+  // TeamOffice sends WFH days as "WFH"; an older Status Master left this empty, so those days were turned into Absent.
+  await execute("UPDATE status_master SET source_codes = 'WFH' WHERE group_key = 'attendance' AND code = 'WFH' AND source_codes = ''");
   tableReady = true;
 }
 

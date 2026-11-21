@@ -40,7 +40,7 @@ export default function Reports() {
   const [exporting, setExporting] = useState('');
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   const run = useCallback(async (t = type, f = from, tt = to) => {
     setLoading(true); setError('');
@@ -76,16 +76,16 @@ export default function Reports() {
     <div>
       <style>{`
         .rp-sum { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:12px; }
-        .rp-sum div { background:#fff; border:1px solid #e8edf6; border-radius:12px; padding:10px 14px; }
+        .rp-sum div { background:#fff; border:1px solid #eadfd5; border-radius:12px; padding:10px 14px; }
         .rp-sum span { display:block; font-size:.72rem; font-weight:600; color:#64748b; }
         .rp-sum b { font-family:'Outfit',sans-serif; font-size:1.25rem; color:#0f172a; }
         .rp-t { width:100%; border-collapse:collapse; }
-        .rp-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; white-space:nowrap; }
+        .rp-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; white-space:nowrap; }
         .rp-t td { padding:8px 12px; font-size:.82rem; color:#334155; border-bottom:1px solid #f4f6fa; white-space:nowrap; }
         .rp-t .r { text-align:right; }
         .rp-chips { display:flex; gap:6px; flex-wrap:wrap; }
         .rp-chip { border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:.76rem; font-weight:600; padding:5px 11px; border-radius:20px; cursor:pointer; }
-        .rp-chip:hover { border-color:#93c5fd; color:#1d4ed8; }
+        .rp-chip:hover { border-color:var(--brand-line); color:var(--brand-dark); }
       `}</style>
 
       <div className="ph">
@@ -118,7 +118,7 @@ export default function Reports() {
       {report && (
         <>
           <div className="rp-sum">{report.summary.map(s => <div key={s.label}><span>{s.label}</span><b>{s.value}</b></div>)}</div>
-          <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ padding: '10px 14px', borderBottom: '1px solid #eef2f7', fontSize: '.8rem', color: '#64748b' }}>{report.subtitle}</div>
             <div style={{ overflowX: 'auto' }}>
               <table className="rp-t">

@@ -4,11 +4,12 @@ import { Tabs } from '@/lib/ui-motion';
 
 const API = '/api';
 import useLiveRefresh from '@/lib/live';
+import { appLocale } from '@/lib/app-config-client';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const formatDT = (d) => {
   if (!d) return '\u2014';
-  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
+  try { return new Date(d).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; }
 };
 
 const statusBadge = (s) => {
@@ -48,7 +49,7 @@ export default function AdminLeaveManagement() {
   const [calMonth, setCalMonth] = useState(new Date().getMonth() + 1);
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calLeaves, setCalLeaves] = useState([]);
-  const [perPage, setPerPage] = useState(15);
+  const [perPage, setPerPage] = useState(10);
   const perPageRef = useRef(15);
 
   useLiveRefresh(() => { fetchStats(); fetchRequests(page, { silent: true }); });
@@ -93,6 +94,13 @@ export default function AdminLeaveManagement() {
     try { const res = await fetch(`${API}/leave/${id}/approve`, { method: 'PUT', headers: auth() }); const d = await res.json(); if (!res.ok) throw new Error(d.detail || 'Failed'); setReviewReq(null); fetchStats(); fetchRequests(page); } catch (err) { alert(err.message); } finally { setProcessing(false); }
   };
 
+  const handleCancelApproved = async (id) => {
+    const reason = window.prompt('Cancel this approved leave? The attendance days it marked will be restored. Reason (optional):');
+    if (reason === null) return;
+    setProcessing(true);
+    try { const res = await fetch(`${API}/leave/${id}/cancel`, { method: 'PUT', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); const d = await res.json(); if (!res.ok) throw new Error(d.detail || 'Failed'); setReviewReq(null); fetchStats(); fetchRequests(page); } catch (err) { alert(err.message); } finally { setProcessing(false); }
+  };
+
   const handleReject = async (id) => {
     if (!rejectReason.trim()) { alert('Please provide a rejection reason'); return; }
     setProcessing(true);
@@ -113,7 +121,7 @@ export default function AdminLeaveManagement() {
     }
   });
   // leave types come from Masters > Leave Types; each one gets a colour from this palette by its position
-  const CHIP_PALETTE = [['#dcfce7', '#15803d'], ['#fee2e2', '#b91c1c'], ['#dbeafe', '#1d4ed8'], ['#fef3c7', '#b45309'], ['#ede9fe', '#6d28d9'], ['#cffafe', '#0e7490'], ['#fce7f3', '#be185d']];
+  const CHIP_PALETTE = [['#dcfce7', '#15803d'], ['#fee2e2', '#b91c1c'], ['var(--brand-soft-2)', 'var(--brand-dark)'], ['#fef3c7', '#b45309'], ['#ede9fe', '#6d28d9'], ['#cffafe', '#0e7490'], ['#fce7f3', '#be185d']];
   const LEAVE_CHIP = Object.fromEntries(leaveTypes.map((t, i) => [t, CHIP_PALETTE[i % CHIP_PALETTE.length]]));
   const todayKey = toKey(new Date());
 
@@ -124,7 +132,7 @@ export default function AdminLeaveManagement() {
   const s = {
     container: { padding: '0 21px', maxWidth: 1400, margin: '0 auto' },
     card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' },
-    btnPrimary: { padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+    btnPrimary: { padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--brand),var(--brand-mid))', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
     btnOutline: { padding: '8px 16px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   };
 
@@ -207,7 +215,7 @@ export default function AdminLeaveManagement() {
                           <td style={{ padding: '12px 16px', fontSize: 13 }}>{statusBadge(r.status)}</td>
                           <td style={{ padding: '12px 16px' }}>
                             {(r.status || '').toLowerCase() === 'pending' ? (
-                              <button onClick={() => setReviewReq(r)} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Review</button>
+                              <button onClick={() => setReviewReq(r)} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: 'var(--brand)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Review</button>
                             ) : (
                               <button onClick={() => setReviewReq(r)} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>View</button>
                             )}
@@ -227,21 +235,21 @@ export default function AdminLeaveManagement() {
       {activeTab === 'calendar' && (
         <div className="lc">
           <style>{`
-            .lc { background:#fff; border:1px solid #e8edf6; border-radius:12px; padding:14px 16px; }
+            .lc { background:#fff; border:1px solid #eadfd5; border-radius:12px; padding:14px 16px; }
             .lc-top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
             .lc-top h3 { margin:0; font-size:1rem; font-weight:700; color:#0f172a; }
             .lc-ctl { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
             .lc-ctl select { height:34px; padding:0 26px 0 10px; border:1px solid #e2e8f0; border-radius:9px; font-size:.8rem; color:#334155; background:#fff; outline:none; }
             .lc-nav { width:34px; height:34px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; cursor:pointer; color:#334155; font-size:1rem; line-height:1; }
-            .lc-nav:hover { background:#f1f6ff; border-color:#bfdbfe; color:#1d4ed8; }
+            .lc-nav:hover { background:var(--brand-soft); border-color:var(--brand-line); color:var(--brand-dark); }
             .lc-grid { display:grid; grid-template-columns:repeat(7,1fr); border-top:1px solid #eef2f7; border-left:1px solid #eef2f7; }
             .lc-dow { padding:8px 0; text-align:center; font-size:.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; background:#f8fafc; border-right:1px solid #eef2f7; border-bottom:1px solid #eef2f7; }
             .lc-cell { min-height:78px; padding:5px 6px; border-right:1px solid #eef2f7; border-bottom:1px solid #eef2f7; }
             .lc-cell.empty { background:#fafbfd; }
             .lc-day { font-size:.76rem; font-weight:600; color:#64748b; margin-bottom:3px; display:inline-flex; width:22px; height:22px; align-items:center; justify-content:center; border-radius:50%; }
-            .lc-cell.today .lc-day { background:#2563eb; color:#fff; }
+            .lc-cell.today .lc-day { background:var(--brand); color:#fff; }
             .lc-chip { font-size:.66rem; font-weight:600; border-radius:4px; padding:2px 5px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            .lc-more { font-size:.64rem; color:#2563eb; font-weight:700; }
+            .lc-more { font-size:.64rem; color:var(--brand); font-weight:700; }
           `}</style>
           <div className="lc-top">
             <h3>Leave Calendar</h3>
@@ -269,7 +277,7 @@ export default function AdminLeaveManagement() {
                 <div key={day} className={`lc-cell${key === todayKey ? ' today' : ''}`}>
                   <span className="lc-day">{day}</span>
                   {leaves.slice(0, 2).map((l, j) => {
-                    const c = LEAVE_CHIP[l.leave_type] || ['#eef2ff', '#3730a3'];
+                    const c = LEAVE_CHIP[l.leave_type] || ['var(--brand-soft)', 'var(--brand-dark)'];
                     return <div key={j} className="lc-chip" style={{ background: c[0], color: c[1] }} title={(l.emp_full_name || l.employee_name) + (l.leave_type ? ' - ' + l.leave_type : '')}>{l.emp_full_name || l.employee_name}</div>;
                   })}
                   {leaves.length > 2 && <div className="lc-more">+{leaves.length - 2} more</div>}
@@ -288,28 +296,28 @@ export default function AdminLeaveManagement() {
               <h4 style={{ margin: 0, fontSize: 19, color: '#0f172a', fontWeight: 700 }}>Review Leave Request</h4>
               <button onClick={() => { setReviewReq(null); setShowRejectInput(false); setRejectReason(''); }} style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
             </div>
-            <h5 style={{ fontSize: 13, color: '#2563eb', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Employee Information</h5>
+            <h5 style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Employee Information</h5>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20, padding: 14, borderRadius: 10, background: '#f8fafc' }}>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Name</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{reviewReq.emp_name || reviewReq.employee_name}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Employee ID</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{reviewReq.emp_code || reviewReq.employee_code}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Designation</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{reviewReq.designation || '\u2014'}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Department</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{reviewReq.emp_dept || '\u2014'}</div></div>
             </div>
-            <h5 style={{ fontSize: 13, color: '#2563eb', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Leave Information</h5>
+            <h5 style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Leave Information</h5>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20, padding: 14, borderRadius: 10, background: '#f8fafc' }}>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Leave Type</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{reviewReq.leave_type}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Duration</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{reviewReq.duration} day{reviewReq.duration > 1 ? 's' : ''}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Start Date</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{formatDT(reviewReq.start_date)}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>End Date</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{formatDT(reviewReq.end_date)}</div></div>
             </div>
-            <h5 style={{ fontSize: 13, color: '#2563eb', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reason</h5>
-            <div style={{ marginBottom: 20, padding: 14, borderRadius: 10, background: '#f8fafc', fontSize: 13, color: '#0f172a', lineHeight: 1.5 }}>{reviewReq.reason || 'No reason provided.'}{reviewReq.supporting_doc && (<div style={{ marginTop: 10 }}><a href="#" onClick={async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/leave/${reviewReq.id}/document`, { headers: auth() }); if (!res.ok) throw new Error((await res.json()).detail || 'Could not open the document'); window.open(URL.createObjectURL(await res.blob()), '_blank'); } catch (err) { alert(err.message); } }} style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>View supporting document &darr;</a></div>)}</div>
+            <h5 style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reason</h5>
+            <div style={{ marginBottom: 20, padding: 14, borderRadius: 10, background: '#f8fafc', fontSize: 13, color: '#0f172a', lineHeight: 1.5 }}>{reviewReq.reason || 'No reason provided.'}{reviewReq.supporting_doc && (<div style={{ marginTop: 10 }}><a href="#" onClick={async (e) => { e.preventDefault(); try { const res = await fetch(`${API}/leave/${reviewReq.id}/document`, { headers: auth() }); if (!res.ok) throw new Error((await res.json()).detail || 'Could not open the document'); window.open(URL.createObjectURL(await res.blob()), '_blank'); } catch (err) { alert(err.message); } }} style={{ color: 'var(--brand)', fontWeight: 600, textDecoration: 'none' }}>View supporting document &darr;</a></div>)}</div>
             {(reviewReq.status || '').toLowerCase() === 'pending' && (
               <>
-                <h5 style={{ fontSize: 13, color: '#2563eb', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Leave Balance</h5>
+                <h5 style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Leave Balance</h5>
                 <BalanceView employeeId={reviewReq.employee_id} />
                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => handleApprove(reviewReq.id)} disabled={processing} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: processing ? '#93c5fd' : '#16a34a', color: '#fff', fontSize: 14, fontWeight: 600, cursor: processing ? 'not-allowed' : 'pointer', minWidth: 120 }}>{processing ? 'Processing...' : 'Approve Leave'}</button>
+                  <button onClick={() => handleApprove(reviewReq.id)} disabled={processing} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: processing ? 'var(--brand-line)' : '#16a34a', color: '#fff', fontSize: 14, fontWeight: 600, cursor: processing ? 'not-allowed' : 'pointer', minWidth: 120 }}>{processing ? 'Processing...' : 'Approve Leave'}</button>
                   <button onClick={() => setShowRejectInput(true)} disabled={processing} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: processing ? '#fca5a5' : '#dc2626', color: '#fff', fontSize: 14, fontWeight: 600, cursor: processing ? 'not-allowed' : 'pointer', minWidth: 120 }}>{processing ? 'Processing...' : 'Reject Leave'}</button>
                 </div>
                 {showRejectInput && (
@@ -324,6 +332,9 @@ export default function AdminLeaveManagement() {
             {reviewReq.status !== 'pending' && (
               <div style={{ padding: 14, borderRadius: 10, background: '#f8fafc', fontSize: 13, color: '#64748b', textAlign: 'center' }}>
                 This request has been {reviewReq.status}.{reviewReq.rejection_reason && <div style={{ marginTop: 4, color: '#dc2626' }}>Reason: {reviewReq.rejection_reason}</div>}
+                {(reviewReq.status || '').toLowerCase() === 'approved' && (
+                  <div><button onClick={() => handleCancelApproved(reviewReq.id)} disabled={processing} style={{ marginTop: 10, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel this approved leave</button></div>
+                )}
               </div>
             )}
           </div>

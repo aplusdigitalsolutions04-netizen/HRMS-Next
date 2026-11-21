@@ -92,7 +92,9 @@ export default function EditEmployee() {
         .then(async res => {
             if (!res.ok) {
                 const errBody = await res.text();
-                throw new Error(errBody || `HTTP ${res.status}`);
+                let msg = errBody;
+                try { const j = JSON.parse(errBody); msg = j.detail || j.error || j.message || ''; if (j.ref && msg && !msg.includes(j.ref)) msg += ` (Ref: ${j.ref})`; } catch { /* plain text */ }
+                throw new Error(msg || 'Could not save the changes. Please try again.');
             }
             return res.text();
         })
@@ -103,7 +105,7 @@ export default function EditEmployee() {
             }).then(() => navigate('/employees/manage'));
         })
         .catch(err => {
-            Swal.fire('Error', 'Update failed: ' + err.message, 'error');
+            Swal.fire('Could not update', err.message === 'Failed to fetch' ? 'Could not reach the server. Please check the connection and try again.' : err.message, 'error');
         });
     };
 
@@ -120,13 +122,13 @@ export default function EditEmployee() {
         textarea: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', background: '#fff' },
         select: { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff' },
         fileInput: { width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fafbfc' },
-        divider: { border: 'none', borderTop: '2px solid #eff6ff', margin: '24px 0' },
+        divider: { border: 'none', borderTop: '2px solid var(--brand-soft)', margin: '24px 0' },
         grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
         grid3: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 },
         grid4: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 },
         gridFull: { gridColumn: '1 / -1' },
-        submitBtn: { width: '100%', padding: '12px 18px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, #2563eb, #3b82f6)', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
-        link: { color: '#2563eb', fontSize: 12, textDecoration: 'none', fontWeight: 500 },
+        submitBtn: { width: '100%', padding: '12px 18px', border: 'none', borderRadius: 10, background: 'linear-gradient(135deg, var(--brand), var(--brand-mid))', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 24 },
+        link: { color: 'var(--brand)', fontSize: 12, textDecoration: 'none', fontWeight: 500 },
         badge: { fontSize: 9, background: '#d1fae5', color: '#065f46', padding: '1px 5px', borderRadius: 3, fontWeight: 600 },
     };
 
@@ -152,7 +154,7 @@ export default function EditEmployee() {
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <div style={{ background: '#fff', borderRadius: 16, padding: '18px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '2px solid #eff6ff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '2px solid var(--brand-soft)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                             <button
                                 type="button"

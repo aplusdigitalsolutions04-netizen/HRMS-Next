@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -11,7 +12,7 @@ const FIELDS: Record<string, number> = {
   alternate_mobile_no: 20, present_address: 500, permanent_address: 500,
 };
 
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -42,3 +43,5 @@ export async function PUT(req: NextRequest) {
     return jsonSuccess({ message: 'Your details have been updated.' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const PUT = withApiLog(PUT_handler);

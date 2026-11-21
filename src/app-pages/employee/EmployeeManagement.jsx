@@ -32,7 +32,7 @@ const EmployeeManagement = () => {
   const [drawerError, setDrawerError] = useState('');
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [perPage, setPerPage] = useState(25);
+  const [perPage, setPerPage] = useState(10);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef(null);
   const fileRef = useRef(null);
@@ -182,12 +182,13 @@ const EmployeeManagement = () => {
     Swal.fire({
       title: `Delete "${emp.full_name}"?`,
       html: `Their record (${emp.emp_code || emp.email_id}) will be hidden, not erased - attendance, payroll, and other history stay intact and this can be undone from the "Deleted" filter.<br/><br/>
-             Should their email/ID (<strong>${emp.email_id}</strong>) be freed up for a new invite right away?`,
+             Their employee ID stays with this record.<br/><br/>
+             Should their email (<strong>${emp.email_id}</strong>) be freed up for a new invite right away?`,
       icon: 'warning',
       showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: 'Delete & free email/ID',
-      denyButtonText: 'Delete & keep locked',
+      confirmButtonText: 'Delete & free the email',
+      denyButtonText: 'Delete & keep the email',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#dc2626',
       denyButtonColor: '#64748b',
@@ -219,7 +220,7 @@ const EmployeeManagement = () => {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Send reminder',
-      confirmButtonColor: '#1e40af',
+      confirmButtonColor: 'var(--brand-dark)',
     }).then(result => {
       if (!result.isConfirmed) return;
       fetch(`${API}/employee/invite-reminder/${emp.id}`, { method: 'POST', headers: auth() })
@@ -240,7 +241,7 @@ const EmployeeManagement = () => {
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Restore',
-      confirmButtonColor: '#1e40af',
+      confirmButtonColor: 'var(--brand-dark)',
     }).then(result => {
       if (!result.isConfirmed) return;
       fetch(`${API}/employee/${emp.id}/restore`, { method: 'POST', headers: auth() })
@@ -271,7 +272,7 @@ const EmployeeManagement = () => {
       showCancelButton: true,
       confirmButtonText: 'Create Draft',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#1e40af',
+      confirmButtonColor: 'var(--brand-dark)',
       preConfirm: () => {
         const val = document.getElementById('swal-template-select').value;
         if (!val) {

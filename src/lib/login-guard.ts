@@ -1,10 +1,11 @@
 // @ts-nocheck
 import { query, execute } from './db';
 import { RowDataPacket } from 'mysql2';
+import { getConfig } from './app-config';
 
-// Too many wrong passwords lock the login for a while: 5 wrong tries for one email, or 30 from one address (which stops one
-// machine trying many emails). The lock ends by itself after LOCK_MINUTES; a right password clears the count.
-const MAX_PER_EMAIL = 5, MAX_PER_IP = 30, LOCK_MINUTES = 15, WINDOW_MINUTES = 30;
+// Too many wrong passwords lock the login for a while: some wrong tries for one email, or more from one address (which stops one
+// machine trying many emails). The numbers and the lock time are set in Settings > Rules & Limits. The lock ends by itself; a right
+// password clears the count.
 
 export const clientIp = (req: Request) => (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim().slice(0, 60);
 // When the server cannot tell the caller's address ('unknown'), everybody would share one counter and a few wrong tries by one
@@ -27,6 +28,8 @@ export async function lockedMinutes(email: string, ip: string): Promise<number> 
 
 export async function recordFailure(email: string, ip: string) {
   try {
+    const cfg = await getConfig();
+    const MAX_PER_EMAIL = Math.floor(cfg.login_max_per_email), MAX_PER_IP = Math.floor(cfg.login_max_per_ip), LOCK_MINUTES = Math.floor(cfg.login_lock_minutes), WINDOW_MINUTES = Math.floor(cfg.login_window_minutes);
     for (const k of keysFor(email, ip)) {
       const max = k.startsWith('u:') ? MAX_PER_EMAIL : MAX_PER_IP;
       await execute(

@@ -1,10 +1,11 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { getAccount, listMessages } from '@/lib/mailbox';
 
 // GET /api/mail/messages?folder=inbox|sent&page=1&per_page=20&search=
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -18,3 +19,5 @@ export async function GET(req: NextRequest) {
     return jsonSuccess({ ...r, page, per_page: perPage, folder: undefined, mailbox: r.folder });
   } catch (e: any) { return jsonError(e?.message || e, 502); }
 }
+
+export const GET = withApiLog(GET_handler);

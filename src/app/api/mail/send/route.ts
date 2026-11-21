@@ -1,18 +1,19 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { getAccount, sendFromAccount } from '@/lib/mailbox';
 import { auditFrom } from '@/lib/audit';
 import { plainToHtml } from '@/lib/mail-format';
 
-const MAX_FILE = 10 * 1024 * 1024, MAX_TOTAL = 20 * 1024 * 1024;
+import { getConfig, mb } from '@/lib/app-config';
 const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const EMAIL = /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/;
 const addresses = (s: string) => String(s || '').split(/[,;]/).map(x => x.trim()).filter(Boolean);
 
 // POST multipart: to, cc, bcc, subject, body (plain text), in_reply_to, references, files[]
 // Goes out from the person's own mailbox, and a copy shows in their Sent box.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -24,15 +25,16 @@ export async function POST(req: NextRequest) {
     const body = String(fd.get('body') || '');
     for (const x of [...addresses(to), ...addresses(cc), ...addresses(bcc)]) if (!EMAIL.test(x)) return jsonError(`"${x}" is not a valid email address`, 422);
     if (addresses(to).length === 0) return jsonError('Add at least one recipient in To', 422);
-    if (addresses(to).length + addresses(cc).length + addresses(bcc).length > 50) return jsonError('Too many recipients (50 at most)', 422);
+    if (addresses(to).length + addresses(cc).length + addresses(bcc).length > lim.mail_max_recipients) return jsonError(`Too many recipients (${lim.mail_max_recipients} at most)`, 422);
     if (!subject && !body.trim()) return jsonError('Write a subject or a message', 422);
 
+    const lim = await getConfig();
     const attachments: any[] = []; let total = 0;
     for (const f of fd.getAll('files')) {
       if (typeof f === 'string' || !f.size) continue;
       total += f.size;
-      if (f.size > MAX_FILE) return jsonError(`"${f.name}" is bigger than 10 MB`, 422);
-      if (total > MAX_TOTAL) return jsonError('Attachments are bigger than 20 MB in all', 422);
+      if (f.size > mb(lim.mail_file_max_mb)) return jsonError(`"${f.name}" is bigger than ${lim.mail_file_max_mb} MB`, 422);
+      if (total > mb(lim.mail_total_max_mb)) return jsonError(`Attachments are bigger than ${lim.mail_total_max_mb} MB in all`, 422);
       attachments.push({ filename: f.name, content: Buffer.from(await f.arrayBuffer()), contentType: f.type || undefined });
     }
 
@@ -43,3 +45,5 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ message: 'Mail sent', saved_in_sent: r.saved });
   } catch (e: any) { return jsonError(e?.message || e, 502); }
 }
+
+export const POST = withApiLog(POST_handler);

@@ -51,20 +51,20 @@ export const emailLogStyles = `
         font-size:.88rem; outline:none; transition:all .2s;
         background:#f8fafc; color:#0f172a;
     }
-    .el-search:focus { border-color:#2563eb; background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    .el-search:focus { border-color:var(--brand); background:#fff; box-shadow:0 0 0 3px rgba(111,78,55,.1); }
     .el-search::placeholder { color:#94a3b8; }
     .el-filter-select {
         padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px;
         font-size:.85rem; outline:none; background:#f8fafc; color:#0f172a; cursor:pointer;
         min-width:120px;
     }
-    .el-filter-select:focus { border-color:#2563eb; background:#fff; }
+    .el-filter-select:focus { border-color:var(--brand); background:#fff; }
     .el-date-input {
         padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px;
         font-size:.85rem; outline:none; background:#f8fafc; color:#0f172a;
         min-width:130px;
     }
-    .el-date-input:focus { border-color:#2563eb; background:#fff; }
+    .el-date-input:focus { border-color:var(--brand); background:#fff; }
     .el-btn-export {
         display:inline-flex; align-items:center; gap:7px;
         background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none;
@@ -112,7 +112,7 @@ export const emailLogStyles = `
 
     /* ── Template chip ── */
     .el-tpl-chip {
-        display:inline-block; background:#dbeafe; color:#5b21b6;
+        display:inline-block; background:var(--brand-soft-2); color:#5b21b6;
         padding:3px 10px; border-radius:50px;
         font-weight:600; font-size:.74rem;
         max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -140,7 +140,7 @@ export const emailLogStyles = `
         align-items:center; justify-content:center; font-size:.85rem;
         transition:all .15s;
     }
-    .el-btn-view:hover { border-color:#2563eb; color:#2563eb; background:#eff6ff; }
+    .el-btn-view:hover { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
     .el-btn-more {
         width:32px; height:32px; border-radius:8px; border:1.5px solid #e2e8f0;
         background:#fff; color:#64748b; cursor:pointer; display:inline-flex;
@@ -171,7 +171,7 @@ export const emailLogStyles = `
 
     /* ── Loading & Empty ── */
     .el-loading { display:flex; justify-content:center; padding:60px 15px; }
-    .el-spinner { width:34px; height:34px; border-radius:50%; border:3px solid #e2e8f0; border-top-color:#2563eb; animation:elSpin .7s linear infinite; }
+    .el-spinner { width:34px; height:34px; border-radius:50%; border:3px solid #e2e8f0; border-top-color:var(--brand); animation:elSpin .7s linear infinite; }
     .el-empty { text-align:center; padding:60px 15px; }
     .el-empty-icon { font-size:3rem; margin-bottom:16px; display:block; }
     .el-empty-title { font-size:1.05rem; font-weight:700; color:#0f172a; margin-bottom:6px; }
@@ -193,7 +193,7 @@ export const emailLogStyles = `
     .el-view-field.full { grid-column:1 / -1; }
     .el-view-field-label { font-size:.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
     .el-view-field-value { font-size:.88rem; color:#0f172a; line-height:1.4; word-break:break-word; }
-    .el-view-field-value.email { color:#1e40af; }
+    .el-view-field-value.email { color:var(--brand-dark); }
     .el-view-body-box { background:#fff; border-radius:10px; padding:15px 18px; font-size:.88rem; color:#334155; line-height:1.8; border:1px solid #e2e8f0; font-family:'Segoe UI',Arial,sans-serif; }
     .el-view-body-box p { margin:0 0 12px; }
     .el-view-body-box p:last-child { margin-bottom:0; }

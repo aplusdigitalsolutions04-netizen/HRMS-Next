@@ -24,7 +24,7 @@ export const candidateDataStyles = `
     .modal-content.full table td, .modal-content.full table th { padding:11px 14px; }
     .action-buttons { display:flex; gap:8px; }
     .status-badge { padding:6px 14px; border-radius:14px; font-size:12px; font-weight:600; display:inline-block; }
-    .status-badge.scheduled  { background:#e0f2fe; color:#0369a1; }
+    .status-badge.scheduled  { background:var(--brand-soft); color:var(--brand-dark); }
     .status-badge.completed  { background:#dcfce7; color:#166534; }
     .status-badge.on-hold    { background:#fef3c7; color:#92400e; }
     .status-badge.rejected   { background:#fee2e2; color:#991b1b; }
@@ -56,15 +56,15 @@ export const candidateDataStyles = `
         max-width:97vw;
         max-height:96vh;
         overflow-y:auto;
-        box-shadow:0 30px 80px rgba(30,64,175,.25);
-        border:1.5px solid #dbeafe;
+        box-shadow:0 30px 80px rgba(78,54,38,.25);
+        border:1.5px solid var(--brand-soft-2);
         animation:fadeUp .3s cubic-bezier(.16,1,.3,1) both;
     }
     .email-modal-header {
         padding:17px 20px 16px;
         border-bottom:1.5px solid #f1f5f9;
         display:flex; align-items:center; justify-content:space-between;
-        background:linear-gradient(135deg,#1e40af 0%,#2563eb 100%);
+        background:linear-gradient(135deg,var(--brand-dark) 0%,var(--brand) 100%);
         border-radius:18px 18px 0 0;
     }
     .email-modal-title {
@@ -90,7 +90,7 @@ export const candidateDataStyles = `
         font-size:.92rem; color:#0f172a; background:#f8fafc;
         outline:none; transition:all .2s; font-family:'Inter',sans-serif;
     }
-    .em-input:focus { border-color:#2563eb; background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,.12); }
+    .em-input:focus { border-color:var(--brand); background:#fff; box-shadow:0 0 0 4px rgba(111,78,55,.12); }
     .em-select {
         width:100%; padding:11px 14px;
         border:1.5px solid #e2e8f0; border-radius:10px;
@@ -98,7 +98,7 @@ export const candidateDataStyles = `
         outline:none; cursor:pointer; transition:all .2s;
         font-family:'Inter',sans-serif;
     }
-    .em-select:focus { border-color:#2563eb; background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,.12); }
+    .em-select:focus { border-color:var(--brand); background:#fff; box-shadow:0 0 0 4px rgba(111,78,55,.12); }
     .em-textarea {
         width:100%; padding:12px 14px; min-height:160px;
         border:1.5px solid #e2e8f0; border-radius:10px;
@@ -106,17 +106,17 @@ export const candidateDataStyles = `
         outline:none; resize:vertical; line-height:1.65;
         transition:all .2s; font-family:'monospace';
     }
-    .em-textarea:focus { border-color:#2563eb; background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,.12); }
+    .em-textarea:focus { border-color:var(--brand); background:#fff; box-shadow:0 0 0 4px rgba(111,78,55,.12); }
     .em-field { margin-bottom:18px; }
     .em-to-badge {
         display:inline-flex; align-items:center; gap:8px;
-        background:#dbeafe; color:#5b21b6; border-radius:50px;
+        background:var(--brand-soft-2); color:#5b21b6; border-radius:50px;
         padding:8px 16px; font-size:.88rem; font-weight:600;
         border:1.5px solid #c4b5fd;
     }
     .tpl-selector-info {
         background:linear-gradient(135deg,#f0f4ff,#faf5ff);
-        border:1.5px solid #dbeafe; border-radius:12px;
+        border:1.5px solid var(--brand-soft-2); border-radius:12px;
         padding:14px 16px; margin-bottom:20px;
         font-size:.85rem; color:#475569; line-height:1.6;
     }
@@ -126,14 +126,14 @@ export const candidateDataStyles = `
     }
     .send-btn {
         display:inline-flex; align-items:center; gap:8px;
-        background:linear-gradient(135deg,#1e40af,#2563eb);
+        background:linear-gradient(135deg,var(--brand-dark),var(--brand));
         color:#fff; border:none; border-radius:12px;
         padding:13px 24px; font-size:.95rem; font-weight:700;
-        cursor:pointer; box-shadow:0 6px 20px rgba(30,64,175,.3);
+        cursor:pointer; box-shadow:0 6px 20px rgba(78,54,38,.3);
         transition:all .25s; font-family:'Outfit',sans-serif;
         flex:1; justify-content:center;
     }
-    .send-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 10px 28px rgba(30,64,175,.4); filter:brightness(1.08); }
+    .send-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 10px 28px rgba(78,54,38,.4); filter:brightness(1.08); }
     .send-btn:disabled { opacity:.65; cursor:not-allowed; }
     .skip-btn {
         display:inline-flex; align-items:center; gap:8px;
@@ -150,7 +150,7 @@ export const candidateDataStyles = `
     }
     .status-banner.success { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; animation:pulseGreen 1.5s ease infinite; }
     .status-banner.error   { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
-    .status-banner.sending { background:#dbeafe; color:#5b21b6; border:1px solid #c4b5fd; }
+    .status-banner.sending { background:var(--brand-soft-2); color:#5b21b6; border:1px solid #c4b5fd; }
     .no-tpl-hint { text-align:center; padding:16px; color:#94a3b8; font-size:.85rem; }
 
     /* ── Email modal tabs ── */
@@ -161,7 +161,7 @@ export const candidateDataStyles = `
         border-bottom:2.5px solid transparent; margin-bottom:-2px;
         transition:all .2s; font-family:'Outfit',sans-serif;
     }
-    .em-tab.active { color:#1e40af; border-bottom-color:#1e40af; }
+    .em-tab.active { color:var(--brand-dark); border-bottom-color:var(--brand-dark); }
     .em-tab:hover:not(.active) { color:#64748b; }
 
     /* ── Email history table ── */
@@ -176,7 +176,7 @@ export const candidateDataStyles = `
     .cc-chip {
         display:inline-flex; align-items:center; gap:6px;
         padding:4px 12px; border-radius:50px;
-        background:#dbeafe; color:#5b21b6; font-size:.8rem; font-weight:600;
+        background:var(--brand-soft-2); color:#5b21b6; font-size:.8rem; font-weight:600;
         border:1.5px solid #c4b5fd;
     }
     .cc-chip .chip-remove {

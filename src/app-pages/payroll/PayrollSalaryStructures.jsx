@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Pagination, { paginate } from '../shared/Pagination';
+import { appLocale, currencySymbol } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -23,7 +24,7 @@ const BUILTIN_COMPONENTS = [
 const KIND_PANELS = [
   { kind: 'earning', title: 'Earnings', color: '#15803d' },
   { kind: 'deduction', title: 'Deductions', color: '#b91c1c' },
-  { kind: 'adjustment', title: 'Other additions', color: '#1e40af' },
+  { kind: 'adjustment', title: 'Other additions', color: 'var(--brand-dark)' },
 ];
 const newKey = () => 'x_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 const num = (v) => parseFloat(v) || 0;
@@ -36,12 +37,17 @@ export default function PayrollSalaryStructures() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [revision, setRevision] = useState({ effective_from: '', reason: 'Appraisal', note: '' });   // why and from when a changed structure applies
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [empSearch, setEmpSearch] = useState('');
-  const emptyForm = () => ({ basic_pay: 0, hra: 0, conveyance_allowance: 0, food_vouchers: 0, medical_insurance: 0, other_deductions: 0, incentives: 0, el_encashment: 0, ctc: '', ctc_period: 'monthly', extra: {}, orphans: [] });
+  const emptyForm = () => ({ basic_pay: 0, hra: 0, conveyance_allowance: 0, food_vouchers: 0, medical_insurance: 0, other_deductions: 0, incentives: 0, el_encashment: 0, el_frequency_id: '', statutory_off: [], ctc: '', ctc_period: 'monthly', extra: {}, orphans: [] });
   const [form, setForm] = useState(emptyForm());
   const [components, setComponents] = useState(BUILTIN_COMPONENTS);   // the split columns (saved setting)
+  const [statRules, setStatRules] = useState([]);                       // the statutory deductions that are switched on (Payroll > Statutory Deductions)
+  useEffect(() => { fetch(`${API}/payroll/statutory`, { headers: auth() }).then(r => r.json()).then(d => setStatRules((d.rules || []).filter(x => x.enabled))).catch(() => {}); }, []);
+  const [elFrequencies, setElFrequencies] = useState([]);                // the EL Frequencies master (Settings > Payslip Settings)
+  useEffect(() => { fetch(`${API}/el-frequencies`, { headers: auth() }).then(r => r.json()).then(d => setElFrequencies(Array.isArray(d.frequencies) ? d.frequencies : [])).catch(() => {}); }, []);
   const [showPercentModal, setShowPercentModal] = useState(false);
   const [splitForm, setSplitForm] = useState(BUILTIN_COMPONENTS);       // being edited in the popup
   const customComponents = components.filter(c => !c.builtin);
@@ -144,6 +150,8 @@ export default function PayrollSalaryStructures() {
       other_deductions: ss.other_deductions || 0,
       incentives: ss.incentives || 0,
       el_encashment: ss.el_encashment || 0,
+      el_frequency_id: ss.el_frequency_id || '',
+      statutory_off: String(ss.statutory_off || '').split(',').filter(Boolean),
       ctc: ss.ctc || '',
       ctc_period: ss.ctc_period || 'monthly',
     });
@@ -160,6 +168,7 @@ export default function PayrollSalaryStructures() {
         headers: { ...auth(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           emp_code: empCode, ...form,
+          revision: { ...revision, effective_from: revision.effective_from || new Date().toISOString().slice(0, 10) },
           extra_components: [
             ...customComponents.map(c => ({ key: c.key, label: c.label, type: c.kind === 'deduction' ? 'deduction' : 'earning', amount: num(form.extra?.[c.key]) })).filter(x => x.amount > 0),
             ...(form.orphans || []),
@@ -233,9 +242,10 @@ export default function PayrollSalaryStructures() {
                     <td>{formatNum(ss.medical_insurance)}</td>
                     <td>{formatNum(ss.other_deductions)}</td>
                     <td>{formatNum(ss.incentives)}</td>
-                    <td>{formatNum(ss.el_encashment)}</td>
+                    <td>{formatNum(ss.el_encashment)}{Number(ss.el_encashment) > 0 && <div style={{ fontSize: 11, color: '#94a3b8' }}>{ss.el_frequency_name || 'Company default'}</div>}</td>
                     <td>
                       <button className="pr-action-btn" onClick={() => openEdit(ss)}>✏️</button>
+                      <a className="pr-action-btn" href={`/payroll/revisions?emp=${encodeURIComponent(ss.emp_code)}`} title="Salary history" style={{ textDecoration: 'none' }}>🕘</a>
                     </td>
                   </tr>
                 ))}
@@ -280,6 +290,27 @@ export default function PayrollSalaryStructures() {
                     </div>
                     <button className="pr-action-btn" onClick={() => setSelectedEmp(null)}>✕</button>
                   </div>
+                </div>
+              )}
+              <div className="pr-field">
+                <label className="pr-label">EL Encashment paid</label>
+                <select className="pr-input" value={form.el_frequency_id || ''} onChange={e => setForm({ ...form, el_frequency_id: e.target.value })}>
+                  <option value="">Company default (Payslip Settings)</option>
+                  {elFrequencies.filter(f => f.is_active || String(f.id) === String(form.el_frequency_id)).map(f => <option key={f.id} value={f.id}>{f.name}{f.months > 1 ? ` (every ${f.months} months)` : ''}</option>)}
+                </select>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>The EL amount below is per month. With Quarterly, Half Yearly or Yearly it is paid together on the payslip of the last month of the period (March/June/September/December, June/December, December).</div>
+              </div>
+              {statRules.length > 0 && (
+                <div className="pr-field">
+                  <label className="pr-label">Statutory deductions for this employee</label>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {statRules.map(r => (
+                      <label key={r.code} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13 }}>
+                        <input type="checkbox" checked={!(form.statutory_off || []).includes(r.code)} onChange={e => setForm({ ...form, statutory_off: e.target.checked ? (form.statutory_off || []).filter(c => c !== r.code) : [...(form.statutory_off || []), r.code] })} /> Deduct {r.name}
+                      </label>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Untick a deduction to leave this employee out of it.</div>
                 </div>
               )}
               <div className="pr-ctc-box">
@@ -332,6 +363,15 @@ export default function PayrollSalaryStructures() {
                 })}
               </div>
             </div>
+            {structures.some(s => s.emp_code === selectedEmp?.emp_code) && (
+              <div style={{ padding: '10px 24px', borderTop: '1.5px solid #e2e8f0', background: '#fffbeb', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ flex: '1 1 150px' }}><label className="pr-label">Change applies from</label><input className="pr-input" type="date" value={revision.effective_from} onChange={e => setRevision({ ...revision, effective_from: e.target.value })} /></div>
+                <div style={{ flex: '1 1 140px' }}><label className="pr-label">Reason</label>
+                  <select className="pr-input" value={revision.reason} onChange={e => setRevision({ ...revision, reason: e.target.value })}>{['Appraisal', 'Promotion', 'Correction', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+                <div style={{ flex: '2 1 200px' }}><label className="pr-label">Note (optional)</label><input className="pr-input" maxLength={300} value={revision.note} onChange={e => setRevision({ ...revision, note: e.target.value })} placeholder="e.g. yearly appraisal 2026" /></div>
+                <div style={{ flexBasis: '100%', fontSize: 12, color: '#92400e' }}>If the pay changes, it is kept in the salary history from this date. Months before it are still worked out with the old structure. Leave the date empty for today.</div>
+              </div>
+            )}
             <div className="pr-modal-footer">
               <button className="pr-btn pr-btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="pr-btn pr-btn-primary" onClick={handleSave}>Save Structure</button>
@@ -383,7 +423,7 @@ export default function PayrollSalaryStructures() {
                             <span>{fmtPct(splitTotal)}% {splitTotal > 100.0001 ? '- over 100%' : `· ${fmtPct(100 - splitTotal)}% left`}</span>
                           </div>
                           <div style={{ height: 7, background: '#f1f5f9', borderRadius: 7, overflow: 'hidden' }}>
-                            <div style={{ width: Math.min(100, splitTotal) + '%', height: '100%', background: splitTotal > 100.0001 ? '#ef4444' : '#2563eb', transition: 'width .2s' }} />
+                            <div style={{ width: Math.min(100, splitTotal) + '%', height: '100%', background: splitTotal > 100.0001 ? '#ef4444' : 'var(--brand)', transition: 'width .2s' }} />
                           </div>
                         </div>
                       )}
@@ -414,7 +454,7 @@ const customTitle = (ss) => customList(ss).map(x => `${x.label}: ${x.amount}`).j
 
 function formatNum(v) {
   const n = parseFloat(v) || 0;
-  return '₹ ' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currencySymbol() + ' ' + n.toLocaleString(appLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const pgStyles = `
@@ -425,20 +465,20 @@ const pgStyles = `
 .pr-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; overflow: hidden; }
 .pr-toolbar { padding: 16px 20px; border-bottom: 1.5px solid #e2e8f0; }
 .pr-search { width: 300px; max-width: 100%; padding: 9px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .88rem; outline: none; font-family: 'Inter', sans-serif; }
-.pr-search:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+.pr-search:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(111,78,55,.15); }
 .pr-loading { padding: 40px; text-align: center; color: #94a3b8; }
 .pr-empty { padding: 48px 20px; text-align: center; color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .pr-empty p { margin: 0; font-size: .9rem; }
 .pr-table-wrap { overflow-x: auto; }
 .pr-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .pr-table th { padding: 12px 14px; text-align: left; font-weight: 600; color: #64748b; background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; white-space: nowrap; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
-.pr-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+.pr-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; white-space: nowrap; }
 .pr-table tbody tr:hover { background: #f8fafc; }
 .pr-action-btn { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 14px; }
 .pr-action-btn:hover { background: #f1f5f9; }
 .pr-btn { padding: 10px 22px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; font-family: 'Outfit', sans-serif; border: none; display: inline-flex; align-items: center; gap: 6px; }
-.pr-btn-primary { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; }
-.pr-btn-primary:hover { box-shadow: 0 4px 14px rgba(37,99,235,.35); transform: translateY(-1px); }
+.pr-btn-primary { background: linear-gradient(135deg,var(--brand),var(--brand-mid)); color: #fff; }
+.pr-btn-primary:hover { box-shadow: 0 4px 14px rgba(111,78,55,.35); transform: translateY(-1px); }
 .pr-btn-secondary { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
 .pr-btn-secondary:hover { background: #f1f5f9; }
 .pr-modal-wide { width: min(1080px, 96vw) !important; max-width: 96vw !important; }
@@ -463,12 +503,12 @@ const pgStyles = `
 .pr-ctc-box { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
 .pr-label { display: block; font-size: .82rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
 .pr-input { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .88rem; outline: none; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-.pr-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+.pr-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(111,78,55,.15); }
 .pr-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
 .pr-emp-list { max-height: 200px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px; margin-top: 4px; }
 .pr-emp-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
 .pr-emp-item:hover { background: #f8fafc; }
-.pr-emp-item.selected { background: #eff6ff; }
+.pr-emp-item.selected { background: var(--brand-soft); }
 .pr-emp-item.has-ss { opacity: .7; }
 .pr-emp-name { font-size: .88rem; font-weight: 500; color: #0f172a; }
 .pr-emp-desig { font-size: .78rem; color: #94a3b8; margin-top: 2px; }

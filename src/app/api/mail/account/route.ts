@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4 } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -10,7 +11,7 @@ import { auditFrom } from '@/lib/audit';
 // Passwords are never sent back.
 const safe = (a: any) => ({ id: a.id, sender_email: a.sender_email, sender_name: a.sender_name || '', smtp_host: a.smtp_host, smtp_port: a.smtp_port, encryption: a.encryption, imap_host: a.imap_host || '', imap_port: a.imap_port || 993, is_default: Number(a.is_default) === 1 });
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 // Check the details against the real servers, and only then save. An address that is already connected is updated.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Make one of the connected emails the default.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -71,7 +72,7 @@ export async function PUT(req: NextRequest) {
 }
 
 // Remove one connected email (?id=). If it was the default, another one takes over.
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -91,3 +92,8 @@ export async function DELETE(req: NextRequest) {
     return jsonSuccess({ message: 'Email removed' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);
+export const PUT = withApiLog(PUT_handler);
+export const DELETE = withApiLog(DELETE_handler);

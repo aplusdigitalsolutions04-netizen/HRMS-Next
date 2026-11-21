@@ -15,6 +15,8 @@ const VARS = [
     { var: '{{official_email}}', desc: 'Official Email (For Welcome Email)' },
     { var: '{{official_no}}', desc: 'Official No. (For Welcome Email)' },
     { var: '{{official_details_section}}', desc: 'Pre-designed Official Details Box (For Welcome Email)' },
+    { var: '{{month_year}}', desc: 'Payslip month and year, e.g. October 2026 (For the "Payslip" template)' },
+    { var: '{{net_salary}}', desc: 'Payslip net salary (For the "Payslip" template)' },
 ];
 
 const API = '/api';
@@ -50,7 +52,7 @@ export default function AvailableVariables({ onInsert }) {
             focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: 'Create',
-            confirmButtonColor: '#2563eb',
+            confirmButtonColor: 'var(--brand)',
             preConfirm: () => {
                 const name = document.getElementById('swal-input-name').value;
                 const desc = document.getElementById('swal-input-desc').value;
@@ -82,10 +84,10 @@ export default function AvailableVariables({ onInsert }) {
         <div style={{ marginTop: '14px' }}>
             <div className="section-title" style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <span className="step-num" style={{ background: 'linear-gradient(135deg,#3b82f6,#2563eb)' }}>V</span>
+                    <span className="step-num" style={{ background: 'linear-gradient(135deg,var(--brand-mid),var(--brand))' }}>V</span>
                     Available Variables
                     <span style={{
-                        background: '#dbeafe', color: '#2563eb',
+                        background: 'var(--brand-soft-2)', color: 'var(--brand)',
                         borderRadius: '50px', padding: '3px 12px',
                         fontSize: '.75rem', fontWeight: 700, marginLeft: '8px'
                     }}>
@@ -95,8 +97,8 @@ export default function AvailableVariables({ onInsert }) {
                 <button 
                     type="button" 
                     onClick={handleCreateVariable} 
-                    style={{ background: '#f8fafc', color: '#1e40af', border: '1.5px solid #dbeafe', padding: '4px 11px', borderRadius: '8px', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseOver={e => e.currentTarget.style.background = '#dbeafe'}
+                    style={{ background: '#f8fafc', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-soft-2)', padding: '4px 11px', borderRadius: '8px', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseOver={e => e.currentTarget.style.background = 'var(--brand-soft-2)'}
                     onMouseOut={e => e.currentTarget.style.background = '#f8fafc'}
                 >
                     + Create Variable
@@ -113,14 +115,14 @@ export default function AvailableVariables({ onInsert }) {
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '6px',
                             padding: '3px 10px', borderRadius: '50px',
-                            background: '#f0f4ff', border: '1.5px solid #dbeafe',
-                            color: '#1e40af', cursor: 'pointer',
+                            background: '#f0f4ff', border: '1.5px solid var(--brand-soft-2)',
+                            color: 'var(--brand-dark)', cursor: 'pointer',
                             fontFamily: "'Outfit', monospace", fontSize: '.72rem',
                             fontWeight: 700, transition: 'all .2s',
                             boxShadow: 'none'
                         }}
-                        onMouseOver={e => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,.15)'; }}
-                        onMouseOut={e => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.borderColor = '#dbeafe'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        onMouseOver={e => { e.currentTarget.style.background = 'var(--brand-soft-2)'; e.currentTarget.style.borderColor = 'var(--brand-line)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(111,78,55,.15)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.borderColor = 'var(--brand-soft-2)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                         title={item.desc}
                     >
                         {item.var}

@@ -1,7 +1,8 @@
+import { appLocale } from '@/lib/app-config-client';
 export const fmt = (iso) => {
     if (!iso) return '—';
     const d = new Date(iso);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 export const parseVars = (raw) => {
@@ -10,12 +11,12 @@ export const parseVars = (raw) => {
 };
 
 export const CHIP_COLORS = [
-    { bg: '#dbeafe', color: '#2563eb' },
-    { bg: '#dbeafe', color: '#1d4ed8' },
+    { bg: 'var(--brand-soft-2)', color: 'var(--brand)' },
+    { bg: 'var(--brand-soft-2)', color: 'var(--brand-dark)' },
     { bg: '#dcfce7', color: '#15803d' },
     { bg: '#fef3c7', color: '#b45309' },
     { bg: '#fce7f3', color: '#be185d' },
-    { bg: '#e0f2fe', color: '#0369a1' },
+    { bg: 'var(--brand-soft)', color: 'var(--brand-dark)' },
 ];
 
 export const fileIcon = (name) => {

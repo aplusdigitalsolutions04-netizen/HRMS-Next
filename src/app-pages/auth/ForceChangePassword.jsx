@@ -87,10 +87,10 @@ export default function ForceChangePassword() {
         @keyframes fcpFade { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         .fcp-card { animation:fcpFade .4s ease both; }
         .fcp-input { width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:.85rem; outline:none; background:#fff; color:#1f2937; transition:all .2s; box-sizing:border-box; }
-        .fcp-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+        .fcp-input:focus { border-color:var(--brand); box-shadow:0 0 0 3px rgba(111,78,55,0.1); }
       `}</style>
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:18 }}>
-        <div className="fcp-card" style={{ width:'100%', maxWidth:440, background:'#fff', borderRadius:14, padding:'30px 27px', boxShadow:'0 8px 32px rgba(37,99,235,0.1)', border:'1px solid #e8f0ff' }}>
+        <div className="fcp-card" style={{ width:'100%', maxWidth:440, background:'#fff', borderRadius:14, padding:'30px 27px', boxShadow:'0 8px 32px rgba(111,78,55,0.1)', border:'1px solid #e8f0ff' }}>
           <div style={{ textAlign:'center', marginBottom:28 }}>
             <img src="/api/company-logo" alt="A Plus" style={{ height:36, marginBottom:12 }} />
             <h2 style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:'1.25rem', color:'#0f172a', margin:0, letterSpacing:'-0.3px' }}>Create New Password</h2>
@@ -137,7 +137,7 @@ export default function ForceChangePassword() {
                 {confirmPassword && (
                   <span style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)' }}>
                     {newPassword === confirmPassword ? (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6f4e37" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     ) : (
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     )}
@@ -147,7 +147,7 @@ export default function ForceChangePassword() {
             </div>
 
             <button type="submit" disabled={loading} style={{
-              width:'100%', padding:12, background:loading?'#94a3b8':'linear-gradient(135deg,#2563eb,#3b82f6)', color:'#fff', border:'none', borderRadius:10, fontWeight:700, fontSize:14, cursor:loading?'default':'pointer', transition:'all .25s'
+              width:'100%', padding:12, background:loading?'#94a3b8':'linear-gradient(135deg,var(--brand),var(--brand-mid))', color:'#fff', border:'none', borderRadius:10, fontWeight:700, fontSize:14, cursor:loading?'default':'pointer', transition:'all .25s'
             }}>
               {loading ? 'Changing Password...' : 'Set New Password'}
             </button>

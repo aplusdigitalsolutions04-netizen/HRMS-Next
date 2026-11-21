@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useLiveRefresh from '@/lib/live';
 import { Stagger, Item } from '@/lib/ui-motion';
 import { Link } from 'react-router-dom';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 
@@ -13,7 +14,7 @@ function AnimatedValue({ value, suffix = '' }) {
   useEffect(() => {
     const target = Number(value) || 0;
     if (target === 0) { setDisplay(0); return; }
-    const dur = 600;
+    const dur = 1000;
     startTime.current = performance.now();
 
     const tick = (now) => {
@@ -36,13 +37,16 @@ const DonutChart = ({ segments, size = 120, sw = 20 }) => {
   const circ = 2 * Math.PI * r;
   const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
   let offset = 0;
+  // the ring draws itself in after it appears: every segment starts at length 0 and grows to its share
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setDrawn(true), 80); return () => clearTimeout(t); }, []);
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f1f5f9" strokeWidth={sw} />
       {segments.map((seg, i) => {
         const pct = seg.value / total, dash = pct * circ, gap = circ - dash, o = offset;
         offset += dash;
-        return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color} strokeWidth={sw} strokeDasharray={`${dash} ${gap}`} strokeDashoffset={-o} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.8s ease, stroke-dashoffset 0.8s ease' }} />;
+        return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color} strokeWidth={sw} strokeDasharray={drawn ? `${dash} ${gap}` : `0 ${circ}`} strokeDashoffset={-o} strokeLinecap="round" style={{ transition: 'stroke-dasharray 1s cubic-bezier(.22,1,.36,1) ' + (i * 0.1) + 's, stroke-dashoffset 0.8s ease' }} />;
       })}
     </svg>
   );
@@ -73,11 +77,11 @@ const Icon = ({ name, size = 18 }) => (
   </svg>
 );
 
-const LT_COLORS = ['#2563eb', '#7c3aed', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9'];
+const LT_COLORS = ['var(--brand)', '#7c3aed', '#10b981', '#f59e0b', '#ec4899', '#0ea5e9'];
 const ACT_COLORS = {
   pending: { bg: '#fffbeb', fg: '#b45309' }, approved: { bg: '#f0fdf4', fg: '#15803d' }, rejected: { bg: '#fef2f2', fg: '#b91c1c' },
   cancelled: { bg: '#f1f5f9', fg: '#64748b' }, active: { bg: '#f0fdf4', fg: '#15803d' }, needs_correction: { bg: '#fff7ed', fg: '#c2410c' },
-  default: { bg: '#eff6ff', fg: '#1d4ed8' },
+  default: { bg: 'var(--brand-soft)', fg: 'var(--brand-dark)' },
 };
 const timeAgo = (iso) => {
   if (!iso) return '';
@@ -87,9 +91,9 @@ const timeAgo = (iso) => {
   if (m < 60) return m + ' min ago';
   const h = Math.floor(m / 60); if (h < 24) return h + ' hour' + (h === 1 ? '' : 's') + ' ago';
   const dd = Math.floor(h / 24); if (dd < 30) return dd + ' day' + (dd === 1 ? '' : 's') + ' ago';
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  return d.toLocaleDateString(appLocale(), { day: '2-digit', month: 'short' });
 };
-const PALETTE = ['#2563eb', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#3b82f6', '#14b8a6', '#f97316'];
+const PALETTE = ['var(--brand)', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', 'var(--brand-mid)', '#14b8a6', '#f97316'];
 
 const initialsOf = (name) => (name || '?').split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '?';
 
@@ -97,7 +101,7 @@ const initialsOf = (name) => (name || '?').split(' ').filter(Boolean).map(s => s
 const shortDate = (s) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
   if (!m) return '';
-  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short' });
 };
 const weekday = (s) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
@@ -192,8 +196,8 @@ function Dashboard() {
     const isToday = ds.getTime() === today.getTime();
     const isTomorrow = ds.getTime() === tom.getTime();
     return {
-      date: isToday ? 'Today' : isTomorrow ? 'Tomorrow' : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-      time: d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      date: isToday ? 'Today' : isTomorrow ? 'Tomorrow' : d.toLocaleDateString(appLocale(), { day: '2-digit', month: 'short' }),
+      time: d.toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit', hour12: true }),
       isToday,
     };
   };
@@ -220,7 +224,7 @@ function Dashboard() {
   // Attention list: only the items this user can actually act on.
   const attention = [
     { key: 'emp', icon: 'edit', label: 'Employee approvals', value: stats.pendingEmps, to: '/employees/pending', color: '#f59e0b', show: true },
-    { key: 'leave', icon: 'calendar', label: 'Leave requests', value: ov.leave ? ov.leave.pending : null, to: '/leave/manage', color: '#2563eb', show: ov.leave != null },
+    { key: 'leave', icon: 'calendar', label: 'Leave requests', value: ov.leave ? ov.leave.pending : null, to: '/leave/manage', color: 'var(--brand)', show: ov.leave != null },
     { key: 'wfh', icon: 'home', label: 'WFH requests', value: ov.wfh ? ov.wfh.pending : null, to: '/wfh/manage', color: '#0ea5e9', show: ov.wfh != null },
     { key: 'doc', icon: 'file', label: 'Document approvals', value: ov.pending ? ov.pending.documents : null, to: '/document-approvals', color: '#ec4899', show: ov.pending && ov.pending.documents != null },
   ].filter(a => a.show);
@@ -243,7 +247,7 @@ function Dashboard() {
     const h = now.getHours();
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   })();
-  const todayLabel = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const todayLabel = now.toLocaleDateString(appLocale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const Skeleton = ({ width = '60%', height = 12 }) => (
     <div className="db-sk" style={{ width, height }} />
@@ -270,8 +274,8 @@ function Dashboard() {
         .db-hero {
           display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
           padding:22px 26px; border-radius:20px; margin-bottom:16px; color:#fff;
-          background:linear-gradient(120deg,#1e40af 0%,#2563eb 55%,#3b82f6 100%);
-          box-shadow:0 10px 30px rgba(37,99,235,.28); position:relative; overflow:hidden;
+          background:linear-gradient(120deg,var(--brand-dark) 0%,var(--brand) 55%,var(--brand-mid) 100%);
+          box-shadow:0 10px 30px rgba(111,78,55,.28); position:relative; overflow:hidden;
         }
         .db-hero::after { content:''; position:absolute; right:-40px; top:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.1); }
         .db-hero::before { content:''; position:absolute; right:120px; bottom:-90px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.07); }
@@ -291,8 +295,8 @@ function Dashboard() {
           background:#fff; border:1px solid #e8ecf3; color:#334155; font-size:.84rem; font-weight:600; text-decoration:none;
           box-shadow:0 1px 2px rgba(15,23,42,.04); transition:all .2s; position:relative;
         }
-        .db-q:hover { border-color:#bfdbfe; color:#1e40af; transform:translateY(-2px); box-shadow:0 8px 18px rgba(37,99,235,.14); }
-        .db-q-ic { width:28px; height:28px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; }
+        .db-q:hover { border-color:var(--brand-line); color:var(--brand-dark); transform:translateY(-2px); box-shadow:0 8px 18px rgba(111,78,55,.14); }
+        .db-q-ic { width:28px; height:28px; border-radius:8px; background:var(--brand-soft); color:var(--brand); display:flex; align-items:center; justify-content:center; }
         .db-q-bd { background:#f59e0b; color:#fff; font-size:.68rem; font-weight:700; border-radius:20px; padding:1px 7px; min-width:18px; text-align:center; }
 
         /* ── KPI Row ── */
@@ -303,7 +307,7 @@ function Dashboard() {
           border:1px solid #f1f5f9; display:flex; flex-direction:column;
           transition:all .3s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden; cursor:default;
         }
-        .db-kpi-c::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#2563eb); }
+        .db-kpi-c::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,var(--brand)); }
         .db-kpi-c:hover { box-shadow:0 12px 32px rgba(0,0,0,.1), 0 4px 12px rgba(0,0,0,.06); transform:translateY(-2px); }
         .db-kpi-r1 { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
         .db-kpi-ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform .3s ease; }
@@ -316,7 +320,7 @@ function Dashboard() {
         .db-kpi-gr.up { background:#ecfdf5; color:#065f46; }
         .db-kpi-gr.down { background:#fef2f2; color:#991b1b; }
         .db-kpi-d { font-size:.7rem; color:#94a3b8; }
-        .db-kpi-lk { font-size:.7rem; font-weight:700; color:#2563eb; text-decoration:none; margin-left:auto; white-space:nowrap; opacity:0; transform:translateX(-4px); transition:all .25s; }
+        .db-kpi-lk { font-size:.7rem; font-weight:700; color:var(--brand); text-decoration:none; margin-left:auto; white-space:nowrap; opacity:0; transform:translateX(-4px); transition:all .25s; }
         .db-kpi-c:hover .db-kpi-lk { opacity:1; transform:translateX(0); }
 
         /* ── 12-column grid ── */
@@ -324,7 +328,7 @@ function Dashboard() {
         .s4 { grid-column:span 4; } .s5 { grid-column:span 5; } .s6 { grid-column:span 6; } .s7 { grid-column:span 7; } .s8 { grid-column:span 8; }
 
         .db-card {
-          background:#fff; border-radius:12px; border:1px solid #e8edf6; overflow:hidden;
+          background:#fff; border-radius:12px; border:1px solid #eadfd5; overflow:hidden;
           box-shadow:0 1px 2px rgba(15,26,58,.04);
           transition:box-shadow .3s ease, transform .3s ease; display:flex; flex-direction:column; min-width:0;
         }
@@ -332,11 +336,11 @@ function Dashboard() {
         .db-card-hdr { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px 0; flex-shrink:0; }
         .db-card-ttl { font-family:'Outfit',sans-serif; font-weight:700; font-size:.88rem; color:#0f172a; display:flex; align-items:center; gap:8px; }
         .db-card-ttl i { width:24px; height:24px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-style:normal; }
-        .db-card-lnk { font-size:.72rem; font-weight:700; color:#2563eb; text-decoration:none; white-space:nowrap; }
-        .db-card-lnk:hover { color:#1e40af; text-decoration:underline; }
+        .db-card-lnk { font-size:.72rem; font-weight:700; color:var(--brand); text-decoration:none; white-space:nowrap; }
+        .db-card-lnk:hover { color:var(--brand-dark); text-decoration:underline; }
         .db-card-bd { padding:10px 14px 14px; flex:1; display:flex; flex-direction:column; min-height:0; }
         .db-emp { text-align:center; padding:12px 10px; color:#94a3b8; font-size:.8rem; margin:auto; }
-        .db-tag { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#eff6ff; color:#1e40af; white-space:nowrap; }
+        .db-tag { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--brand-soft); color:var(--brand-dark); white-space:nowrap; }
 
         /* ── Today's attendance ── */
         .db-today { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
@@ -382,7 +386,7 @@ function Dashboard() {
         .db-li { display:flex; align-items:center; gap:10px; padding:7px 6px; margin:0 -8px; border-radius:10px; border-bottom:1px solid #f8fafc; transition:background .2s; }
         .db-li:last-child { border-bottom:none; }
         .db-li:hover { background:#f8fafc; }
-        .db-av { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; font-family:'Outfit',sans-serif; background:linear-gradient(135deg,#eff6ff,#dbeafe); color:#2563eb; }
+        .db-av { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; font-family:'Outfit',sans-serif; background:linear-gradient(135deg,var(--brand-soft),var(--brand-soft-2)); color:var(--brand); }
         .db-li-info { flex:1; min-width:0; }
         .db-li-name { font-size:.82rem; font-weight:600; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .db-li-sub { font-size:.72rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -404,7 +408,7 @@ function Dashboard() {
         .db-cols { display:flex; align-items:flex-end; justify-content:space-between; gap:8px; height:110px; padding-top:6px; }
         .db-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; height:100%; }
         .db-col-v { font-size:.78rem; font-weight:700; color:#334155; }
-        .db-col-b { width:100%; max-width:38px; border-radius:8px 8px 4px 4px; background:linear-gradient(180deg,#60a5fa,#2563eb); transform-origin:bottom; animation:dbRise .7s cubic-bezier(.22,1,.36,1) both; min-height:4px; }
+        .db-col-b { width:100%; max-width:38px; border-radius:8px 8px 4px 4px; background:linear-gradient(180deg,var(--brand-mid),var(--brand)); transform-origin:bottom; animation:dbRise .7s cubic-bezier(.22,1,.36,1) both; min-height:4px; }
         .db-col-b.zero { background:#e2e8f0; }
         .db-col-l { font-size:.72rem; font-weight:600; color:#94a3b8; text-transform:uppercase; }
 
@@ -422,7 +426,7 @@ function Dashboard() {
         .db-datepill { display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; font-size:.8rem; font-weight:600; color:#475569; }
         .db-rf.spin svg { animation:dbspin .8s linear infinite; }
         .db-kpi { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:12px; }
-        .db-kpi-c { background:#fff; border:1px solid #e8edf6; border-radius:12px; padding:12px 14px; box-shadow:0 1px 2px rgba(15,26,58,.04); display:flex; flex-direction:column; gap:6px; }
+        .db-kpi-c { background:#fff; border:1px solid #eadfd5; border-radius:12px; padding:12px 14px; box-shadow:0 1px 2px rgba(15,26,58,.04); display:flex; flex-direction:column; gap:6px; }
         .db-kpi-c::before { display:none; }
         .db-kpi-c:hover { box-shadow:0 6px 18px rgba(15,26,58,.07); transform:none; }
         .kc-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -508,7 +512,7 @@ function Dashboard() {
         {/* ── KPI cards ── */}
         <Stagger className="db-kpi">
           <Item className="db-kpi-c" key="emp">
-            <div className="kc-top"><span className="kc-lbl">Total Employees</span><span className="kc-ic" style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="users" size={16} /></span></div>
+            <div className="kc-top"><span className="kc-lbl">Total Employees</span><span className="kc-ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="users" size={16} /></span></div>
             <div className="kc-val"><AnimatedValue value={stats.emps} /></div>
             <div className="kc-foot"><span className={`db-kpi-gr ${stats.empGrowth >= 0 ? 'up' : 'down'}`}>{stats.empGrowth >= 0 ? '+' : ''}{stats.empGrowth}%</span><span className="db-kpi-d">vs last 30 days</span><Link to="/employees/manage" className="db-kpi-lk">View &rarr;</Link></div>
           </Item>
@@ -572,14 +576,14 @@ function Dashboard() {
                     </div>
                     <div className="db-today-tiles">
                       <div className="db-tile" style={{ '--bg': '#f0fdf4', '--bd': '#bbf7d0', '--fg': '#15803d' }}><b><AnimatedValue value={at.present} /></b><span>Present</span></div>
-                      <div className="db-tile" style={{ '--bg': '#f0f9ff', '--bd': '#bae6fd', '--fg': '#0369a1' }}><b><AnimatedValue value={at.wfh} /></b><span>Work from home</span></div>
+                      <div className="db-tile" style={{ '--bg': 'var(--brand-soft)', '--bd': '#bae6fd', '--fg': 'var(--brand-dark)' }}><b><AnimatedValue value={at.wfh} /></b><span>Work from home</span></div>
                       <div className="db-tile" style={{ '--bg': '#fffbeb', '--bd': '#fde68a', '--fg': '#b45309' }}><b><AnimatedValue value={onLeaveToday.length} /></b><span>On leave</span></div>
                       <div className="db-tile" style={{ '--bg': '#f8fafc', '--bd': '#e2e8f0', '--fg': '#475569' }}><b><AnimatedValue value={notIn} /></b><span>Not checked in</span></div>
                     </div>
                   </div>
                 )}
                 {at.recorded === 0 && at.totalActive > 0 && (
-                  <div className="db-kpi-d" style={{ marginTop: 12 }}>No attendance has been synced for today yet. Open <Link to="/attendance/daily" style={{ color: '#2563eb', fontWeight: 700 }}>Daily Attendance</Link> to pull today's punches.</div>
+                  <div className="db-kpi-d" style={{ marginTop: 12 }}>No attendance has been synced for today yet. Open <Link to="/attendance/daily" style={{ color: 'var(--brand)', fontWeight: 700 }}>Daily Attendance</Link> to pull today's punches.</div>
                 )}
                 {at.offOrHoliday > 0 && <div className="db-kpi-d" style={{ marginTop: 12 }}>{at.offOrHoliday} employee(s) are on a weekly off / holiday today.</div>}
               </div>
@@ -588,7 +592,7 @@ function Dashboard() {
           {ov.leaveTrends && (
             <Item data-w="leave_trends" className="db-card s6">
               <div className="db-card-hdr">
-                <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="calendar" size={15} /></i>Leave Trends</span>
+                <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="calendar" size={15} /></i>Leave Trends</span>
                 <Link to="/leave/manage" className="db-card-lnk">Manage &rarr;</Link>
               </div>
               <div className="db-card-bd">
@@ -635,7 +639,7 @@ function Dashboard() {
                       const sc = ACT_COLORS[String(a.status || '').toLowerCase()] || ACT_COLORS.default;
                       return (
                         <div className="db-li" key={i}>
-                          <div className="db-av" style={{ background: '#eff6ff', color: '#2563eb' }}>{initialsOf(a.name)}</div>
+                          <div className="db-av" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>{initialsOf(a.name)}</div>
                           <div className="db-li-info">
                             <div className="db-li-name">{a.name}</div>
                             <div className="db-li-sub">{a.text}</div>
@@ -705,7 +709,7 @@ function Dashboard() {
           </Item>
           <Item data-w="interviews" className="db-card s6">
             <div className="db-card-hdr">
-              <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#0284c7' }}><Icon name="calendar" size={15} /></i>Upcoming Interviews</span>
+              <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand-mid)' }}><Icon name="calendar" size={15} /></i>Upcoming Interviews</span>
               <Link to="/candidates/data" className="db-card-lnk">View all</Link>
             </div>
             <div className="db-card-bd">
@@ -739,7 +743,7 @@ function Dashboard() {
         <Stagger className="db-grid">
           <Item data-w="attendance_overview" className="db-card s6">
             <div className="db-card-hdr">
-              <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="clock" size={15} /></i>Attendance Overview</span>
+              <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="clock" size={15} /></i>Attendance Overview</span>
             </div>
             <div className="db-card-bd">
               {attendanceSummaries.length === 0 ? (
@@ -813,7 +817,7 @@ function Dashboard() {
             {ov.departments && (
               <Item data-w="headcount" className="db-card s4">
                 <div className="db-card-hdr">
-                  <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#0284c7' }}><Icon name="grid" size={15} /></i>Headcount by Department</span>
+                  <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand-mid)' }}><Icon name="grid" size={15} /></i>Headcount by Department</span>
                 </div>
                 <div className="db-card-bd">
                   {ov.departments.length === 0 ? (
@@ -835,7 +839,7 @@ function Dashboard() {
             {ov.hiring && (
               <Item data-w="new_hires" className="db-card s4">
                 <div className="db-card-hdr">
-                  <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#2563eb' }}><Icon name="userPlus" size={15} /></i>New Hires</span>
+                  <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="userPlus" size={15} /></i>New Hires</span>
                   <span className="db-tag">Last 6 months</span>
                 </div>
                 <div className="db-card-bd">
@@ -892,12 +896,12 @@ function Dashboard() {
                       ))}
                       {wfhToday.map((p, i) => (
                         <div className="db-li" key={'w' + i}>
-                          <div className="db-av" style={{ background: '#f0f9ff', color: '#0284c7' }}>{initialsOf(p.full_name)}</div>
+                          <div className="db-av" style={{ background: 'var(--brand-soft)', color: 'var(--brand-mid)' }}>{initialsOf(p.full_name)}</div>
                           <div className="db-li-info">
                             <div className="db-li-name">{p.full_name}</div>
                             <div className="db-li-sub">Working from home</div>
                           </div>
-                          <span className="db-tag" style={{ background: '#f0f9ff', color: '#0369a1' }}>WFH</span>
+                          <span className="db-tag" style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}>WFH</span>
                         </div>
                       ))}
                     </div>
@@ -915,8 +919,8 @@ function Dashboard() {
             {ov.celebrations && (
               <Item data-w="anniversaries" className="db-card s6">
                 <div className="db-card-hdr">
-                  <span className="db-card-ttl"><i style={{ background: '#eff6ff', color: '#3b82f6' }}><Icon name="award" size={15} /></i>Work Anniversaries</span>
-                  <span className="db-tag" style={{ background: '#eff6ff', color: '#6d28d9' }}>Next 30 days</span>
+                  <span className="db-card-ttl"><i style={{ background: 'var(--brand-soft)', color: 'var(--brand-mid)' }}><Icon name="award" size={15} /></i>Work Anniversaries</span>
+                  <span className="db-tag" style={{ background: 'var(--brand-soft)', color: '#6d28d9' }}>Next 30 days</span>
                 </div>
                 <div className="db-card-bd">
                   {ov.celebrations.anniversaries.length === 0 ? (
@@ -925,7 +929,7 @@ function Dashboard() {
                     <div className="db-list">
                       {ov.celebrations.anniversaries.map((a, i) => (
                         <div className="db-li" key={i}>
-                          <div className="db-av" style={{ background: '#eff6ff', color: '#2563eb' }}>{initialsOf(a.full_name)}</div>
+                          <div className="db-av" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>{initialsOf(a.full_name)}</div>
                           <div className="db-li-info">
                             <div className="db-li-name">{a.full_name}</div>
                             <div className="db-li-sub">{a.years} year{a.years === 1 ? '' : 's'} with us</div>

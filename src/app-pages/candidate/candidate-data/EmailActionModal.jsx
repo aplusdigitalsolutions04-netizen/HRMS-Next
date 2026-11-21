@@ -11,7 +11,7 @@ const EmailActionModal = ({
     if (!isOpen) return null;
     const isHtml = /<\/?(p|div|br|table|tr|td|ul|ol|li|h[1-6])\b/i.test(templateBody || '');
     const srcDoc = isHtml ? templateBody : `<div style="white-space:pre-line;font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6">${String(templateBody || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</div>`;
-    const tab = (k, label) => <button type="button" className="btn-premium-outline" onClick={() => setView(view === k ? '' : k)} style={{ padding: '6px 14px', fontSize: '.82rem', ...(view === k ? { background: '#eff6ff', borderColor: '#2563eb' } : {}) }}>{label}</button>;
+    const tab = (k, label) => <button type="button" className="btn-premium-outline" onClick={() => setView(view === k ? '' : k)} style={{ padding: '6px 14px', fontSize: '.82rem', ...(view === k ? { background: 'var(--brand-soft)', borderColor: 'var(--brand)' } : {}) }}>{label}</button>;
     return (
         <div className="modal-overlay" onClick={() => !saving && onClose()}>
             <div className="modal-glass" style={{ minWidth: 480, width: view ? 'min(760px, 94vw)' : undefined, maxHeight: '92vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>

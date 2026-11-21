@@ -5,7 +5,7 @@ import useLiveRefresh from '@/lib/live';
 import { openEmployeeDocument, previewEmployeeDocument, previewDocumentUrl } from '@/lib/clientDocs';
 import { Tabs } from '@/lib/ui-motion';
 import { DOC_OPTIONS } from '@/lib/documents';
-import { shrinkImage, MAX_UPLOAD_BYTES, mb } from '@/lib/shrink-upload';
+import { shrinkImage, maxUploadBytes, mb } from '@/lib/shrink-upload';
 import useStatusMaster, { pillStyle } from '../shared/useStatusMaster';
 
 const EmployeeDetail = () => {
@@ -44,6 +44,22 @@ const EmployeeDetail = () => {
     useEffect(() => { loadPerms(); }, [tab === 'documents', employee && employee.id]);
     useLiveRefresh(() => loadPerms());
     // HR puts a document into the employee's profile (replaces the one that is there)
+    // the date until which each document is valid (reminders are sent before it ends; see Document Expiry)
+    const [expiry, setExpiry] = useState({});
+    useEffect(() => {
+        if (!employee || !employee.id) return;
+        fetch('/api/document-expiry?employee_id=' + employee.id, { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } })
+            .then(r => (r.ok ? r.json() : { items: [] })).then(d => { const m = {}; (d.items || []).forEach(i => { m[i.document_type] = i.expiry_date; }); setExpiry(m); }).catch(() => {});
+    }, [employee && employee.id]);
+    const saveExpiry = async (key, value) => {
+        const before = expiry[key];
+        setExpiry(x => ({ ...x, [key]: value }));
+        try {
+            const res = await fetch('/api/document-expiry', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + sessionStorage.getItem('token') }, body: JSON.stringify({ employee_id: employee.id, document_type: key, expiry_date: value || null }) });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.detail || 'Could not save');
+        } catch (e) { setExpiry(x => ({ ...x, [key]: before })); Swal.fire({ icon: 'error', title: 'Not saved', text: e.message }); }
+    };
     const [uploadingKey, setUploadingKey] = useState('');
     const uploadDocument = async (key, label, e) => {
         const input = e.target;
@@ -52,7 +68,7 @@ const EmployeeDetail = () => {
         setUploadingKey(key);
         try {
             const file = await shrinkImage(picked);
-            if (file.size > MAX_UPLOAD_BYTES) throw new Error('"' + picked.name + '" is ' + mb(picked.size) + '. Please use a file smaller than ' + mb(MAX_UPLOAD_BYTES) + '.');
+            if (file.size > maxUploadBytes()) throw new Error('"' + picked.name + '" is ' + mb(picked.size) + '. Please use a file smaller than ' + mb(maxUploadBytes()) + '.');
             const fd = new FormData();
             fd.append('key', key);
             fd.append('file', file);
@@ -242,10 +258,10 @@ const EmployeeDetail = () => {
             <style>{`
                 .emp-detail-page { min-height: 60vh; }
                 .ed-grid { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
-                .ed-card { background: #fff; border: 1px solid #e8edf6; border-radius: 12px; padding: 16px; }
+                .ed-card { background: #fff; border: 1px solid #eadfd5; border-radius: 12px; padding: 16px; }
                 .ed-card h3 { margin: 0 0 10px; font-size: .78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
                 .ed-profile { text-align: center; }
-                .ed-avatar { width: 84px; height: 84px; border-radius: 50%; margin: 4px auto 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; font-family: 'Outfit',sans-serif; font-size: 1.7rem; font-weight: 700; overflow: hidden; border: 3px solid #dbeafe; }
+                .ed-avatar { width: 84px; height: 84px; border-radius: 50%; margin: 4px auto 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,var(--brand),var(--brand-mid)); color: #fff; font-family: 'Outfit',sans-serif; font-size: 1.7rem; font-weight: 700; overflow: hidden; border: 3px solid var(--brand-soft-2); }
                 .ed-avatar img { width: 100%; height: 100%; object-fit: cover; }
                 .ed-name { font-size: 1.05rem; font-weight: 700; color: #0f172a; font-family: 'Outfit',sans-serif; }
                 .ed-role { font-size: .82rem; color: #64748b; margin: 2px 0 8px; }
@@ -257,8 +273,8 @@ const EmployeeDetail = () => {
                 .ed-row em { color: #cbd5e1; font-style: normal; }
                 .ed-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
                 .ed-docs { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 8px; }
-                .ed-doc { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid #e8edf6; border-radius: 10px; color: #1d4ed8; font-size: .82rem; font-weight: 600; text-decoration: none; background: #f8fbff; }
-                .ed-doc:hover { background: #eff6ff; border-color: #bfdbfe; }
+                .ed-doc { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid #eadfd5; border-radius: 10px; color: var(--brand-dark); font-size: .82rem; font-weight: 600; text-decoration: none; background: #f8fbff; }
+                .ed-doc:hover { background: var(--brand-soft); border-color: var(--brand-line); }
                 .ed-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #eef2f7; }
                 @media (max-width: 960px) { .ed-grid { grid-template-columns: 1fr; } .ed-two { grid-template-columns: 1fr; } }
             `}</style>
@@ -295,7 +311,7 @@ const EmployeeDetail = () => {
                             { id: 'personal', label: 'Personal Info' },
                             { id: 'education', label: 'Education / Work' },
                             { id: 'bank', label: 'Bank Details' },
-                            { id: 'documents', label: <>Documents ({permDocs.length ? permDocs.filter(d => d.filled).length + uploads.filter(u => u.document_type === 'Additional').length : docs.length}){permDocs.some(d => d.permission === 'requested') && <span style={{ marginLeft: 6, background: '#2563eb', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10.5, fontWeight: 700 }}>{permDocs.filter(d => d.permission === 'requested').length} asked</span>}</> },
+                            { id: 'documents', label: <>Documents ({permDocs.length ? permDocs.filter(d => d.filled).length + uploads.filter(u => u.document_type === 'Additional').length : docs.length}){permDocs.some(d => d.permission === 'requested') && <span style={{ marginLeft: 6, background: 'var(--brand)', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 10.5, fontWeight: 700 }}>{permDocs.filter(d => d.permission === 'requested').length} asked</span>}</> },
                             { id: 'assets', label: 'Assets' },
                         ]} />
                     </div>
@@ -352,7 +368,7 @@ const EmployeeDetail = () => {
                                 <Row label="PAN" value={employee.pan} />
                                 <Row label="UAN" value={employee.uan} />
                                 <Row label="Pay Mode" value={employee.pay_mode} />
-                                <div style={{ marginTop: 14, padding: '10px 12px', border: '1px solid #e8edf6', borderRadius: 10, background: '#f8fafc', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                <div style={{ marginTop: 14, padding: '10px 12px', border: '1px solid #eadfd5', borderRadius: 10, background: '#f8fafc', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                                     <span style={{ fontSize: '.8rem', color: '#475569', flex: 1, minWidth: 220 }}>
                                         The employee can see these details but cannot change them. Allow them to update their bank and contact details once.
                                         {Number(employee.profile_edit_allowed) ? <b style={{ color: '#15803d' }}> Allowed now.</b> : null}
@@ -374,7 +390,7 @@ const EmployeeDetail = () => {
                                     : (
                                         <div style={{ overflowX: 'auto' }}>
                                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.82rem' }}>
-                                                <thead><tr>{['Tag', 'Asset', 'Given', 'Returned', 'Condition'].map(h => <th key={h} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, textTransform: 'uppercase', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e8edf6' }}>{h}</th>)}</tr></thead>
+                                                <thead><tr>{['Tag', 'Asset', 'Given', 'Returned', 'Condition'].map(h => <th key={h} style={{ textAlign: 'left', padding: '7px 10px', fontSize: 11, textTransform: 'uppercase', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #eadfd5' }}>{h}</th>)}</tr></thead>
                                                 <tbody>{assets.map(a => (
                                                     <tr key={a.assignment_id}>
                                                         <td style={{ padding: '7px 10px', fontWeight: 700 }}>{a.asset_tag}</td>
@@ -393,7 +409,7 @@ const EmployeeDetail = () => {
                             <>
                                 <style>{`
                                     .dp-t { width:100%; border-collapse:collapse; }
-                                    .dp-t th { text-align:left; font-size:.68rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; padding:6px 10px; background:#f8fafc; border-bottom:1px solid #e8edf6; white-space:nowrap; }
+                                    .dp-t th { text-align:left; font-size:.68rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; padding:6px 10px; background:#f8fafc; border-bottom:1px solid #eadfd5; white-space:nowrap; }
                                     .dp-t td { padding:5px 10px; font-size:.8rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
                                     .dp-t tr:last-child td { border-bottom:none; }
                                 `}</style>
@@ -401,16 +417,16 @@ const EmployeeDetail = () => {
                                     <h3 style={{ margin: 0 }}>Documents</h3>
                                     <span style={{ fontSize: '.76rem', color: '#64748b' }}>Tick the documents the employee must upload. Once a document is in, the employee cannot upload it again unless you allow it (one upload at a time).</span>
                                 </div>
-                                <div style={{ border: '1px solid #e8edf6', borderRadius: 10, overflow: 'hidden', marginBottom: 10 }}>
+                                <div style={{ border: '1px solid #eadfd5', borderRadius: 10, overflow: 'hidden', marginBottom: 10 }}>
                                     <table className="dp-t">
-                                        <thead><tr><th>Document</th><th>Status</th><th style={{ textAlign: 'center' }}>Compulsory</th><th>Upload permission</th></tr></thead>
+                                        <thead><tr><th>Document</th><th>Status</th><th style={{ textAlign: 'center' }}>Compulsory</th><th>Valid till</th><th>Upload permission</th></tr></thead>
                                         <tbody>
                                             {permDocs.map(d => {
                                                 const opt = DOC_OPTIONS.find(o => o.key === d.key) || {};
                                                 const onProfile = !!(employee && opt.column && employee[opt.column]);
                                                 const sent = uploads.find(u => u.document_type === d.key);
                                                 return (
-                                                    <tr key={d.key} style={{ background: d.permission === 'requested' ? '#eff6ff' : undefined }}>
+                                                    <tr key={d.key} style={{ background: d.permission === 'requested' ? 'var(--brand-soft)' : undefined }}>
                                                         <td style={{ fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap' }}>{d.label}</td>
                                                         <td style={{ whiteSpace: 'nowrap' }}>
                                                             <span style={{ color: d.waiting ? '#d97706' : d.filled ? '#15803d' : '#94a3b8', fontWeight: 600, fontSize: '.76rem' }}>{d.key === 'Additional' ? 'Extra papers' : d.waiting ? 'Waiting for approval' : d.filled ? 'Uploaded' : 'Not uploaded'}</span>
@@ -418,12 +434,15 @@ const EmployeeDetail = () => {
                                                                 {uploadingKey === d.key ? 'Uploading...' : (d.key === 'Additional' ? 'Add file' : d.filled ? 'Replace' : 'Upload')}
                                                                 <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={!!uploadingKey} onChange={(e) => uploadDocument(d.key, d.label, e)} />
                                                             </label>
-                                                            {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); openDoc(opt.column); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
-                                                            {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); previewEmployeeDocument(employee.id, opt.column, d.label); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
-                                                            {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); openApproval(sent.id); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
-                                                            {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); previewDocumentUrl('/api/documents/' + sent.id + '/serve', d.label); }} style={{ marginLeft: 8, color: '#2563eb', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
+                                                            {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); openDoc(opt.column); }} style={{ marginLeft: 8, color: 'var(--brand)', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
+                                                            {onProfile && <a href="#" onClick={(e) => { e.preventDefault(); previewEmployeeDocument(employee.id, opt.column, d.label); }} style={{ marginLeft: 8, color: 'var(--brand)', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
+                                                            {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); openApproval(sent.id); }} style={{ marginLeft: 8, color: 'var(--brand)', fontWeight: 600, fontSize: '.76rem' }}>View</a>}
+                                                            {!onProfile && sent && <a href="#" onClick={(e) => { e.preventDefault(); previewDocumentUrl('/api/documents/' + sent.id + '/serve', d.label); }} style={{ marginLeft: 8, color: 'var(--brand)', fontWeight: 600, fontSize: '.76rem' }}>Preview</a>}
                                                         </td>
                                                         <td style={{ textAlign: 'center' }}>{d.key === 'Additional' ? <span style={{ color: '#cbd5e1' }}>-</span> : <input type="checkbox" checked={reqDocs.includes(d.key)} onChange={() => setReqDocs(p => p.includes(d.key) ? p.filter(x => x !== d.key) : [...p, d.key])} />}</td>
+                                                        <td style={{ whiteSpace: 'nowrap' }}>{d.key === 'Additional' ? <span style={{ color: '#cbd5e1' }}>-</span> : (
+                                                            <input type="date" value={expiry[d.key] || ''} onChange={(e) => saveExpiry(d.key, e.target.value)} title="Date until which this document is valid" style={{ height: 24, border: '1px solid ' + (expiry[d.key] && expiry[d.key] < new Date().toISOString().slice(0, 10) ? '#fca5a5' : '#e2e8f0'), borderRadius: 6, padding: '0 6px', fontSize: '.74rem', color: expiry[d.key] && expiry[d.key] < new Date().toISOString().slice(0, 10) ? '#b91c1c' : '#334155', fontFamily: 'inherit' }} />
+                                                        )}</td>
                                                         <td>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                                                 {d.waiting ? <span style={{ color: '#94a3b8', fontSize: '.76rem' }}>Approve it first</span> : d.permission === 'granted' ? (
@@ -433,7 +452,7 @@ const EmployeeDetail = () => {
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        {d.permission === 'requested' && <span style={{ color: '#1d4ed8', fontWeight: 600, fontSize: '.74rem' }} title={d.note}>Employee asked{d.note ? ': ' + (d.note.length > 40 ? d.note.slice(0, 40) + '…' : d.note) : ''}</span>}
+                                                                        {d.permission === 'requested' && <span style={{ color: 'var(--brand-dark)', fontWeight: 600, fontSize: '.74rem' }} title={d.note}>Employee asked{d.note ? ': ' + (d.note.length > 40 ? d.note.slice(0, 40) + '…' : d.note) : ''}</span>}
                                                                         <button className="btn-p" style={{ height: 24, padding: '0 10px', fontSize: '.72rem' }} disabled={permBusy === d.key} onClick={() => setPerm(d.key, true)}>{d.filled ? 'Allow upload again' : 'Allow upload'}</button>
                                                                     </>
                                                                 )}

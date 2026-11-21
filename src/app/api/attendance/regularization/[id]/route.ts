@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, calcHours, createNotification } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -17,7 +18,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 // attendance on the spot (times, hours and status worked out like a normal punch day, so a Saturday punch
 // becomes Extra Work and a short day a Half Day), marked as a manual entry so the TeamOffice sync never undoes
 // it. A late-coming request is only recorded as approved (nothing in attendance changes).
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 // The employee changes their own missed-punch / late-coming request while nobody has acted on it yet.
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user || user.type !== 'employee') return jsonError('Not authenticated', 401);
@@ -154,3 +155,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonSuccess({ message: 'Request updated' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);
+export const PUT = withApiLog(PUT_handler);

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -8,7 +9,7 @@ import { checkWfhRequest } from '@/lib/wfh';
 import { logAudit } from '@/lib/audit';
 
 // The employee changes their own WFH request (dates, reason) while nobody has acted on it yet.
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user || user.type !== 'employee') return jsonError('Not authenticated', 401);
@@ -37,3 +38,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonSuccess({ message: 'WFH request updated' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const PUT = withApiLog(PUT_handler);

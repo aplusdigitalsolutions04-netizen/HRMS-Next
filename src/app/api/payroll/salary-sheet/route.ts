@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { computeSalarySheet, saveAdjustment, getMonthDaysMode } from '@/lib/salary-sheet';
@@ -11,7 +12,7 @@ function period(searchParams: URLSearchParams) {
   return { month, year };
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 // Body: { emp_code, month, year, incentive?, el_days?, variable_pay?, ew_days? } (each number, or null to clear)
 // null clears the override for that month.
-export async function PUT(req: NextRequest) {
+async function PUT_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -51,3 +52,6 @@ export async function PUT(req: NextRequest) {
     return jsonSuccess({ message: 'Saved', row });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const PUT = withApiLog(PUT_handler);

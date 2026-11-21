@@ -21,9 +21,9 @@ const cols = {
   p: { bg: '#d1f7c4', color: '#14532d' },
   a: { bg: '#ffd6d6', color: '#7f1d1d' },
   wo: { bg: '#e5e7eb', color: '#111827' },
-  cl: { bg: '#bfdbfe', color: '#1e3a8a' },
+  cl: { bg: 'var(--brand-line)', color: 'var(--brand-dark)' },
   wfh: { bg: '#fde68a', color: '#78350f' },
-  nh: { bg: '#bfdbfe', color: '#4c1d95' },
+  nh: { bg: 'var(--brand-line)', color: '#4c1d95' },
   cl2: { bg: '#dfa', color: '#111827' },
   sl: { bg: '#fee2e2', color: '#991b1b' },
   upl: { bg: '#fecaca', color: '#7f1d1d' },
@@ -117,8 +117,8 @@ const AttendanceResult = () => {
   const s = {
     card: { background: '#fff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: '1px solid #e8f0ff', overflow: 'hidden' },
     sel: { padding: '9px 14px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, background: '#fff', color: '#0f172a', outline: 'none' },
-    btn: { padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-    btnAct: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
+    btn: { padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,var(--brand),var(--brand-mid))', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+    btnAct: { padding: '6px 12px', borderRadius: 7, border: 'none', background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
     btnVfy: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#f0fdf4', color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
     btnDis: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#f1f5f9', color: '#94a3b8', fontSize: 12, fontWeight: 500, cursor: 'not-allowed', whiteSpace: 'nowrap' },
     btnVer: { padding: '6px 12px', borderRadius: 7, border: 'none', background: '#f0fdf4', color: '#15803d', fontSize: 12, fontWeight: 600, cursor: 'not-allowed', whiteSpace: 'nowrap' },
@@ -132,7 +132,7 @@ const AttendanceResult = () => {
         .ar-yd{position:relative;width:150px}
         .ar-yl{display:none;position:absolute;width:100%;max-height:200px;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
         .ar-yi{padding:8px 12px;cursor:pointer;font-size:13px;color:#334155}
-        .ar-yi:hover{background:#2563eb;color:#fff}
+        .ar-yi:hover{background:var(--brand);color:#fff}
         .ar-tw{overflow-x:auto}
         .ar-t{width:100%;border-collapse:collapse;font-size:13px}
         .ar-t th{background:#f8fafc;padding:11px 14px;text-align:left;font-weight:600;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
@@ -223,7 +223,7 @@ const AttendanceResult = () => {
                     </td>
                     <td style={{ textAlign: 'center', fontWeight: 700, color: '#16a34a' }}>{row.total_present_days ?? 0}</td>
                     <td style={{ textAlign: 'center', fontWeight: 700, color: '#dc2626' }}>{row.total_absent_days ?? 0}</td>
-                    <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, color: '#2563eb' }}>{fmtNum(row.total_working_hours)}</td>
+                    <td style={{ textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, color: 'var(--brand)' }}>{fmtNum(row.total_working_hours)}</td>
                     <td>
                       {(row.is_verified || row.isVerified || row.IsVerified) ? (
                         <div style={{ display: 'flex', gap: 5 }}>

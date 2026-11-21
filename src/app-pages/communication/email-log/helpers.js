@@ -1,3 +1,4 @@
+import { appLocale } from '@/lib/app-config-client';
 export const formatEmailBody = (body) => {
   if (!body) return '—';
   const htmlRegex = /<\/?[a-z][\s\S]*>/i;
@@ -7,10 +8,10 @@ export const formatEmailBody = (body) => {
 
 export const formatDT = (dt) => {
   if (!dt) return '—';
-  return new Date(dt).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  return new Date(dt).toLocaleString(appLocale(), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 };
 
 export const formatDate = (dt) => {
   if (!dt) return '—';
-  return new Date(dt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  return new Date(dt).toLocaleDateString(appLocale(), { day:'2-digit', month:'short', year:'numeric' });
 };

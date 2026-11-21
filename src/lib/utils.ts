@@ -44,7 +44,8 @@ export function todayDate(): string {
 
 export function jsonError(e: any, status = 400) {
   const message = e?.message || e?.code || (e?.errors?.map((x: any) => x.message).join('; ')) || e || 'Server error';
-  return NextResponse.json({ detail: message }, { status });
+  // an error that carries its own status (a refused upload is 422, not a server fault)
+  return NextResponse.json({ detail: message }, { status: typeof e?.httpStatus === 'number' ? e.httpStatus : status });
 }
 
 export function jsonSuccess(data: any, status = 200) {
@@ -73,6 +74,13 @@ export function checkPermission(user: AuthUser | null, perm: string): boolean {
   return user.permissions?.[perm] === true;
 }
 
+// true when the account is the administrator or has at least one of the permissions
+export function hasAnyPermission(user: AuthUser | null, perms: string[]): boolean {
+  if (!user) return false;
+  if (user.role === 'ADMIN') return true;
+  return perms.some(p => user.permissions?.[p] === true);
+}
+
 export async function getAdminUser(req: Request): Promise<AuthUser | null> {
   const user = await getAuthUser(req);
   if (!user || user.type !== 'admin') return null;
@@ -84,14 +92,14 @@ export function splitEmails(val: string | null | undefined): string[] {
   return val.split(',').map(e => e.trim()).filter(Boolean);
 }
 
-export function formatDate(d: Date | string | null | undefined): string {
+export function formatDate(d: Date | string | null | undefined, locale?: string): string {
   if (!d) return '\u2014';
-  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(d).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export function formatDateTime(d: Date | string | null | undefined): string {
+export function formatDateTime(d: Date | string | null | undefined, locale?: string): string {
   if (!d) return '\u2014';
-  return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(d).toLocaleString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export function calcHours(inTime: string | null | undefined, outTime: string | null | undefined): string {

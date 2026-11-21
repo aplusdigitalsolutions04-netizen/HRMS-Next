@@ -10,6 +10,7 @@ import InterviewModal from './candidate-data/InterviewModal';
 import EmailActionModal from './candidate-data/EmailActionModal';
 import EmailComposeModal from './candidate-data/EmailComposeModal';
 import CandidateEmailActionModal from './candidate-data/CandidateEmailActionModal';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -605,7 +606,7 @@ const CandidateData = () => {
                         showCancelButton: true,
                         confirmButtonText: 'Restore Draft',
                         cancelButtonText: 'Start Fresh',
-                        confirmButtonColor: '#1e40af',
+                        confirmButtonColor: 'var(--brand-dark)',
                         cancelButtonColor: '#64748b',
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -716,10 +717,19 @@ const CandidateData = () => {
 
         const tpl = emailTemplates.find(t => t.id === templateId);
         if (!tpl) return;
+        // the people this template always copies join the Cc / Bcc lists (nobody twice)
+        const addPeople = (csv, setList, setShow) => {
+            const add = String(csv || '').split(/[,;\s]+/).filter(Boolean);
+            if (!add.length) return;
+            setList(prev => [...prev, ...add.filter(a => !prev.some(x => String(x).toLowerCase() === a.toLowerCase()))]);
+            setShow(true);
+        };
+        addPeople(tpl.cc_emails, setEmailCCList, setShowCC);
+        addPeople(tpl.bcc_emails, setEmailBCCList, setShowBCC);
 
         let interviewTime = '';
         if (interviewDate) {
-            try { const d = new Date(interviewDate); interviewTime = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); } catch {}
+            try { const d = new Date(interviewDate); interviewTime = d.toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit', hour12: true }); } catch {}
         }
         const variableMap = {
             candidate_name:   currentCandidateName || '',

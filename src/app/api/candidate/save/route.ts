@@ -1,14 +1,16 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, uuidv4, now } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, uuidv4, now, hasAnyPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['add_candidate'])) return jsonError('Insufficient permissions', 403);
     const body = await req.json();
     if (!body.candidate_name || !body.contact_number) return jsonError('Name and contact required', 422);
 
@@ -23,3 +25,5 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ success: true, id, message: 'Candidate saved' }, 201);
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

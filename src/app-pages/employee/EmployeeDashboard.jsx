@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import ThemeToggle from '../../app/layout-parts/ThemeToggle';
 import useLiveRefresh from '@/lib/live';
 import { useNavigate } from 'react-router-dom';
 import { empDashboardStyles } from './employee-dashboard/styles';
 import EmpIcon from './employee-dashboard/EmpIcon';
+import { appLocale } from '@/lib/app-config-client';
 
 const EmployeeAttendance = lazy(() => import('./EmployeeAttendance'));
 const EmployeeLeave = lazy(() => import('./EmployeeLeave'));
@@ -16,6 +18,10 @@ const ProfileTab = lazy(() => import('./employee-dashboard/ProfileTab'));
 const ContactHRTab = lazy(() => import('./employee-dashboard/ContactHRTab'));
 const Preferences = lazy(() => import('../settings/Preferences'));
 const MyMail = lazy(() => import('../mail/MyMail'));
+const HelpDesk = lazy(() => import('../helpdesk/HelpDesk'));
+const Directory = lazy(() => import('../directory/Directory'));
+const MyLetters = lazy(() => import('./employee-dashboard/MyLetters'));
+const Guide = lazy(() => import('../help/Guide'));
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -24,14 +30,18 @@ const SHOW_CONTACT_HR = false;
 const menuItems = [
   { key: 'dashboard', label: 'Dashboard', icon: 'home' },
   { key: 'attendance', label: 'Attendance', icon: 'calendar' },
-  { key: 'payslips', label: 'My Payslips', icon: 'dollar' },
-  { key: 'documents', label: 'Documents', icon: 'file' },
   { key: 'leave', label: 'Leave Requests', icon: 'briefcase' },
   { key: 'wfh', label: 'Work From Home', icon: 'monitor' },
+  { key: 'payslips', label: 'My Payslips', icon: 'dollar' },
+  { key: 'documents', label: 'Documents', icon: 'file' },
+  { key: 'letters', label: 'My Letters', icon: 'file' },
+  { key: 'helpdesk', label: 'Help Desk', icon: 'bell' },
+  { key: 'directory', label: 'Directory', icon: 'user' },
   { key: 'mail', label: 'My Mail', icon: 'mail' },
   { key: 'contact-hr', label: 'Contact HR', icon: 'mail' },
   { key: 'notifications', label: 'Notifications', icon: 'bell' },
   { key: 'preferences', label: 'Preferences', icon: 'settings' },
+  { key: 'guide', label: 'Guide', icon: 'file' },
 ].filter(m => SHOW_CONTACT_HR || m.key !== 'contact-hr');
 
 const TabFallback = () => <div className="p-4 text-center">Loading...</div>;
@@ -226,7 +236,7 @@ export default function EmployeeDashboard() {
   const maxAtt = Math.max(presentDays, absentDays, leaveDays, 1);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'transparent' }}>
       <style>{empDashboardStyles}</style>
 
       {/* Sidebar */}
@@ -240,7 +250,7 @@ export default function EmployeeDashboard() {
                 <rect width="32" height="32" rx="8" fill="url(#brand-grad)"/>
                 <path d="M8 20V12l8-4 8 4v8l-8 4-8-4z" fill="rgba(255,255,255,.2)"/>
                 <circle cx="16" cy="16" r="4" fill="#fff"/>
-                <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#2563eb"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs>
+                <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#6f4e37"/><stop offset="1" stopColor="#8a6a52"/></linearGradient></defs>
               </svg>
             )}
           </div>
@@ -267,12 +277,23 @@ export default function EmployeeDashboard() {
         </nav>
       </aside>
 
+      {/* Phone navigation: the five pages used most, at the bottom of the screen */}
+      <nav className="emp-bottombar" aria-label="Main">
+        {[['dashboard', 'Home', 'home'], ['attendance', 'Attendance', 'calendar'], ['leave', 'Leave', 'briefcase'], ['payslips', 'Payslips', 'dollar'], ['notifications', 'Alerts', 'bell']].map(([key, label, icon]) => (
+          <button key={key} type="button" className={activeMenu === key ? 'active' : ''} onClick={() => setActiveMenu(key)}>
+            <EmpIcon name={icon} size={20} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+
       {/* Main Area */}
       <div className="emp-main">
         {/* Header */}
         <header className="emp-header">
           <div className="emp-header-left"></div>
           <div className="emp-header-right">
+            <ThemeToggle className="emp-header-btn" />
             <div style={{ position: 'relative' }} ref={notifRef}>
               <button className="emp-header-btn" onClick={() => setNotifOpen(!notifOpen)} title="Notifications">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -282,7 +303,7 @@ export default function EmployeeDashboard() {
                 <div className="emp-dropdown" style={{ width: 320, right: 0, left: 'auto' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Notifications {unreadCount > 0 && `(${unreadCount})`}</span>
-                    {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Mark All Read</button>}
+                    {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12, color: 'var(--brand)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Mark All Read</button>}
                   </div>
                   <div style={{ maxHeight: 300, overflowY: 'auto' }}>
                     {notifications.length === 0 ? (
@@ -293,13 +314,13 @@ export default function EmployeeDashboard() {
                           onClick={() => { if (!n.is_read) markRead(n.id); }}
                         >
                           <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 600, color: '#0f172a', marginBottom: 2 }}>{n.title}</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{n.created_at ? new Date(n.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{n.created_at ? new Date(n.created_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div>
                         </div>
                       ))
                     )}
                   </div>
                   <div style={{ padding: '10px 16px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
-                    <button onClick={() => { setNotifOpen(false); setActiveMenu('notifications'); }} style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View All Notifications</button>
+                    <button onClick={() => { setNotifOpen(false); setActiveMenu('notifications'); }} style={{ fontSize: 12, color: 'var(--brand)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View All Notifications</button>
                   </div>
                 </div>
               )}
@@ -346,6 +367,7 @@ export default function EmployeeDashboard() {
           <Suspense fallback={<TabFallback />}>
             {activeMenu === 'dashboard' && (
               <DashboardHome
+                goTo={setActiveMenu}
                 greeting={greeting}
                 empName={empName}
                 presentDays={presentDays}
@@ -381,6 +403,10 @@ export default function EmployeeDashboard() {
             {activeMenu === 'contact-hr' && <ContactHRTab />}
             {activeMenu === 'preferences' && <Preferences />}
             {activeMenu === 'mail' && <MyMail />}
+            {activeMenu === 'helpdesk' && <HelpDesk />}
+            {activeMenu === 'directory' && <Directory />}
+            {activeMenu === 'letters' && <MyLetters />}
+            {activeMenu === 'guide' && <Guide />}
 
             {activeMenu === 'leave' && <EmployeeLeave />}
 
@@ -397,12 +423,6 @@ export default function EmployeeDashboard() {
             )}
           </Suspense>
         </div>
-
-        {/* Footer */}
-        <footer className="emp-footer">
-          <span>&copy; 2026 HRMS. All rights reserved.</span>
-          <span>v1.0.0</span>
-        </footer>
       </div>
     </div>
   );

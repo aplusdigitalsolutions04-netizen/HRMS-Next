@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { API, auth, SettingsCard, FormField, SaveButton } from './shared';
 import Pagination, { paginate } from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const REMINDERS_PAGE_SIZE = 10;
 
 export default function CommunicationSettings({ saving, setSaving }) {
   const [settings, setSettings] = useState({
     default_reminder_delay: '30',
-    reminder_recipient_email: 'hr@aplusdigitalsolutions.com',
+    reminder_recipient_email: '',
     enable_reminder_emails: 'true',
     enable_draft_creation: 'true',
   });
@@ -27,7 +28,7 @@ export default function CommunicationSettings({ saving, setSaving }) {
         setSettings(prev => ({
           ...prev,
           default_reminder_delay: custom ? 'custom' : val,
-          reminder_recipient_email: d.reminder_recipient_email || 'hr@aplusdigitalsolutions.com',
+          reminder_recipient_email: d.reminder_recipient_email || '',
           enable_reminder_emails: d.enable_reminder_emails || 'true',
           enable_draft_creation: d.enable_draft_creation || 'true',
         }));
@@ -180,7 +181,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
 
   const formatDT = (dt) => {
     if (!dt) return '—';
-    return new Date(dt).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    return new Date(dt).toLocaleString(appLocale(), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
   };
 
   const formatDelay = (minutes) => {
@@ -277,7 +278,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
     const map = {
       ACTIVE: { bg:'#dcfce7', c:'#166534', label:'Active' },
       PAUSED: { bg:'#fef3c7', c:'#92400e', label:'Paused' },
-      COMPLETED: { bg:'#dbeafe', c:'#1e3a8a', label:'Completed' },
+      COMPLETED: { bg:'var(--brand-soft-2)', c:'var(--brand-dark)', label:'Completed' },
       OVERDUE: { bg:'#fee2e2', c:'#991b1b', label:'Overdue' },
       CANCELLED: { bg:'#f1f5f9', c:'#64748b', label:'Cancelled' },
     };
@@ -293,7 +294,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
           { key:'active_count', label:'Active Reminders', color:'#10b981', bg:'#ecfdf5', border:'#10b981', icon:'⏰' },
           { key:'paused_count', label:'Paused Reminders', color:'#d97706', bg:'#fffbeb', border:'#f59e0b', icon:'⏸' },
           { key:'overdue_count', label:'Overdue Reminders', color:'#dc2626', bg:'#fef2f2', border:'#ef4444', icon:'⚠️' },
-          { key:'completed_today', label:'Completed Today', color:'#1d4ed8', bg:'#eff6ff', border:'#2563eb', icon:'✅' },
+          { key:'completed_today', label:'Completed Today', color:'var(--brand-dark)', bg:'var(--brand-soft)', border:'var(--brand)', icon:'✅' },
         ].map(c => (
           <div key={c.key} style={{ background:c.bg, borderRadius:14, padding:'14px 14px', border:`1.5px solid ${c.border}20`, boxShadow:'0 2px 8px rgba(0,0,0,.04)', display:'flex', flexDirection:'column', gap:2 }}>
             <div style={{ fontSize:'.72rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.5px' }}>{c.icon} {c.label}</div>
@@ -370,10 +371,10 @@ function CandidateReminderManagement({ saving, setSaving }) {
                       <div style={{ fontWeight:600, color:'#1e293b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.candidate_name}>{r.candidate_name || '—'}</div>
                     </div>
                   </td>
-                  <td style={{ padding:'10px 14px', verticalAlign:'middle', color:'#1e40af', fontSize:'.82rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.candidate_email}>{r.candidate_email || '—'}</td>
+                  <td style={{ padding:'10px 14px', verticalAlign:'middle', color:'var(--brand-dark)', fontSize:'.82rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.candidate_email}>{r.candidate_email || '—'}</td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle', fontSize:'.82rem', color:'#475569' }}>{r.job_role || '—'}</td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle' }}>
-                    <span style={{ background:'#dbeafe', color:'#5b21b6', padding:'2px 10px', borderRadius:50, fontWeight:600, fontSize:'.72rem', display:'inline-block', whiteSpace:'nowrap', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis' }} title={r.communication_type}>{r.communication_type || '—'}</span>
+                    <span style={{ background:'var(--brand-soft-2)', color:'#5b21b6', padding:'2px 10px', borderRadius:50, fontWeight:600, fontSize:'.72rem', display:'inline-block', whiteSpace:'nowrap', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis' }} title={r.communication_type}>{r.communication_type || '—'}</span>
                   </td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle', fontSize:'.82rem', color:'#64748b' }}>{formatDelay(r.custom_delay || r.default_delay)}</td>
                   <td style={{ padding:'10px 14px', verticalAlign:'middle', fontSize:'.78rem', color:'#64748b', whiteSpace:'nowrap' }}>{formatDT(r.reminder_time)}</td>
@@ -389,7 +390,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
                       ].map((btn, bi) => (
                         <button key={bi} onClick={btn.onClick} title={btn.title}
                           style={{ width:30, height:30, borderRadius:8, border:'1.5px solid #e2e8f0', background:'#fff', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:'.8rem', transition:'all .15s', color:btn.danger?'#ef4444':'#64748b' }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = btn.danger?'#ef4444':'var(--primary)'; e.currentTarget.style.background = btn.danger?'#fef2f2':'#eff6ff'; }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = btn.danger?'#ef4444':'var(--primary)'; e.currentTarget.style.background = btn.danger?'#fef2f2':'var(--brand-soft)'; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; }}>
                           {btn.icon}
                         </button>
@@ -428,7 +429,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
                   <div style={{ fontSize:'.88rem', color:'#64748b', padding:'8px 0' }}>{formatDelay(editing.custom_delay || editing.default_delay)}</div>
                 </FormField>
                 <FormField label="Email">
-                  <div style={{ fontSize:'.82rem', color:'#1e40af', padding:'8px 0' }}>{editing.candidate_email}</div>
+                  <div style={{ fontSize:'.82rem', color:'var(--brand-dark)', padding:'8px 0' }}>{editing.candidate_email}</div>
                 </FormField>
                 <FormField label="New Reminder Delay" fullWidth>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
@@ -455,7 +456,7 @@ function CandidateReminderManagement({ saving, setSaving }) {
       {viewing && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, animation:'fadeIn .2s ease' }} onClick={() => setViewing(null)}>
           <div style={{ background:'#fff', borderRadius:16, width:'92%', maxWidth:500, boxShadow:'0 20px 60px rgba(0,0,0,.15)', maxHeight:'90vh', overflowY:'auto', animation:'modalSlide .25s ease' }} onClick={e => e.stopPropagation()}>
-            <div style={{ background:'linear-gradient(135deg,#1e40af,#2563eb)', color:'#fff', padding:'16px 17px 14px', borderTopLeftRadius:16, borderTopRightRadius:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ background:'linear-gradient(135deg,var(--brand-dark),var(--brand))', color:'#fff', padding:'16px 17px 14px', borderTopLeftRadius:16, borderTopRightRadius:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <h3 style={{ margin:0, fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'1rem' }}>Reminder Details</h3>
               <button onClick={() => setViewing(null)} style={{ width:28, height:28, borderRadius:'50%', background:'rgba(255,255,255,.2)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>✕</button>
             </div>

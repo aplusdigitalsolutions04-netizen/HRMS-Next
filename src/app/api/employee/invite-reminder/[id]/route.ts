@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -13,7 +14,7 @@ import { hasBlockHtml, plainToHtml } from '@/lib/mail-format';
 // A reminder to an employee who was invited but has not completed the profile yet.
 // The wording comes from the "Invite Reminder" template (Settings > Template Management), nothing is typed in here.
 // Only a reminder: the password is not touched and is not put in the mail (the employee already has the login from the invite).
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -52,3 +53,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonSuccess({ message: `Reminder sent to ${emp.email_id}`, reminder_count: Number(emp.reminder_count || 0) + 1 });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Pagination, { paginate } from '../shared/Pagination';
+import { appLocale, currencySymbol } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const money = (v) => (Number(v) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (v) => (Number(v) || 0).toLocaleString(appLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const days = (v) => (Number(v) || 0).toString();
 
 // Editable number cell: saves when you leave the field or press Enter.
@@ -45,7 +46,7 @@ export default function PayrollSalarySheet() {
   const [exporting, setExporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -127,7 +128,7 @@ export default function PayrollSalarySheet() {
       <div className="ph">
         <div>
           <h1>Payroll</h1>
-          <p>Month days: {modeLabel || '-'}. Paid/Unpaid days come from TeamOffice attendance, pulled automatically{syncedAt ? ` (last at ${new Date(syncedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })})` : ''}. Fix any day in <Link to="/attendance/daily">Daily Attendance</Link> and this sheet updates.</p>
+          <p>Month days: {modeLabel || '-'}. Paid/Unpaid days come from TeamOffice attendance, pulled automatically{syncedAt ? ` (last at ${new Date(syncedAt).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' })})` : ''}. Fix any day in <Link to="/attendance/daily">Daily Attendance</Link> and this sheet updates.</p>
         </div>
         <div className="ph-actions">
           <select className="ss-input" value={month} onChange={e => setMonth(Number(e.target.value))} aria-label="Month">
@@ -138,6 +139,7 @@ export default function PayrollSalarySheet() {
           </select>
           <button className="btn-o" onClick={syncAttendance} disabled={syncing || loading}>{syncing ? 'Syncing...' : '⟳ Refresh now'}</button>
           <button className="btn-o" onClick={exportExcel} disabled={exporting || loading}>{exporting ? 'Exporting...' : '⬇ Export Excel'}</button>
+          <Link to="/payroll/guide" className="btn-o" style={{ textDecoration: 'none' }}>Guide</Link>
           <Link to="/payroll/generate" className="btn-p">Generate Payroll</Link>
         </div>
       </div>
@@ -145,10 +147,10 @@ export default function PayrollSalarySheet() {
       {!loading && (
         <div className="ss-kpis">
           <div className="ss-kpi"><span>Total Employees</span><b>{filtered.length}</b></div>
-          <div className="ss-kpi"><span>Total Payroll</span><b>₹{money(total('final_salary'))}</b></div>
-          <div className="ss-kpi"><span>Average Salary</span><b>₹{money(filtered.length ? total('final_salary') / filtered.length : 0)}</b></div>
-          <div className="ss-kpi"><span>Total Deductions</span><b>₹{money(total('insurance') + total('other_deductions'))}</b></div>
-          <div className="ss-kpi"><span>Variable + Incentive</span><b>₹{money(total('variable_pay') + total('incentive'))}</b></div>
+          <div className="ss-kpi"><span>Total Payroll</span><b>{currencySymbol()}{money(total('final_salary'))}</b></div>
+          <div className="ss-kpi"><span>Average Salary</span><b>{currencySymbol()}{money(filtered.length ? total('final_salary') / filtered.length : 0)}</b></div>
+          <div className="ss-kpi"><span>Total Deductions</span><b>{currencySymbol()}{money(total('insurance') + total('other_deductions') + total('statutory_total'))}</b></div>
+          <div className="ss-kpi"><span>Variable + Incentive</span><b>{currencySymbol()}{money(total('variable_pay') + total('incentive'))}</b></div>
         </div>
       )}
 
@@ -174,20 +176,26 @@ export default function PayrollSalarySheet() {
                 <th className="n">Net Payable</th>
                 <th className="n">Insurance</th>
                 <th className="n">Other Ded.</th>
+                <th className="n" title="PF, ESI, TDS ... as set up in Payroll > Statutory Deductions. The company's own share is not included.">Statutory Ded.</th>
                 <th className="n">Variable Pay</th>
                 <th className="n">Incentive / Payback</th>
                 <th className="n">EL Days</th>
                 <th className="n">EL Pay</th>
                 <th className="n">Extra Work Days</th>
                 <th className="n">Extra Work Pay</th>
+                <th className="n" title="EL days earned this month: every Extra Work day earns one EL day">EL Earned</th>
+                <th className="n" title="EL days given this month by the EL period. With Quarterly / Half Yearly / Yearly all the days of the period are given together in its last month">EL Given</th>
+                <th className="n" title="All EL earned up to this month (every Extra Work day). It is only shown and saved; nothing uses it up">EL Balance</th>
+                <th className="n" title="Casual Leave days taken this year (CL = 1 day, CL/2 = half a day)">CL Used</th>
+                <th className="n" title="Yearly CL quota (Settings → Attendance Settings) minus CL Used">CL Left</th>
                 <th className="n final">Final Salary Transfer</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={16} className="ss-empty">Loading...</td></tr>
+                <tr><td colSpan={22} className="ss-empty">Loading...</td></tr>
               ) : pageRows.length === 0 ? (
-                <tr><td colSpan={16} className="ss-empty">No employees with a salary structure found.</td></tr>
+                <tr><td colSpan={22} className="ss-empty">No employees with a salary structure found.</td></tr>
               ) : pageRows.map((r, idx) => (
                 <tr key={r.emp_code}>
                   <td className="sn">{(page - 1) * pageSize + idx + 1}</td>
@@ -199,12 +207,18 @@ export default function PayrollSalarySheet() {
                   <td className="n">{money(r.net_payable)}</td>
                   <td className="n">{r.insurance ? '- ' + money(r.insurance) : money(0)}</td>
                   <td className="n">{r.other_deductions ? '- ' + money(r.other_deductions) : money(0)}</td>
+                  <td className="n" title={(r.statutory || []).map(s => `${s.name}: ${s.employee}${s.employer ? ' (company ' + s.employer + ')' : ''}`).join('\n')}>{r.statutory_total ? '- ' + money(r.statutory_total) : money(0)}</td>
                   <td className="n"><NumberCell value={r.variable_pay || ""} placeholder="0" onSave={v => save(r.emp_code, { variable_pay: v })} /></td>
                   <td className="n"><NumberCell value={r.incentive} overridden={r.incentive_overridden} onSave={v => save(r.emp_code, { incentive: v })} /></td>
                   <td className="n"><NumberCell value={r.el_days} overridden={r.el_days !== null} placeholder="auto" width={70} onSave={v => save(r.emp_code, { el_days: v })} /></td>
                   <td className="n">{money(r.el_pay)}</td>
                   <td className="n"><NumberCell value={r.extra_work_days} overridden={r.extra_work_days_overridden} width={70} onSave={v => save(r.emp_code, { ew_days: v })} /></td>
                   <td className="n">{money(r.extra_work_pay)}</td>
+                  <td className="n">{r.el_earned || 0}</td>
+                  <td className="n">{r.el_credited ? <b style={{ color: '#15803d' }}>+{r.el_credited}</b> : 0}</td>
+                  <td className="n">{r.el_balance || 0}</td>
+                  <td className="n">{r.cl_used || 0}</td>
+                  <td className="n" style={r.cl_left < 0 ? { color: '#dc2626', fontWeight: 700 } : undefined}>{r.cl_left}</td>
                   <td className="n final">{money(r.final_salary)}</td>
                 </tr>
               ))}
@@ -218,12 +232,14 @@ export default function PayrollSalarySheet() {
                   <td className="n">{money(total('net_payable'))}</td>
                   <td className="n">- {money(total('insurance'))}</td>
                   <td className="n">- {money(total('other_deductions'))}</td>
+                  <td className="n">- {money(total('statutory_total'))}</td>
                   <td className="n">{money(total('variable_pay'))}</td>
                   <td className="n">{money(total('incentive'))}</td>
                   <td></td>
                   <td className="n">{money(total('el_pay'))}</td>
                   <td></td>
                   <td className="n">{money(total('extra_work_pay'))}</td>
+                  <td className="n">{total('el_earned')}</td><td className="n">{total('el_credited')}</td><td></td><td></td><td></td>
                   <td className="n final">{money(total('final_salary'))}</td>
                 </tr>
               </tfoot>
@@ -233,7 +249,7 @@ export default function PayrollSalarySheet() {
         {!loading && <Pagination page={page} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="employees" />}
       </div>
 
-      <p className="ss-foot">Final Salary Transfer = Net Payable − Insurance − Other Deductions + Variable Pay + Incentive + EL Pay + Extra Work. EL Pay = PerDay Salary × EL Days. Government holidays come from Settings → Holiday Calendar and are paid. Net Payable = PerDay Salary × Paid Days. Payslips generated for this month use exactly these numbers.</p>
+      <p className="ss-foot">Final Salary Transfer = Net Payable − Deductions + Additions. How every column is worked out, which setting decides what, and how to do each job: <Link to="/payroll/guide">open the Payroll Guide</Link>. Payslips of this month use exactly these numbers.</p>
     </div>
   );
 }
@@ -241,18 +257,18 @@ export default function PayrollSalarySheet() {
 const styles = `
 .ss-page { padding: 0; }
 .ss-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 12px; }
-.ss-kpi { background: #fff; border: 1px solid #e8edf6; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.ss-kpi { background: #fff; border: 1px solid #eadfd5; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
 .ss-kpi span { font-size: .74rem; font-weight: 600; color: #64748b; }
 .ss-kpi b { font-family: 'Outfit', sans-serif; font-size: 1.3rem; color: #0f172a; line-height: 1.1; }
 .ss-table th.sn, .ss-table td.sn { width: 44px; text-align: center; color: #94a3b8; font-size: .78rem; font-weight: 600; }
 .ss-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .ss-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .ss-sub { margin: 4px 0 0; font-size: .86rem; color: #64748b; max-width: 720px; }
-.ss-sub a { color: #1e40af; font-weight: 600; }
+.ss-sub a { color: var(--brand-dark); font-weight: 600; }
 .ss-ctrls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .ss-input { padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .88rem; background: #fff; }
-.ss-btn { padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; font-weight: 600; font-size: .88rem; cursor: pointer; }
-.ss-btn-alt { background: #fff; color: #1e40af; border: 1.5px solid #bfdbfe; }
+.ss-btn { padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg,var(--brand),var(--brand-mid)); color: #fff; font-weight: 600; font-size: .88rem; cursor: pointer; }
+.ss-btn-alt { background: #fff; color: var(--brand-dark); border: 1.5px solid var(--brand-line); }
 .ss-btn:disabled { opacity: .6; cursor: not-allowed; }
 .ss-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 10px 14px; font-size: .84rem; margin-bottom: 14px; }
 .ss-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; overflow: hidden; }

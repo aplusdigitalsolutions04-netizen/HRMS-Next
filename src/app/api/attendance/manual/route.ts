@@ -1,3 +1,4 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, checkPermission, calcHours } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -12,7 +13,7 @@ const MANUAL_REMARK = 'Manual entry';
 
 // HR adds or corrects one day of attendance (e.g. Work From Home, or Extra
 // Work on a holiday). TeamOffice syncs skip rows marked as manual entries.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -52,3 +53,5 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ message: 'Attendance saved' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

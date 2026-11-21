@@ -1,10 +1,11 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, parsePagination, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -16,3 +17,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
     return jsonSuccess({ requests: rows });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);

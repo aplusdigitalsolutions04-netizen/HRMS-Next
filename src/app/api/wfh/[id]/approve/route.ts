@@ -1,14 +1,16 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
+import { getConfig } from '@/lib/app-config';
 import { RowDataPacket } from 'mysql2';
 import { sendRequestMail, hrRecipients, managerOf, appUrl, ymd } from '@/lib/request-mail';
 import { getStep, getMaxStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { logAudit } from '@/lib/audit';
 import { markWfhDays } from '@/lib/wfh-attendance';
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -91,7 +93,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     await createNotification(
       `WFH Approved`,
-      `Your WFH request (${new Date(lr.start_date).toLocaleDateString('en-IN')} - ${new Date(lr.end_date).toLocaleDateString('en-IN')}) has been approved.`,
+      `Your WFH request (${new Date(lr.start_date).toLocaleDateString((await getConfig()).locale)} - ${new Date(lr.end_date).toLocaleDateString((await getConfig()).locale)}) has been approved.`,
       'wfh_approved',
       String(id),
       false,
@@ -114,3 +116,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonError(e, 500);
   }
 }
+
+export const PUT = withApiLog(PUT_handler);

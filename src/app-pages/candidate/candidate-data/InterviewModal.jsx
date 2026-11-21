@@ -11,7 +11,7 @@ const InterviewModal = ({
         <div className="modal-content full">
             <h3 className="modal-title" style={{ marginBottom: 16 }}>
                 📋 Interview Details —&nbsp;
-                <span style={{ color: '#1e40af' }}>{candidateName}</span>
+                <span style={{ color: 'var(--brand-dark)' }}>{candidateName}</span>
             </h3>
             {formError && (
                 <div style={{ color: '#e53935', fontWeight: 500, marginBottom: 10 }}>{formError}</div>
@@ -68,8 +68,8 @@ const InterviewModal = ({
                         </thead>
                         <tbody>
                             {[...previousInterviews].reverse().map((r, idx) => (
-                                <tr key={r.id || idx} style={r.id && r.id === currentInterviewId ? { background: '#eff6ff' } : undefined}>
-                                    <td>{r.interview_round}{r.id && r.id === currentInterviewId && <span style={{ marginLeft: 6, fontSize: 10.5, background: '#2563eb', color: '#fff', borderRadius: 8, padding: '1px 6px', fontWeight: 700 }}>Latest</span>}</td>
+                                <tr key={r.id || idx} style={r.id && r.id === currentInterviewId ? { background: 'var(--brand-soft)' } : undefined}>
+                                    <td>{r.interview_round}{r.id && r.id === currentInterviewId && <span style={{ marginLeft: 6, fontSize: 10.5, background: 'var(--brand)', color: '#fff', borderRadius: 8, padding: '1px 6px', fontWeight: 700 }}>Latest</span>}</td>
                                     <td>{r.apply_post || '-'}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{r.interview_date?.split('T')[0] || ''}</td>
                                     <td>{r.interview_mode}</td>

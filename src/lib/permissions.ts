@@ -41,6 +41,7 @@ export const ALL_PERMISSIONS: Record<string, { label: string; group: string; def
   view_reports:            { label: "View & Export Reports",      group: "Reports",              default: false },
   view_assets:             { label: "View Assets",                group: "Assets",               default: false },
   manage_assets:           { label: "Manage Assets",              group: "Assets",               default: false },
+  manage_announcements:    { label: "Post Announcements",         group: "Communications",       default: false },
   view_audit_log:          { label: "View Audit Log",             group: "System",               default: false },
 };
 

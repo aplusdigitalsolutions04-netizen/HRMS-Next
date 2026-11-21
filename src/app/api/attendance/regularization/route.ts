@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, parsePagination, createNotification } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -15,7 +16,7 @@ const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
 //   HR        GET  -> everybody's requests (status / search / page)
 const SELECT_STEP = `LEFT JOIN approval_workflow_steps ws ON ws.workflow_id = r.workflow_id AND ws.step_order = r.current_step`;
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -126,3 +127,6 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ id, message: `Request sent to ${sentTo}.` + (mailSent ? '' : ' No email was sent because your email is not connected (My Mail).'), mail_sent: mailSent }, 201);
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);

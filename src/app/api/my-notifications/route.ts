@@ -1,11 +1,12 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { mutedCategories } from '@/lib/preferences';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function PATCH(req: NextRequest) {
+async function PATCH_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -52,7 +53,7 @@ export async function PATCH(req: NextRequest) {
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETE_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -69,3 +70,7 @@ export async function DELETE(req: NextRequest) {
     return jsonSuccess({ message: 'Notifications deleted' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const PATCH = withApiLog(PATCH_handler);
+export const DELETE = withApiLog(DELETE_handler);

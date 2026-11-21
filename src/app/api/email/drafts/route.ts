@@ -1,25 +1,40 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
-import { query } from '@/lib/db';
+import { getAuthUser, jsonError, jsonSuccess, hasAnyPermission } from '@/lib/utils';
+import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { fillEmployeeTemplate, buildCompanyLogoEmail } from '@/lib/emailTemplates';
 
-export async function GET(req: NextRequest) {
+// Drafts saved before the candidate / template names were kept get them filled in from the candidate and the template (checked at most every ten minutes).
+let namesRepairedAt = 0;
+async function repairDraftNames() {
+  if (Date.now() - namesRepairedAt < 10 * 60_000) return;   // at most every ten minutes
+  namesRepairedAt = Date.now();
+  try {
+    await execute("UPDATE email_drafts d JOIN interview_candidates c ON c.id = d.candidate_id SET d.candidate_name = c.candidate_name WHERE (d.candidate_name IS NULL OR d.candidate_name = '')");
+    await execute("UPDATE email_drafts d JOIN email_templates t ON t.id = d.template_id SET d.template_name = t.name WHERE (d.template_name IS NULL OR d.template_name = '')");
+  } catch { /* a database without those columns */ }
+}
+
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_drafts', 'manage_drafts', 'send_candidate_emails', 'add_candidate'])) return jsonError('Insufficient permissions', 403);
+    await repairDraftNames();
     const rows = await query<RowDataPacket[]>('SELECT * FROM email_drafts WHERE status=? ORDER BY updated_at DESC', ['draft']);
     return jsonSuccess(rows);
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_drafts', 'manage_drafts', 'send_candidate_emails', 'add_candidate'])) return jsonError('Insufficient permissions', 403);
 
     const bodyReq = await req.json().catch(() => ({}));
     const { employee_id, template_id } = bodyReq;
@@ -73,3 +88,6 @@ export async function POST(req: NextRequest) {
     return jsonError(e.message || 'Internal Server Error', 500); 
   }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);

@@ -12,7 +12,7 @@ export default function ReportingStructure() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
-  const [perPage, setPerPage] = useState(25);
+  const [perPage, setPerPage] = useState(10);
   const perPageRef = useRef(25);
 
   const [savingId, setSavingId] = useState(null);
@@ -102,7 +102,7 @@ export default function ReportingStructure() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #cbd5e1', outline: 'none', width: 250, fontSize: 14 }}
           />
-          <button type="submit" style={{ padding: '8px 16px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+          <button type="submit" style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--brand-mid)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
             Search
           </button>
         </form>
@@ -151,7 +151,7 @@ export default function ReportingStructure() {
                             <option key={m.id} value={m.id} disabled={m.id === emp.id}>{m.full_name} ({m.emp_code || m.designation || 'N/A'})</option>
                           ))}
                         </select>
-                        {savingId === emp.id && <span style={{ fontSize: 11, color: '#3b82f6' }}>Saving...</span>}
+                        {savingId === emp.id && <span style={{ fontSize: 11, color: 'var(--brand-mid)' }}>Saving...</span>}
                       </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>

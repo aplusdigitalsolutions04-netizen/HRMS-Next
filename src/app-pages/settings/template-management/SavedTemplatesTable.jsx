@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Pagination, { paginate } from '../../shared/Pagination';
 
 const PAGE_SIZE = 10;
-const PILL = [['#dbeafe', '#1d4ed8'], ['#dcfce7', '#15803d'], ['#fef3c7', '#b45309'], ['#ede9fe', '#6d28d9'], ['#fee2e2', '#b91c1c'], ['#cffafe', '#0e7490'], ['#fce7f3', '#be185d']];
+const PILL = [['var(--brand-soft-2)', 'var(--brand-dark)'], ['#dcfce7', '#15803d'], ['#fef3c7', '#b45309'], ['#ede9fe', '#6d28d9'], ['#fee2e2', '#b91c1c'], ['#cffafe', '#0e7490'], ['#fce7f3', '#be185d']];
 
 export default function SavedTemplatesTable({ templates: allTemplates, categories = [], loadingList, expandedId, setExpandedId, deleteTemplate, fetchTemplates, editTemplate }) {
     const [page, setPage] = useState(1);
@@ -25,7 +25,7 @@ export default function SavedTemplatesTable({ templates: allTemplates, categorie
                     Saved Templates
                     {!loadingList && (
                         <span style={{
-                            background: '#dbeafe', color: '#1d4ed8',
+                            background: 'var(--brand-soft-2)', color: 'var(--brand-dark)',
                             borderRadius: '50px', padding: '3px 12px',
                             fontSize: '.78rem', fontWeight: 700
                         }}>

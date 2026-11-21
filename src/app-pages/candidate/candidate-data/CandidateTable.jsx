@@ -5,7 +5,7 @@ const PAGE_SIZE = 10;
 
 const BADGE_MAP = {
     no_email: { bg: '#f1f5f9', c: '#64748b', label: 'No Email' },
-    draft_saved: { bg: '#dbeafe', c: '#1d4ed8', label: 'Draft Saved' },
+    draft_saved: { bg: 'var(--brand-soft-2)', c: 'var(--brand-dark)', label: 'Draft Saved' },
     reminder_active: { bg: '#fef3c7', c: '#92400e', label: 'Reminder Active' },
     overdue: { bg: '#fee2e2', c: '#991b1b', label: 'Overdue' },
     email_sent: { bg: '#dcfce7', c: '#166534', label: 'Email Sent' },
@@ -80,7 +80,7 @@ const CandidateTable = ({
                     {loadingCandidates && (
                         <tr><td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                                <div style={{ width: 22, height: 22, border: '3px solid #dbeafe', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                <div style={{ width: 22, height: 22, border: '3px solid var(--brand-soft-2)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                                 <span style={{ fontWeight: 600 }}>Loading candidates…</span>
                             </div>
                         </td></tr>
@@ -91,7 +91,7 @@ const CandidateTable = ({
                                 <div style={{ fontSize: '2.8rem', marginBottom: '12px' }}>⚠️</div>
                                 <div style={{ color: '#991b1b', fontWeight: 700, fontSize: '1rem', marginBottom: '8px' }}>Failed to load candidates</div>
                                 <div style={{ color: '#64748b', fontSize: '.88rem', marginBottom: '20px', maxWidth: 480, margin: '0 auto 20px' }}>{fetchError}</div>
-                                <button onClick={onRefresh} style={{ background: 'linear-gradient(135deg,#1e40af,#2563eb)', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '.9rem' }}>🔄 Retry</button>
+                                <button onClick={onRefresh} style={{ background: 'linear-gradient(135deg,var(--brand-dark),var(--brand))', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '.9rem' }}>🔄 Retry</button>
                             </div>
                         </td></tr>
                     )}

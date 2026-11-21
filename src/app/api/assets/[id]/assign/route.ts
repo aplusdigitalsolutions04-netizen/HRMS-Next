@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, createNotification } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -8,7 +9,7 @@ import { auditFrom } from '@/lib/audit';
 const isDate = (s: any) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 
 // Give an Available asset to an employee, or take it back (action: "return").
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -43,3 +44,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonSuccess({ message: `Assigned to ${emp.full_name}` });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

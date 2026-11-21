@@ -1,10 +1,11 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, requireRole, calcHours } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { auditFrom } from '@/lib/audit';
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return NextResponse.json({ success: false, detail: 'Not authenticated' }, { status: 401 });
@@ -46,3 +47,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, detail: e?.message || 'Server error' }, { status: 500 });
   }
 }
+
+export const POST = withApiLog(POST_handler);

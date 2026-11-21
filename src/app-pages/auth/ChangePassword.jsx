@@ -106,14 +106,14 @@ export default function ChangePassword() {
           box-shadow: 0 0 0 4px var(--primary-light);
         }
         .alert-success {
-          background: rgba(16, 185, 129, 0.1);
+          background: rgba(16,185,129, 0.1);
           color: var(--success);
           padding: 12px 16px;
           border-radius: 12px;
           margin-bottom: 1.5rem;
           font-size: 0.9rem;
           font-weight: 500;
-          border: 1px solid rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16,185,129, 0.2);
         }
         .alert-danger {
           background: rgba(239, 68, 68, 0.1);

@@ -1,9 +1,10 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
 import { execute } from '@/lib/db';
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -18,7 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETE_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -29,3 +30,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return jsonSuccess({ message: 'Template deleted' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const PUT = withApiLog(PUT_handler);
+export const DELETE = withApiLog(DELETE_handler);

@@ -34,7 +34,7 @@ export const empDashboardStyles = `
   }
   .emp-sidebar-brand-text span:first-child {
     font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.2rem;
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand-mid));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     line-height: 1.2;
@@ -60,8 +60,8 @@ export const empDashboardStyles = `
     color: #334155;
   }
   .emp-sidebar-item.active {
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: var(--brand-soft);
+    color: var(--brand-dark);
     font-weight: 600;
   }
   .emp-sidebar-item.active::before {
@@ -72,7 +72,7 @@ export const empDashboardStyles = `
     transform: translateY(-50%);
     width: 4px;
     height: 20px;
-    background: #2563eb;
+    background: var(--brand);
     border-radius: 0 4px 4px 0;
   }
   .emp-sidebar-support {
@@ -88,13 +88,13 @@ export const empDashboardStyles = `
     color: #94a3b8; font-size: 11px; line-height: 1.4; margin-bottom: 10px;
   }
   .emp-sidebar-support button {
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    background: linear-gradient(135deg, var(--brand), var(--brand-mid));
     color: #fff; border: none; padding: 8px 16px; border-radius: 8px;
     font-size: 12px; font-weight: 600; cursor: pointer;
     font-family: inherit; transition: all 0.2s ease;
   }
   .emp-sidebar-support button:hover {
-    transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    transform: translateY(-1px); box-shadow: 0 4px 12px rgba(111,78,55,0.3);
   }
 
   .emp-main {
@@ -152,7 +152,7 @@ export const empDashboardStyles = `
   .emp-header-profile:hover { background: #f1f5f9; }
   .emp-avatar {
     width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    background: linear-gradient(135deg, var(--brand), var(--brand-mid));
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700; font-family: 'Outfit', sans-serif;
     flex-shrink: 0;
@@ -166,11 +166,11 @@ export const empDashboardStyles = `
   }
 
   .emp-content {
-    flex: 1; padding: 21px 24px; max-width: 1400px;
+    flex: 1; padding: 21px 24px; max-width: 1760px; width: 100%; margin: 0 auto;
   }
 
   .emp-banner {
-    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 50%, var(--brand-mid) 100%);
     border-radius: 14px; padding: 24px 30px;
     position: relative; overflow: hidden; margin-bottom: 28px;
   }
@@ -263,10 +263,10 @@ export const empDashboardStyles = `
     cursor: pointer; outline: none; font-family: inherit;
   }
   .emp-card-link {
-    font-size: 13px; color: #2563eb; font-weight: 500;
+    font-size: 13px; color: var(--brand); font-weight: 500;
     cursor: pointer; text-decoration: none; transition: color 0.2s;
   }
-  .emp-card-link:hover { color: #1e40af; }
+  .emp-card-link:hover { color: var(--brand-dark); }
 
   .att-chart {
     display: flex; align-items: flex-end; gap: 8px; height: 140px;
@@ -323,11 +323,11 @@ export const empDashboardStyles = `
     border: 1px solid #f1f5f9; transition: all 0.2s ease;
   }
   .doc-card:hover {
-    border-color: #dbeafe; background: #fafaff;
+    border-color: var(--brand-soft-2); background: #fafaff;
   }
   .doc-icon {
     width: 36px; height: 36px; border-radius: 10px;
-    background: #eff6ff; color: #2563eb;
+    background: var(--brand-soft); color: var(--brand);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
@@ -343,9 +343,9 @@ export const empDashboardStyles = `
     width: 30px; height: 30px; border-radius: 8px;
     border: none; background: #f1f5f9; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    color: #2563eb; transition: all 0.2s; flex-shrink: 0;
+    color: var(--brand); transition: all 0.2s; flex-shrink: 0;
   }
-  .doc-btn:hover { background: #2563eb; color: #fff; }
+  .doc-btn:hover { background: var(--brand); color: #fff; }
 
   .emp-right-col {
     display: flex; flex-direction: column; gap: 24px;
@@ -362,7 +362,7 @@ export const empDashboardStyles = `
     font-family: 'Outfit', sans-serif;
   }
   .profile-card-det .pcd-designation {
-    font-size: 13px; color: #2563eb; font-weight: 500; margin: 2px 0 8px;
+    font-size: 13px; color: var(--brand); font-weight: 500; margin: 2px 0 8px;
   }
   .pcd-status {
     display: inline-block; padding: 3px 12px; border-radius: 14px;
@@ -419,7 +419,7 @@ export const empDashboardStyles = `
     display: flex; justify-content: space-between; align-items: center;
   }
   .leave-overall div:first-child { font-size: 13px; color: #64748b; }
-  .leave-overall div:last-child { font-size: 18px; font-weight: 700; color: #2563eb; font-family: 'Outfit', sans-serif; }
+  .leave-overall div:last-child { font-size: 18px; font-weight: 700; color: var(--brand); font-family: 'Outfit', sans-serif; }
 
   .emp-btn {
     display: block; width: 100%; padding: 10px;
@@ -428,19 +428,19 @@ export const empDashboardStyles = `
     font-family: inherit; text-align: center;
   }
   .emp-btn-primary {
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    background: linear-gradient(135deg, var(--brand), var(--brand-mid));
     color: #fff; border: none;
   }
   .emp-btn-primary:hover {
-    box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+    box-shadow: 0 4px 15px rgba(111,78,55,0.3);
     transform: translateY(-1px);
   }
   .emp-btn-outline {
-    background: none; color: #2563eb;
-    border: 1.5px solid #dbeafe;
+    background: none; color: var(--brand);
+    border: 1.5px solid var(--brand-soft-2);
   }
   .emp-btn-outline:hover {
-    background: #eff6ff; border-color: #2563eb;
+    background: var(--brand-soft); border-color: var(--brand);
   }
 
   .emp-footer {
@@ -485,30 +485,52 @@ export const empDashboardStyles = `
     .emp-search-bar { width: 140px; }
   }
 
-  /* ── Employee portal: same navy sidebar + compact look as the HR side ── */
-  .emp-sidebar { background: #0f1a3a; border-right: none; width: 240px; min-width: 240px; }
-  .emp-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); }
-  .emp-sidebar .sidebar-brand { border-bottom: 1px solid rgba(255,255,255,.1) !important; }
-  .emp-sidebar .brand-logo { background: #fff; border-radius: 10px; padding: 4px 10px; }
-  .emp-sidebar .brand-name { color: #fff; }
-  .emp-sidebar .brand-sub { color: #8da2d6; }
+  /* ── Employee portal: same warm brown glass look and compact size as the HR side ── */
+  .emp-sidebar { background: linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(250,244,238,.84) 100%); backdrop-filter: blur(22px) saturate(1.3); -webkit-backdrop-filter: blur(22px) saturate(1.3); border-right: 1px solid var(--glass-line); width: 240px; min-width: 240px; box-shadow: 6px 0 30px -18px rgba(78,54,38,.28); }
+  .emp-sidebar::-webkit-scrollbar-thumb { background: rgba(111,78,55,.22); }
+  .emp-sidebar .sidebar-brand { border-bottom: 1px solid var(--glass-line) !important; }
+  .emp-sidebar .brand-logo { background: transparent; padding: 0; }
+  .emp-sidebar .brand-name { color: var(--brand-dark); }
+  .emp-sidebar .brand-sub { color: #a08a78; }
   .emp-sidebar-nav { padding: 6px 10px 16px; gap: 1px; }
-  .emp-sidebar-item { height: 40px; border-radius: 10px; color: #b9c6e8; font-size: .85rem; transition: background-color .15s, color .15s; }
-  .emp-sidebar-item:hover { background: rgba(255,255,255,.07); color: #fff; }
-  .emp-sidebar-item.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 6px 16px rgba(37,99,235,.38); }
+  .emp-sidebar-item { height: 40px; border-radius: 10px; color: var(--ink-soft); font-size: .85rem; transition: background-color .15s, color .15s, transform .15s; }
+  .emp-sidebar-item:hover { background: rgba(111,78,55,.08); color: var(--ink); transform: translateX(2px); }
+  .emp-sidebar-item.active { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%); color: #fff; font-weight: 600; box-shadow: 0 8px 18px -6px rgba(111,78,55,.55); }
+  .emp-sidebar-item.active:hover { transform: none; color: #fff; }
   .emp-sidebar-item.active::before { display: none; }
   .emp-sidebar-item svg { flex-shrink: 0; }
-  .emp-sidebar-support { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); }
-  .emp-sidebar-support h4 { color: #fff; }
-  .emp-sidebar-support p { color: #8da2d6; }
-  .emp-main { margin-left: 240px; background: #f3f5fb; }
-  .emp-header { height: 60px; border-bottom: 1px solid #e8edf6; padding: 0 20px; }
-  .emp-header-btn { width: 36px; height: 36px; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; }
-  .emp-header-btn:hover { background: #f1f6ff; border-color: #bfdbfe; }
-  .emp-content { padding: 16px 20px; max-width: 1400px; }
+  .emp-sidebar-support { background: var(--brand-soft); border-color: var(--brand-line); }
+  .emp-sidebar-support h4 { color: var(--ink); }
+  .emp-sidebar-support p { color: var(--ink-soft); }
+  .emp-main { margin-left: 240px; background: transparent; }
+  .emp-header { height: 60px; background: rgba(255,255,255,.7); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); border-bottom: 1px solid var(--glass-line); padding: 0 20px; }
+  .emp-header-btn { width: 36px; height: 36px; border: 1px solid var(--glass-line); background: rgba(255,255,255,.8); border-radius: 10px; }
+  .emp-header-btn:hover { background: var(--brand-soft); border-color: var(--brand-line); }
+  .emp-content { padding: 16px 20px; max-width: 1760px; width: 100%; margin: 0 auto; }
   .emp-banner { padding: 16px 22px; border-radius: 12px; margin-bottom: 16px; }
   .emp-banner h1 { font-size: 20px; margin-bottom: 3px; }
   .emp-banner p { font-size: 13px; }
-  .emp-card, .ea-card { border-radius: 12px; border: 1px solid #e8edf6; box-shadow: none; }
-  @media (max-width: 900px) { .emp-sidebar { position: static; width: 100%; min-width: 0; height: auto; } .emp-main { margin-left: 0; height: auto; } }
+  .emp-stat-card { background: var(--glass); backdrop-filter: blur(14px) saturate(1.25); -webkit-backdrop-filter: blur(14px) saturate(1.25); border: 1px solid rgba(255,255,255,.85); outline: 1px solid var(--glass-line); outline-offset: -1px; border-radius: 14px; box-shadow: 0 6px 22px -14px rgba(78,54,38,.28); }
+  .emp-card, .ea-card { border-radius: 14px; border: 1px solid rgba(255,255,255,.85); outline: 1px solid var(--glass-line); outline-offset: -1px; background: var(--glass); backdrop-filter: blur(14px) saturate(1.25); -webkit-backdrop-filter: blur(14px) saturate(1.25); box-shadow: 0 6px 22px -14px rgba(78,54,38,.28); }
+  /* slim rail that opens over the page only while the cursor is on it */
+  .emp-sidebar { width: 64px; min-width: 64px; overflow-x: hidden; white-space: nowrap; transition: width .22s ease, box-shadow .22s ease; }
+  .emp-sidebar:hover, .emp-sidebar:focus-within { width: 240px; box-shadow: 14px 0 40px -14px rgba(78,54,38,.45); }
+  .emp-main { margin-left: 64px; }
+  .emp-sidebar .sidebar-brand { padding-left: 12px; padding-right: 12px; overflow: hidden; }
+  .emp-sidebar .brand-text { opacity: 0; transition: opacity .15s; }
+  .emp-sidebar:hover .brand-text, .emp-sidebar:focus-within .brand-text { opacity: 1; }
+  .emp-sidebar .brand-logo { flex-shrink: 0; width: 36px; max-width: 36px; padding: 0 !important; }
+  .emp-sidebar:hover .brand-logo, .emp-sidebar:focus-within .brand-logo { width: 140px; max-width: 140px; }
+  .emp-sidebar .brand-text { display: none; }
+  .emp-sidebar:hover .brand-text, .emp-sidebar:focus-within .brand-text { display: flex; }
+  .emp-sidebar-item { overflow: hidden; }
+  .emp-sidebar:not(:hover):not(:focus-within) .emp-sidebar-item { gap: 0; font-size: 0; }
+  .emp-bottombar { display: none; }
+  @media (max-width: 768px) {
+    .emp-sidebar { display: none; }
+    .emp-main { margin-left: 0; padding-bottom: 64px; }
+    .emp-bottombar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 120; height: 60px; background: var(--glass-solid, rgba(255,255,255,.94)); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--glass-line); }
+    .emp-bottombar button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: none; background: none; color: var(--ink-soft); font-size: .66rem; font-weight: 600; font-family: inherit; cursor: pointer; }
+    .emp-bottombar button.active { color: var(--brand); }
+  }
 `;

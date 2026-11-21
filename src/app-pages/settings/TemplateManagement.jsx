@@ -122,7 +122,7 @@ export default function TemplateManagement() {
 
     const TYPES = [
         { label: 'PDF', bg: '#fee2e2', color: '#991b1b' },
-        { label: 'DOCX', bg: '#dbeafe', color: '#1d4ed8' },
+        { label: 'DOCX', bg: 'var(--brand-soft-2)', color: 'var(--brand-dark)' },
         { label: 'HTML', bg: '#dcfce7', color: '#166534' },
     ];
 
@@ -131,10 +131,10 @@ export default function TemplateManagement() {
             <style>{templateManagementStyles}</style>
 
             {(dragging || uploading) && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(37,99,235,.14)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: uploading ? 'auto' : 'none' }}>
-                    <div style={{ background: '#fff', border: '2px dashed #2563eb', borderRadius: 18, padding: '34px 46px', textAlign: 'center', boxShadow: '0 20px 60px rgba(30,64,175,.25)' }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(111,78,55,.14)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: uploading ? 'auto' : 'none' }}>
+                    <div style={{ background: '#fff', border: '2px dashed var(--brand)', borderRadius: 18, padding: '34px 46px', textAlign: 'center', boxShadow: '0 20px 60px rgba(78,54,38,.25)' }}>
                         <div style={{ fontSize: '2.4rem', marginBottom: 6 }}>{uploading ? '✨' : '☁️'}</div>
-                        <div style={{ fontWeight: 700, color: '#1e40af', fontSize: '1.1rem', fontFamily: "'Outfit', sans-serif" }}>
+                        <div style={{ fontWeight: 700, color: 'var(--brand-dark)', fontSize: '1.1rem', fontFamily: "'Outfit', sans-serif" }}>
                             {uploading ? `Reading ${uploadName} with AI…` : 'Drop your file to make a template'}
                         </div>
                         <div style={{ color: '#64748b', fontSize: '.88rem', marginTop: 6 }}>PDF, DOCX or HTML</div>

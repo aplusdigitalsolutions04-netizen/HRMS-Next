@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -9,7 +10,7 @@ import { auditFrom } from '@/lib/audit';
 
 // Puts a copy of every approved payslip of a month on Google Drive (folder "<Month> <Year>"). Used for months approved before
 // Drive saving existed; saving again replaces the same files, so it is safe to run twice.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -30,3 +31,5 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ saved, failed, message: `Saved ${saved} payslip(s) to Google Drive.` + (failed ? ` ${failed} failed: ${firstError}` : '') });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

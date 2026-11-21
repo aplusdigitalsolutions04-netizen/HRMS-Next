@@ -16,6 +16,7 @@ const PayslipSettings = lazy(() => import('./PayslipSettings'));
 const HolidaySettings = lazy(() => import('./HolidaySettings'));
 const StatusMaster = lazy(() => import('./StatusMaster'));
 const RequestMails = lazy(() => import('./RequestMails'));
+const RulesLimits = lazy(() => import('./RulesLimits'));
 
 export default function SettingsWorkspace() {
   const { section } = useParams();
@@ -63,6 +64,8 @@ function renderSection(key, saving, setSaving) {
       return <PayslipSettings saving={saving} setSaving={setSaving} />;
     case 'request-mails':
       return <RequestMails saving={saving} setSaving={setSaving} />;
+    case 'rules':
+      return <RulesLimits />;
     case 'google-drive':
       return <GoogleDriveSettings />;
     default:

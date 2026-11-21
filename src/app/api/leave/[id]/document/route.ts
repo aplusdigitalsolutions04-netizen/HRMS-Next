@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -7,7 +8,7 @@ import { readLeaveDoc } from '@/lib/leave-docs';
 
 // The paper attached to a leave request. Only: the employee who sent it, their reporting manager, and HR who can see or
 // approve leave.
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -24,3 +25,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return new NextResponse(f.buf, { headers: { 'Content-Type': f.mime, 'Content-Disposition': `inline; filename="${f.name}"`, 'X-Content-Type-Options': 'nosniff' } });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);

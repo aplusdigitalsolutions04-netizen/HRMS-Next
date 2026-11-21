@@ -49,7 +49,7 @@ export async function previewDocumentUrl(url, title = 'Document') {
     else html = `<p style="color:#64748b;margin:18px 0">This file type cannot be previewed in the browser. Use Download to open it.</p>`;
     const r = await Swal.fire({
       title: esc(title), html, width: 'min(980px, 96vw)', showCloseButton: true, showCancelButton: true,
-      confirmButtonText: 'Download', cancelButtonText: 'Close', confirmButtonColor: '#2563eb',
+      confirmButtonText: 'Download', cancelButtonText: 'Close', confirmButtonColor: 'var(--brand)',
     });
     if (r.isConfirmed) {
       const a = document.createElement('a');

@@ -19,6 +19,7 @@ const GROUPS = [
       { key: 'company', label: 'Company Settings', icon: svgBuilding(), perm: 'settings_company' },
       { key: 'smtp', label: 'SMTP Settings', icon: svgMail(), perm: 'settings_smtp' },
       { key: 'google-drive', label: 'Google Drive', icon: svgDrive(), perm: null },
+      { key: 'rules', label: 'Rules & Limits', icon: svgChart(), perm: 'settings_company' },
     ],
   },
   {
@@ -65,9 +66,9 @@ const readOpen = () => { try { return JSON.parse(sessionStorage.getItem(OPEN_KEY
 const sidebarStyles = `
 .sg-btn { width:100%; display:flex; align-items:center; gap:12px; padding:10px 12px; border:none; background:transparent; border-radius:10px; cursor:pointer; color:#475569; font:inherit; font-size:.9rem; font-weight:600; text-align:left; transition:background .15s, color .15s; }
 .sg-btn:hover { background:#f1f5f9; color:#1e293b; }
-.sg-btn.has-active { color:#1e40af; }
+.sg-btn.has-active { color:var(--brand-dark); }
 .sg-btn .sg-ic { display:flex; color:#64748b; }
-.sg-btn.has-active .sg-ic { color:#2563eb; }
+.sg-btn.has-active .sg-ic { color:var(--brand); }
 .sg-btn .sg-lb { flex:1; }
 .sg-chev { transition:transform .2s ease; color:#94a3b8; flex-shrink:0; }
 .sg-chev.open { transform:rotate(90deg); }
@@ -77,9 +78,9 @@ const sidebarStyles = `
 .sg-sub .nav-link .nav-icon { display:none; }
 .sg-sub .nav-link.active { font-weight:700; }
 .sg-single { text-decoration:none; }
-.sg-single.has-active { background:rgba(255,255,255,.1); }
+.sg-single.has-active { background:rgba(111,78,55,.12); color:var(--brand-dark); }
 .sg-btn .sg-lb { white-space:nowrap; }
-.sg-count { font-size:.68rem; font-weight:700; background:#eff6ff; color:#2563eb; border-radius:14px; padding:1px 7px; }
+.sg-count { font-size:.68rem; font-weight:700; background:var(--brand-soft); color:var(--brand); border-radius:14px; padding:1px 7px; }
 `;
 
 export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
@@ -143,7 +144,7 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
               <rect width="32" height="32" rx="8" fill="url(#brand-grad)"/>
               <path d="M8 20V12l8-4 8 4v8l-8 4-8-4z" fill="rgba(255,255,255,.2)"/>
               <circle cx="16" cy="16" r="4" fill="#fff"/>
-              <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#2563eb"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs>
+              <defs><linearGradient id="brand-grad" x1="0" y1="0" x2="32" y2="32"><stop stopColor="#6f4e37"/><stop offset="1" stopColor="#8a6a52"/></linearGradient></defs>
             </svg>
           )}
         </div>
@@ -152,15 +153,10 @@ export default function SettingsSidebar({ collapsed, onToggleCollapse }) {
             <span className="brand-name">HRMS</span>
           </div>
         )}
-        <button className="collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} style={{ position: collapsed ? 'static' : 'absolute', right: collapsed ? 'auto' : '10px', top: collapsed ? 'auto' : '10px' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points={collapsed ? '9 18 15 12 9 6' : '15 18 9 12 15 6'} />
-          </svg>
-        </button>
       </div>
 
       <nav className="sidebar-nav settings-nav">
-        {!collapsed && <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: '4px 0 12px', padding: '0 12px' }}>Settings</h2>}
+        {!collapsed && <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 700, color: 'var(--ink)', margin: '4px 0 12px', padding: '0 12px' }}>Settings</h2>}
         <style>{sidebarStyles}</style>
         {collapsed
           ? filteredGroups.flatMap(group => group.items).map(item => linkFor(item))

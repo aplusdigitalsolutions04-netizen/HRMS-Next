@@ -3,6 +3,7 @@ import Pagination, { paginate } from '../shared/Pagination';
 
 const API = '/api';
 import useLiveRefresh from '@/lib/live';
+import { appLocale } from '@/lib/app-config-client';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const PAGE_SIZE = 10;
 
@@ -93,7 +94,7 @@ export default function DocumentApprovals() {
         .da-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #f1f5f9; border-radius: 10px; padding: 4px; }
         .da-tab { padding: 8px 15px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; background: none; color: #64748b; font-family: inherit; }
         .da-tab:hover { color: #0f172a; }
-        .da-tab.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-weight: 600; }
+        .da-tab.active { background: #fff; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,0.06); font-weight: 600; }
         .da-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
         .da-table th { padding: 12px 16px; text-align: left; font-weight: 600; color: #64748b; font-size: 13px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
         .da-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: #0f172a; }
@@ -107,8 +108,8 @@ export default function DocumentApprovals() {
         .da-btn.approve:hover { background: #047857; }
         .da-btn.deny { background: #dc2626; color: #fff; }
         .da-btn.deny:hover { background: #b91c1c; }
-        .da-btn.preview { background: #2563eb; color: #fff; margin-right: 6px; }
-        .da-btn.preview:hover { background: #1d4ed8; }
+        .da-btn.preview { background: var(--brand); color: #fff; margin-right: 6px; }
+        .da-btn.preview:hover { background: var(--brand-dark); }
         .da-overlay { position: fixed; top: 3%; left: 3%; right: 3%; bottom: 3%; background: #fff; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,0.25); z-index: 1000; display: flex; flex-direction: column; overflow: hidden; animation: daFadeIn 0.2s ease; }
         @keyframes daFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .da-overlay-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
@@ -171,7 +172,7 @@ export default function DocumentApprovals() {
                   </span>
                 </td>
                 <td style={{ fontSize: 13, color: '#64748b' }}>
-                  {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                  {item.created_at ? new Date(item.created_at).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                 </td>
                 <td>
                   <span className={`da-badge ${item.action}`}>

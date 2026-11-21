@@ -1,7 +1,9 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, createNotification, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
+import { getConfig } from '@/lib/app-config';
 import { RowDataPacket } from 'mysql2';
 import { getStep, canActOnStep, recordAction } from '@/lib/approvalEngine';
 import { sendRequestMail, ymd } from '@/lib/request-mail';
@@ -9,7 +11,7 @@ import { logAudit } from '@/lib/audit';
 
 const fd = ymd;
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -45,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // Notify the employee in-app
     await createNotification(
       `Leave Rejected: ${lr.leave_type}`,
-      `Your ${lr.leave_type} leave request (${new Date(lr.start_date).toLocaleDateString('en-IN')} - ${new Date(lr.end_date).toLocaleDateString('en-IN')}) has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
+      `Your ${lr.leave_type} leave request (${new Date(lr.start_date).toLocaleDateString((await getConfig()).locale)} - ${new Date(lr.end_date).toLocaleDateString((await getConfig()).locale)}) has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
       'leave_rejected',
       String(id),
       false,
@@ -69,3 +71,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return jsonSuccess({ message: 'Leave rejected' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const PUT = withApiLog(PUT_handler);

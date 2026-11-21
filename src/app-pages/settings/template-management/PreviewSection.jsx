@@ -59,6 +59,26 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                     />
                 </div>
                 <div className="pfield">
+                    <div className="field-label">Always CC (optional)</div>
+                    <input
+                        className="pinput"
+                        value={preview.cc_emails || ''}
+                        onChange={e => setPreview(p => ({ ...p, cc_emails: e.target.value }))}
+                        placeholder="hr.head@company.com, manager@company.com"
+                    />
+                    <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>These people get a copy of every mail sent with this template. Separate addresses with a comma.</div>
+                </div>
+                <div className="pfield">
+                    <div className="field-label">Always BCC (optional)</div>
+                    <input
+                        className="pinput"
+                        value={preview.bcc_emails || ''}
+                        onChange={e => setPreview(p => ({ ...p, bcc_emails: e.target.value }))}
+                        placeholder="records@company.com"
+                    />
+                    <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>A hidden copy: the receiver does not see these addresses.</div>
+                </div>
+                <div className="pfield">
                     <div className="field-label">Category (what is this template for?)</div>
                     <select
                         className="pinput"
@@ -70,12 +90,16 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                     </select>
                     <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>
                         {current && current.request_kind
-                            ? <>This template can be chosen in <Link to="/settings/request-mails" style={{ color: '#2563eb', fontWeight: 600 }}>Settings &gt; Request Mails</Link> for the {current.name} mails.</>
+                            ? <>This template can be chosen in <Link to="/settings/request-mails" style={{ color: 'var(--brand)', fontWeight: 600 }}>Settings &gt; Request Mails</Link> for the {current.name} mails.</>
                             : <>To use a template for leave, WFH, missed punch or late coming mails, pick the matching category.</>}
-                        {' '}<Link to="/masters/template-categories" style={{ color: '#2563eb', fontWeight: 600 }}>Manage categories</Link>
-                        {current && current.request_kind === 'leave' && <> &middot; Leave types (Annual, Sick, ...) are added in <Link to="/masters/leave-types" style={{ color: '#2563eb', fontWeight: 600 }}>Masters &gt; Leave Types</Link>.</>}
+                        {' '}<Link to="/masters/template-categories" style={{ color: 'var(--brand)', fontWeight: 600 }}>Manage categories</Link>
+                        {current && current.request_kind === 'leave' && <> &middot; Leave types (Annual, Sick, ...) are added in <Link to="/masters/leave-types" style={{ color: 'var(--brand)', fontWeight: 600 }}>Masters &gt; Leave Types</Link>.</>}
                     </div>
                 </div>
+            </div>
+
+            <div style={{ fontSize: 11.5, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', margin: '2px 0 12px' }}>
+                Always CC / BCC is used by the letter, payslip, leave and other request mails, and is filled in when a template is chosen for a candidate mail. It is <b>not</b> used on mails that carry a password (invite, login details), so a copy never shows someone's password.
             </div>
 
             {/* Body */}
@@ -98,7 +122,7 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                 <div className="pfield">
                     <div className="field-label" style={{ marginBottom: 8 }}>Words for {current.name} mails <span style={{ color: '#94a3b8', fontWeight: 500 }}>(click to put in the body)</span></div>
                     <div className="vars-wrap">
-                        {REQUEST_WORDS.map(w => <button key={w} type="button" className="var-chip" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1.5px solid #bfdbfe', cursor: 'pointer' }} onClick={() => onInsertVar('{{' + w + '}}')}>{'{{' + w + '}}'}</button>)}
+                        {REQUEST_WORDS.map(w => <button key={w} type="button" className="var-chip" style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-line)', cursor: 'pointer' }} onClick={() => onInsertVar('{{' + w + '}}')}>{'{{' + w + '}}'}</button>)}
                     </div>
                 </div>
             )}
@@ -108,7 +132,7 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                 <div className="field-label" style={{ marginBottom: '10px' }}>
                     Detected Variables
                     <span style={{
-                        background: '#dbeafe', color: '#2563eb',
+                        background: 'var(--brand-soft-2)', color: 'var(--brand)',
                         borderRadius: '50px', padding: '2px 10px',
                         fontSize: '.75rem', fontWeight: 700, marginLeft: '8px'
                     }}>

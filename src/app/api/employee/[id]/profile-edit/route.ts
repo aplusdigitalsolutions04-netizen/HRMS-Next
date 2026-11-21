@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, createNotification } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -7,7 +8,7 @@ import { auditFrom } from '@/lib/audit';
 
 // HR/Admin lets an employee change their bank and contact details once (or takes the permission back).
 // The employee can only look at these details until HR allows it; the permission is used up when they save.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -24,3 +25,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonSuccess({ allowed: allow, message: allow ? `${emp.full_name} can now update the bank and contact details once.` : 'Permission taken back.' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const POST = withApiLog(POST_handler);

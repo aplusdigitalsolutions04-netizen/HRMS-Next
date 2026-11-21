@@ -186,11 +186,11 @@ const UpdateAttendance = () => {
     return (
         <div className="attendance-update-page">
             <style>{`
-                .ua-card { background:#fff; border:1px solid #e8edf6; border-radius:12px; overflow:hidden; }
+                .ua-card { background:#fff; border:1px solid #eadfd5; border-radius:12px; overflow:hidden; }
                 .ua-search { display:flex; max-width:440px; border:1px solid #e2e8f0; border-radius:9px; overflow:hidden; background:#fff; }
                 .ua-search input { flex:1; border:none; outline:none; height:36px; padding:0 12px; font-size:.84rem; color:#0f172a; background:transparent; }
-                .ua-search:focus-within { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
-                .ua-search button { border:none; background:#2563eb; color:#fff; font-weight:600; font-size:.82rem; padding:0 16px; cursor:pointer; }
+                .ua-search:focus-within { border-color:var(--brand); box-shadow:0 0 0 3px rgba(111,78,55,.12); }
+                .ua-search button { border:none; background:var(--brand); color:#fff; font-weight:600; font-size:.82rem; padding:0 16px; cursor:pointer; }
                 .ua-search button:disabled { opacity:.6; }
                 .ua-head { padding:12px 14px; border-bottom:1px solid #eef2f7; }
                 .ua-info { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid #eef2f7; }
@@ -199,19 +199,19 @@ const UpdateAttendance = () => {
                 .ua-chip b { color:#0f172a; }
                 .ua-wrap { overflow-x:auto; }
                 .ua-t { width:100%; border-collapse:collapse; }
-                .ua-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; white-space:nowrap; }
+                .ua-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; white-space:nowrap; }
                 .ua-t td { padding:7px 12px; vertical-align:middle; color:#334155; font-size:.82rem; border-bottom:1px solid #f4f6fa; white-space:nowrap; }
                 .ua-t tbody tr:hover td { background:#f8fbff; }
                 .ua-t .num { width:36px; color:#94a3b8; }
                 .ua-day { display:inline-block; padding:2px 8px; border-radius:20px; font-size:.68rem; font-weight:700; background:#eef2f7; color:#475569; }
                 .ua-day.sun { background:#fee2e2; color:#b91c1c; }
                 .ua-time { width:112px; height:30px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:7px; text-align:center; font-family:monospace; font-size:.8rem; padding:0 6px; outline:none; }
-                .ua-time:focus { background:#fff; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+                .ua-time:focus { background:#fff; border-color:var(--brand); box-shadow:0 0 0 3px rgba(111,78,55,.12); }
                 .ua-time:disabled { background:#f1f5f9; color:#94a3b8; }
                 .ua-hrs { display:inline-block; min-width:56px; text-align:center; padding:3px 9px; border-radius:7px; background:#f1f5f9; font-family:monospace; font-size:.8rem; font-weight:700; color:#0f172a; }
                 .ua-sel { height:30px; min-width:150px; border:1px solid #e2e8f0; border-radius:7px; padding:0 26px 0 9px; font-size:.8rem; font-weight:600; color:#334155; background-color:#f8fafc; cursor:pointer; outline:none; }
-                .ua-save { height:30px; padding:0 14px; border:none; border-radius:7px; background:#2563eb; color:#fff; font-weight:600; font-size:.78rem; cursor:pointer; transition:background-color .15s; }
-                .ua-save:hover:not(:disabled) { background:#1d4ed8; }
+                .ua-save { height:30px; padding:0 14px; border:none; border-radius:7px; background:var(--brand); color:#fff; font-weight:600; font-size:.78rem; cursor:pointer; transition:background-color .15s; }
+                .ua-save:hover:not(:disabled) { background:var(--brand-dark); }
                 .ua-save:disabled { opacity:.6; cursor:not-allowed; }
                 .ua-t tr.edited-row td { background:#f0fdf4 !important; }
                 .ua-t tr.sun-row td { background:#fffbeb; }
@@ -285,7 +285,7 @@ const UpdateAttendance = () => {
                             </table>
                         </div>
                         <div style={{ padding: '0 14px 12px' }}>
-                            <Pagination page={page} totalItems={days.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} pageSizeOptions={[10, 31, 50, 100]} itemLabel="days" />
+                            <Pagination page={page} totalItems={days.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={n => { setPageSize(n); setPage(1); }} itemLabel="days" />
                         </div>
                     </>
                 )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { findCached, pillStyle } from '../../shared/useStatusMaster';
+import { appLocale } from '@/lib/app-config-client';
 
 export function AnimatedValue({ value, suffix = '' }) {
   const [display, setDisplay] = useState(0);
@@ -43,5 +44,5 @@ export const canDeleteEmployee = () => {
 
 export const formatDT = (dt) => {
   if (!dt) return '—';
-  return new Date(dt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(dt).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 };

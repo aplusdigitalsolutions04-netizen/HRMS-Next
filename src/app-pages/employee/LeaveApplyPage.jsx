@@ -4,7 +4,7 @@ import MailFrom from '../mail/MailFrom';
 const inp = { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, color: '#0f172a', background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit' };
 const lab = { display: 'block', fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 6 };
 const btnO = { padding: '11px 22px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#475569', fontSize: 14, fontWeight: 600, cursor: 'pointer' };
-const btnP = (off) => ({ padding: '11px 28px', borderRadius: 10, border: 'none', background: off ? '#93c5fd' : '#2563eb', color: '#fff', fontSize: 14, fontWeight: 600, cursor: off ? 'not-allowed' : 'pointer' });
+const btnP = (off) => ({ padding: '11px 28px', borderRadius: 10, border: 'none', background: off ? 'var(--brand-line)' : 'var(--brand)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: off ? 'not-allowed' : 'pointer' });
 
 const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const niceDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; } };
@@ -60,9 +60,9 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
         const on = step === Number(n), done = step > Number(n);
         return (
           <React.Fragment key={n}>
-            {i > 0 && <div style={{ width: 36, height: 2, background: step > 1 ? '#2563eb' : '#e2e8f0' }} />}
+            {i > 0 && <div style={{ width: 36, height: 2, background: step > 1 ? 'var(--brand)' : '#e2e8f0' }} />}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, background: on || done ? '#2563eb' : '#e2e8f0', color: on || done ? '#fff' : '#64748b' }}>{done ? '✓' : n}</span>
+              <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, background: on || done ? 'var(--brand)' : '#e2e8f0', color: on || done ? '#fff' : '#64748b' }}>{done ? '✓' : n}</span>
               <span style={{ fontSize: 13.5, fontWeight: on ? 700 : 500, color: on ? '#0f172a' : '#64748b' }}>{l}</span>
             </div>
           </React.Fragment>
@@ -98,7 +98,7 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
             <div><label style={lab}>Start Date</label><input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} style={inp} /></div>
             <div><label style={lab}>End Date</label><input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={inp} /></div>
           </div>
-          {dur > 0 && <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: '#eff6ff', color: '#2563eb', fontSize: 13, fontWeight: 600 }}>Duration: {dur} day{dur > 1 ? 's' : ''}</div>}
+          {dur > 0 && <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 600 }}>Duration: {dur} day{dur > 1 ? 's' : ''}</div>}
           <div style={{ marginBottom: 14 }}>
             <label style={lab}>Reason <span style={{ color: '#dc2626' }}>*</span></label>
             <textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} rows={5} style={{ ...inp, resize: 'vertical' }} placeholder="Enter the reason for your leave..." />
@@ -128,7 +128,7 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
         <div className="el-card" style={{ padding: 24, width: '100%', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
             <h3 style={{ margin: 0, fontSize: 15, color: '#0f172a' }}>{editMail ? 'Edit the email' : 'Preview of the email'}</h3>
-            <button type="button" onClick={() => setEditMail(v => !v)} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #bfdbfe', background: editMail ? '#2563eb' : '#eff6ff', color: editMail ? '#fff' : '#1d4ed8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button type="button" onClick={() => setEditMail(v => !v)} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid var(--brand-line)', background: editMail ? 'var(--brand)' : 'var(--brand-soft)', color: editMail ? '#fff' : 'var(--brand-dark)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               {editMail ? 'Done editing' : 'Edit email'}
             </button>
           </div>
@@ -144,7 +144,7 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
                 <label style={lab}>Message</label>
                 <textarea value={body} rows={15} onChange={e => setBody(e.target.value)} style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }} />
               </div>
-              <button type="button" onClick={() => { setSubject('Leave Application'); setBody(buildLetter(form, dur, profile)); }} style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 6 }}>Reset to standard</button>
+              <button type="button" onClick={() => { setSubject('Leave Application'); setBody(buildLetter(form, dur, profile)); }} style={{ border: 'none', background: 'none', color: 'var(--brand)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 6 }}>Reset to standard</button>
             </>
           ) : (
             <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, background: '#f8fafc', overflow: 'hidden' }}>

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { encryptSecret } from '@/lib/mailbox';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } from '@/lib/utils';
@@ -17,7 +18,7 @@ const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&l
 //
 // The employee is also emailed the reason together with their login details
 // and a freshly generated password, so they don't have to be told separately.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -105,3 +106,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

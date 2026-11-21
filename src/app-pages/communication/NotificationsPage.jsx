@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Pagination from '../shared/Pagination';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
 const TYPE_COLORS = {
-  INTERVIEW: '#1e40af',
-  EMAIL: '#0284c7',
+  INTERVIEW: 'var(--brand-dark)',
+  EMAIL: 'var(--brand-mid)',
   CANDIDATE: '#10b981',
   EMPLOYEE: '#f59e0b',
-  ATTENDANCE: '#3b82f6',
+  ATTENDANCE: 'var(--brand-mid)',
   TEMPLATE: '#ec4899',
   SETTINGS: '#64748b',
   REMINDER: '#f97316',
+  helpdesk: 'var(--brand)',
+  document_expiry: '#dc2626',
+  letter: '#0891b2',
 };
 
 const TYPE_ICONS = {
@@ -24,6 +28,9 @@ const TYPE_ICONS = {
   TEMPLATE: '📄',
   SETTINGS: '⚙️',
   REMINDER: '⏰',
+  helpdesk: '💬',
+  document_expiry: '⌛',
+  letter: '📄',
 };
 
 export default function NotificationsPage() {
@@ -32,7 +39,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(15);
+  const [perPage, setPerPage] = useState(10);
   const [typeFilter, setTypeFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
@@ -121,7 +128,7 @@ export default function NotificationsPage() {
                   {n.message && <div className="notif-message">{n.message}</div>}
                   <div className="notif-meta">
                     <span className="notif-type-badge" style={{ backgroundColor: TYPE_COLORS[n.category] + '18', color: TYPE_COLORS[n.category] }}>{n.category}</span>
-                    <span className="notif-date">{new Date(n.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="notif-date">{new Date(n.created_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
                 <div className="notif-actions">

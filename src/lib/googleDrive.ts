@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { query, execute } from './db';
+import { getConfig } from './app-config';
 import { RowDataPacket } from 'mysql2';
 import { uuidv4 } from './utils';
 
@@ -308,7 +309,22 @@ function employeeUploadDir(empCode: string, fullName: string): { dir: string; fo
 // Drive when configured, otherwise a per-employee local folder. Centralizing
 // this (previously copy-pasted per route) means a future storage backend, or
 // a fix to the save path itself, only needs to change in one place.
+// What may be uploaded as an employee document: PDFs, pictures and office files. Web pages, scripts, SVG and programs are refused, because a
+// file saved in the public uploads folder is served from this site's own address and a web page there could run in someone's browser.
+const ALLOWED_UPLOAD_EXT = new Set(['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'rtf', 'odt', 'ods']);
+export async function assertUploadAllowed(file: File): Promise<void> {
+  const reject = (m: string) => { const e: any = new Error(m); e.httpStatus = 422; throw e; };
+  const ext = (String(file.name || '').split('.').pop() || '').toLowerCase();
+  if (!ALLOWED_UPLOAD_EXT.has(ext)) reject('This file type is not allowed. Upload a PDF, a picture (JPG, PNG) or an Office document.');
+  if (/html|javascript|svg|xml|x-msdownload|x-sh/i.test(String(file.type || ''))) reject('This file type is not allowed. Upload a PDF, a picture (JPG, PNG) or an Office document.');
+  const cfg = await getConfig();
+  const maxMb = Math.max(cfg.upload_one_file_mb, cfg.register_pdf_mb, cfg.register_doc_mb);
+  if (file.size > maxMb * 1024 * 1024) reject(`The file is larger than ${maxMb} MB.`);
+  if (file.size === 0) reject('The file is empty.');
+}
+
 export async function saveEmployeeDocument(empCode: string, fullName: string, file: File): Promise<string> {
+  await assertUploadAllowed(file);
   const buf = Buffer.from(await file.arrayBuffer());
   if (await isDriveConfigured()) {
     const folderId = await getEmployeeFolderId(empCode, fullName);

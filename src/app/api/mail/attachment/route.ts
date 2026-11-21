@@ -1,10 +1,11 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError } from '@/lib/utils';
 import { getAccount, getAttachment } from '@/lib/mailbox';
 
 // GET /api/mail/attachment?folder=&uid=&index=  - downloads one attachment. Always sent as a download, never shown in the page.
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -18,3 +19,5 @@ export async function GET(req: NextRequest) {
     return new Response(f.content, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Disposition': `attachment; filename="${name}"`, 'X-Content-Type-Options': 'nosniff' } });
   } catch (e: any) { return jsonError(e?.message || e, 502); }
 }
+
+export const GET = withApiLog(GET_handler);

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { encryptSecret } from '@/lib/mailbox';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, uuidv4, now } from '@/lib/utils';
@@ -15,7 +16,7 @@ const esc = (v: any) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&l
 // HR/Admin sets a new password for any employee (forgotten password, locked out, ...). The password is either typed in or
 // generated. The employee logs in with it directly (no forced change), the old password stops working at once (the login token
 // is tied to the password), and a login lock caused by wrong attempts is lifted. The new password can be mailed to them.
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -99,3 +100,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

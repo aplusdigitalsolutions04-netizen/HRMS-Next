@@ -7,6 +7,7 @@ import useLiveRefresh from '@/lib/live';
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 const fmt = (d) => { if (!d) return '-'; const x = new Date(d); return isNaN(x.getTime()) ? '-' : x.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const daysSince = (d) => { if (!d) return 0; const n = Math.floor((Date.now() - new Date(d).getTime()) / 86400000); return n < 0 ? 0 : n; };
 
 // Candidates who did not answer the interview call or mail. They leave the Candidate Pool for this list; "Responded"
@@ -58,18 +59,40 @@ export default function NoResponse() {
 
   const followUp = async (c) => {
     if (!c.email_id) { Swal.fire({ icon: 'warning', title: 'No email', text: 'This candidate has no email address. Call them instead.' }); return; }
-    const post = c.apply_post ? ` for the ${c.apply_post} position` : '';
-    const when = c.interview_date ? ` (${c.interview_round || 'interview'} on ${fmt(c.interview_date)})` : '';
+    // the wording comes from the "Candidate Follow-up" templates (Template Management), already filled with this candidate's details
+    let templates = [];
+    try {
+      const r = await fetch(`${API}/candidate/${c.id}/follow-up`, { headers: auth() });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Could not load the templates');
+      templates = d.templates || [];
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); return; }
+    const first = templates[0];
     const x = await Swal.fire({
-      title: `Follow-up mail to ${c.candidate_name}`, width: 640, showCancelButton: true, confirmButtonText: 'Send mail', focusConfirm: false,
-      html: `<div style="text-align:left"><label style="font-size:12px;font-weight:700">Subject</label><input id="fu-sub" class="swal2-input" style="margin:4px 0 12px;width:100%;box-sizing:border-box" value="Reminder: your interview${post.replace(/"/g, '')}">
-        <label style="font-size:12px;font-weight:700">Message</label><textarea id="fu-msg" class="swal2-textarea" style="margin:4px 0;width:100%;box-sizing:border-box;height:170px">Dear ${c.candidate_name},\n\nWe tried to reach you regarding your interview${post}${when}, but could not connect with you.\nPlease reply to this mail or call us to confirm a suitable time.\n\nRegards,\nHR Team</textarea></div>`,
+      title: `Follow-up mail to ${esc(c.candidate_name)}`, width: 720, showCancelButton: true, confirmButtonText: 'Send mail', focusConfirm: false,
+      html: `<div style="text-align:left"><div style="font-size:.8rem;margin-bottom:10px">To: <b>${esc(c.email_id)}</b></div>
+        <label for="fu-tpl">Template</label>
+        ${templates.length
+          ? `<select id="fu-tpl" class="swal2-select" style="margin:4px 0 12px;width:100%;box-sizing:border-box;display:flex">${[...new Set(templates.map(t => t.category))].map(cat => `<optgroup label="${esc(cat)}">${templates.map((t, i) => t.category === cat ? `<option value="${i}">${esc(t.name)}</option>` : '').join('')}</optgroup>`).join('')}</select>`
+          : `<div style="font-size:.84rem;margin:4px 0 12px">No follow-up template yet. Write the mail below, or add one in <a href="/templates" target="_blank" style="color:var(--brand-dark);text-decoration:underline">Template Management</a> with the category "Candidate Follow-up".</div>`}
+        <label for="fu-sub">Subject</label><input id="fu-sub" class="swal2-input" style="margin:4px 0 12px;width:100%;box-sizing:border-box" value="${esc(first?.subject || '')}">
+        <label for="fu-msg">Message</label><textarea id="fu-msg" class="swal2-textarea" style="margin:4px 0;width:100%;box-sizing:border-box;height:260px">${esc(first?.message || '')}</textarea>
+        <div style="font-size:.74rem;color:#94a3b8;margin-top:6px">You can edit the text before sending. Press Ctrl + Enter in the message to send.</div></div>`,
+      didOpen: () => {
+        const m = document.getElementById('fu-msg'), sub = document.getElementById('fu-sub'), pick = document.getElementById('fu-tpl');
+        // grow with the text so the whole message shows without scrolling, up to most of the screen height
+        const fit = () => { m.style.height = 'auto'; m.style.height = Math.max(240, Math.min(m.scrollHeight + 4, Math.round(window.innerHeight * 0.5))) + 'px'; };
+        m.addEventListener('input', fit); fit();
+        if (pick) pick.addEventListener('change', () => { const t = templates[Number(pick.value)]; if (t) { sub.value = t.subject; m.value = t.message; fit(); } });
+        m.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) Swal.clickConfirm(); });
+        m.focus();
+      },
       preConfirm: () => { const s = document.getElementById('fu-sub').value.trim(), m = document.getElementById('fu-msg').value.trim(); if (!s || !m) { Swal.showValidationMessage('Write the subject and the message'); return false; } return { subject: s, message: m }; },
     });
     if (x.isConfirmed) call(c.id, 'follow-up', x.value, 'Follow-up mail sent');
   };
 
-  const th = { textAlign: 'left', padding: '9px 12px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.4px', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e8edf6', whiteSpace: 'nowrap' };
+  const th = { textAlign: 'left', padding: '9px 12px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.4px', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #eadfd5', whiteSpace: 'nowrap' };
   const td = { padding: '10px 12px', fontSize: 13, borderBottom: '1px solid #f4f6fa', verticalAlign: 'middle' };
   const items = paginate(rows, page, pageSize);
 
@@ -91,7 +114,7 @@ export default function NoResponse() {
         <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>{counts.no_response} waiting</span>
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #e8edf6', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead><tr><th style={{ ...th, width: 40 }}>#</th><th style={th}>Candidate</th><th style={th}>Last round</th><th style={th}>No response since</th><th style={th}>Follow-ups</th><th style={th}>Note</th><th style={th}>Actions</th></tr></thead>

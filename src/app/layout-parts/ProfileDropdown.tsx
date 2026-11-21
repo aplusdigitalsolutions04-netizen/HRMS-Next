@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu } from '@/lib/ui-motion';
+import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -56,7 +57,7 @@ export default function ProfileDropdown() {
   };
 
   const doLogout = () => {
-    fetch(`${API}/logout`, { method: 'POST' }).catch(() => {});
+    fetch(`${API}/logout`, { method: 'POST', headers: { Authorization: 'Bearer ' + (sessionStorage.getItem('token') || '') } }).catch(() => {});
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('role');
     sessionStorage.removeItem('permissions');
@@ -89,7 +90,7 @@ export default function ProfileDropdown() {
             </div>
           </div>
           {profile?.last_login && (
-            <div className="dropdown-last-login">Last Login: {new Date(profile.last_login).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+            <div className="dropdown-last-login">Last Login: {new Date(profile.last_login).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
           )}
           <button className="dropdown-item" onClick={() => { setOpen(false); navigate('/profile'); }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -102,6 +103,10 @@ export default function ProfileDropdown() {
           <button className="dropdown-item" onClick={() => { setOpen(false); navigate('/change-password'); }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             Change Password
+          </button>
+          <button className="dropdown-item" onClick={() => { setOpen(false); navigate('/login-activity'); }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Login Activity
           </button>
           <div className="dropdown-divider" />
           <button className="dropdown-item dropdown-logout" onClick={handleLogout}>

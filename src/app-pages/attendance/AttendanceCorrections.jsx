@@ -53,7 +53,7 @@ export default function AttendanceCorrections() {
       if (!x.isConfirmed) return;
       note = x.value.trim();
     } else {
-      const x = await Swal.fire({ icon: 'question', title: 'Approve?', html: r.request_type === 'Late coming' ? `Late coming of <b>${r.employee_name}</b> on <b>${fmtDate(r.attendance_date)}</b> (arrived ${r.in_time}) will be marked approved.` : `Attendance for <b>${r.employee_name}</b> on <b>${fmtDate(r.attendance_date)}</b> will be corrected to <b>${r.in_time} - ${r.out_time}</b>.`, showCancelButton: true, confirmButtonText: 'Approve', confirmButtonColor: '#2563eb' });
+      const x = await Swal.fire({ icon: 'question', title: 'Approve?', html: r.request_type === 'Late coming' ? `Late coming of <b>${r.employee_name}</b> on <b>${fmtDate(r.attendance_date)}</b> (arrived ${r.in_time}) will be marked approved.` : `Attendance for <b>${r.employee_name}</b> on <b>${fmtDate(r.attendance_date)}</b> will be corrected to <b>${r.in_time} - ${r.out_time}</b>.`, showCancelButton: true, confirmButtonText: 'Approve', confirmButtonColor: 'var(--brand)' });
       if (!x.isConfirmed) return;
     }
     setBusy(r.id);
@@ -77,14 +77,14 @@ export default function AttendanceCorrections() {
     <div>
       <style>{`
         .ac-t { width:100%; border-collapse:collapse; }
-        .ac-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #e8edf6; text-align:left; white-space:nowrap; }
+        .ac-t th { background:#f8fafc; color:#64748b; font-weight:700; text-transform:uppercase; font-size:.68rem; letter-spacing:.4px; padding:9px 12px; border-bottom:1px solid #eadfd5; text-align:left; white-space:nowrap; }
         .ac-t td { padding:9px 12px; font-size:.82rem; color:#334155; border-bottom:1px solid #f4f6fa; vertical-align:middle; }
         .ac-act { display:flex; gap:6px; }
         .ac-ok, .ac-no { height:30px; padding:0 12px; border-radius:7px; font-size:.78rem; font-weight:600; cursor:pointer; border:1px solid; background:#fff; }
-        .ac-ok { color:#fff; background:#2563eb; border-color:#2563eb; } .ac-ok:hover:not(:disabled) { background:#1d4ed8; }
+        .ac-ok { color:#fff; background:var(--brand); border-color:var(--brand); } .ac-ok:hover:not(:disabled) { background:var(--brand-dark); }
         .ac-no { color:#b91c1c; border-color:#fecaca; } .ac-no:hover:not(:disabled) { background:#fef2f2; }
         .ac-ok:disabled, .ac-no:disabled { opacity:.6; cursor:not-allowed; }
-        .ac-card { background:#fff; border:1px solid #e8edf6; border-radius:12px; overflow:hidden; }
+        .ac-card { background:#fff; border:1px solid #eadfd5; border-radius:12px; overflow:hidden; }
       `}</style>
       <div className="ph">
         <div>

@@ -1,3 +1,4 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/utils';
 import { isDriveConfigured, findDuplicateFolders, mergeDuplicateFolders, driveErrorMessage } from '@/lib/googleDrive';
@@ -13,7 +14,7 @@ async function admin(req: NextRequest) {
   return { user };
 }
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const a = await admin(req);
     if (a.err) return a.err;
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const a = await admin(req);
     if (a.err) return a.err;
@@ -36,3 +37,6 @@ export async function POST(req: NextRequest) {
     return jsonError(driveErrorMessage(e) || e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);

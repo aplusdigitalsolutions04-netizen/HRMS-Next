@@ -1,8 +1,10 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, verifyLoginPassword, hashPassword } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { employeeCodes, getStatuses } from '@/lib/status-master';
 import { clientIp, lockedMinutes, recordFailure, clearFailures } from '@/lib/login-guard';
+import { recordFailedLogin } from '@/lib/login-history';
 import { RowDataPacket } from 'mysql2';
 
 // One message for every failed login, so nobody can find out which emails have an account.
@@ -10,7 +12,7 @@ const BAD_LOGIN = 'Invalid email or password';
 // compared when the email is unknown, so a missing account takes as long to refuse as a wrong password
 const DUMMY_HASH = hashPassword('dummy-password-for-timing');
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const text = await req.text();
     const params = new URLSearchParams(text);
@@ -23,12 +25,14 @@ export async function POST(req: NextRequest) {
     if (email.length > 150 || password.length > 200) return NextResponse.json({ detail: BAD_LOGIN }, { status: 401 });
 
     const ip = clientIp(req);
+    const ua = req.headers.get('user-agent') || '';
     const wait = await lockedMinutes(email, ip);
     if (wait > 0) {
+      await recordFailedLogin(email, ip, ua, 'Locked after too many wrong tries');
       return NextResponse.json({ detail: `Too many wrong attempts. Try again after ${wait} minute${wait > 1 ? 's' : ''}.` }, { status: 429 });
     }
 
-    let authResult = await authenticateUser(email, password, 'admin');
+    let authResult = await authenticateUser(email, password, 'admin', { ip, ua });
     if (authResult) {
       await clearFailures(email);
       const resp = {
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
     const passwordOk = !!matched;
     if (!passwordOk) {
       await recordFailure(email, ip);
+      await recordFailedLogin(email, ip, ua, 'Wrong email or password');
       return NextResponse.json({ detail: BAD_LOGIN }, { status: 401 });
     }
     // Which statuses may log in comes from Settings > Status Master (Can log in).
@@ -63,9 +68,10 @@ export async function POST(req: NextRequest) {
       const row = (await getStatuses('employee', true)).find(s => s.code === matched.status);
       return NextResponse.json({ detail: `Account is ${row?.label || matched.status}. Please contact HR to activate your account.` }, { status: 401 });
     }
-    authResult = await authenticateUser(email, password, 'employee');
+    authResult = await authenticateUser(email, password, 'employee', { ip, ua });
     if (!authResult) {
       await recordFailure(email, ip);
+      await recordFailedLogin(email, ip, ua, 'Wrong email or password');
       return NextResponse.json({ detail: BAD_LOGIN }, { status: 401 });
     }
     await clearFailures(email);
@@ -93,3 +99,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ detail: 'Login failed. Please try again.' }, { status: 500 });
   }
 }
+
+export const POST = withApiLog(POST_handler);

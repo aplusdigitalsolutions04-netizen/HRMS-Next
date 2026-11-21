@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { appLocale, currencySymbol } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -100,7 +101,7 @@ export default function MyPayslips() {
               return (
                 <div key={p.id} className="mp-item">
                   <div className="mp-item-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6f4e37" strokeWidth="1.5">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                       <line x1="16" y1="2" x2="16" y2="6"/>
                       <line x1="8" y1="2" x2="8" y2="6"/>
@@ -110,7 +111,7 @@ export default function MyPayslips() {
                   <div className="mp-item-info">
                     <div className="mp-item-title">{monthName} {p.year}</div>
                     <div className="mp-item-meta">
-                      Generated: {p.generated_at ? new Date(p.generated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      Generated: {p.generated_at ? new Date(p.generated_at).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </div>
                   </div>
                   <div className="mp-item-amount">{formatNum(p.net_salary)}</div>
@@ -131,7 +132,7 @@ export default function MyPayslips() {
 
 function formatNum(v) {
   const n = parseFloat(v) || 0;
-  return '₹ ' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currencySymbol() + ' ' + n.toLocaleString(appLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const mpStyles = `
@@ -149,15 +150,15 @@ const mpStyles = `
 .mp-item { display: flex; align-items: center; gap: 14px; padding: 16px 15px; border-bottom: 1px solid #f1f5f9; transition: background .15s; }
 .mp-item:hover { background: #f8fafc; }
 .mp-item:last-child { border-bottom: none; }
-.mp-item-icon { width: 40px; height: 40px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mp-item-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .mp-item-info { flex: 1; min-width: 0; }
 .mp-item-title { font-size: .95rem; font-weight: 600; color: #0f172a; }
 .mp-item-meta { font-size: .78rem; color: #94a3b8; margin-top: 2px; }
 .mp-item-amount { font-size: 1rem; font-weight: 700; color: #059669; white-space: nowrap; }
 .mp-item-actions { display: flex; gap: 6px; }
 .mp-btn { padding: 7px 16px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .15s; font-family: 'Outfit', sans-serif; border: none; }
-.mp-btn-view { background: #eff6ff; color: #2563eb; }
-.mp-btn-view:hover { background: #dbeafe; }
+.mp-btn-view { background: var(--brand-soft); color: var(--brand); }
+.mp-btn-view:hover { background: var(--brand-soft-2); }
 .mp-btn-download { background: #f0fdf4; color: #059669; }
 .mp-btn-download:hover { background: #dcfce7; }
 .mp-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
@@ -170,8 +171,8 @@ const mpStyles = `
 .mp-modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 18px; border-top: 1.5px solid #e2e8f0; background: #f8fafc; }
 .mp-btn-secondary { padding: 10px 17px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif; border: 1.5px solid #e2e8f0; background: #fff; color: #475569; }
 .mp-btn-secondary:hover { background: #f1f5f9; }
-.mp-btn-primary { padding: 10px 17px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif; border: none; background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; }
-.mp-btn-primary:hover { box-shadow: 0 4px 14px rgba(37,99,235,.35); transform: translateY(-1px); }
+.mp-btn-primary { padding: 10px 17px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; font-family: 'Outfit', sans-serif; border: none; background: linear-gradient(135deg,var(--brand),var(--brand-mid)); color: #fff; }
+.mp-btn-primary:hover { box-shadow: 0 4px 14px rgba(111,78,55,.35); transform: translateY(-1px); }
 .mp-detail-grid { display: flex; flex-direction: column; gap: 20px; }
 .mp-detail-section h4 { margin: 0 0 10px; font-family: 'Outfit', sans-serif; font-size: .95rem; font-weight: 700; color: #1e293b; }
 .mp-detail-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: .85rem; }

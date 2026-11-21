@@ -1,6 +1,7 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
-import { getAuthUser, jsonError, jsonSuccess, now, checkPermission } from '@/lib/utils';
+import { getAuthUser, jsonError, jsonSuccess, now, checkPermission, hasAnyPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { getPayslipSignatories, getEwMultiplier, getElPayoutInterval, SIGNATORY_KEYS } from '@/lib/payroll-calc';
 import { getMonthDaysMode } from '@/lib/salary-sheet';
@@ -11,20 +12,22 @@ import { auditFrom } from '@/lib/audit';
 const MAX_SIGNATURE_LEN = 60000;
 const IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/;
 
-export async function GET(req: NextRequest) {
+async function GET_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_payroll', 'manage_salary_structures', 'generate_payslips'])) return jsonError('Insufficient permissions', 403);
     return jsonSuccess({ ...(await getPayslipSignatories()), ew_pay_multiplier: String(await getEwMultiplier()), el_payout_interval_months: String(await getElPayoutInterval()), payslip_auto_draft: ((await query('SELECT setting_value FROM system_settings WHERE setting_key=?', ['payslip_auto_draft']))[0]?.setting_value === '0') ? '0' : '1', payslip_draft_day: String((await query('SELECT setting_value FROM system_settings WHERE setting_key=?', ['payslip_draft_day']))[0]?.setting_value || '1'), salary_month_days_mode: await getMonthDaysMode() });
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
     if (user.type !== 'admin') return new Response(JSON.stringify({ detail: 'Insufficient permissions' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    if (!hasAnyPermission(user, ['view_payroll', 'manage_salary_structures', 'generate_payslips'])) return jsonError('Insufficient permissions', 403);
     if (!checkPermission(user, 'manage_salary_structures')) return jsonError('Insufficient permissions', 403);
 
     const body = await req.json();
@@ -81,3 +84,6 @@ export async function POST(req: NextRequest) {
     return jsonSuccess({ message: 'Payslip settings saved' });
   } catch (e: any) { return jsonError(e, 500); }
 }
+
+export const GET = withApiLog(GET_handler);
+export const POST = withApiLog(POST_handler);

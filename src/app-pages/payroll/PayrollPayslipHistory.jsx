@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Pagination from '../shared/Pagination';
 import Swal from 'sweetalert2';
 import { Tabs } from '@/lib/ui-motion';
+import { appLocale, currencySymbol } from '@/lib/app-config-client';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -22,7 +23,7 @@ export default function PayrollPayslipHistory() {
   const [year, setYear] = useState(0);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [perPage, setPerPage] = useState(15);
+  const [perPage, setPerPage] = useState(10);
   const [statusTab, setStatusTab] = useState('all');
   const [drafts, setDrafts] = useState(0);
   const [approving, setApproving] = useState(false);
@@ -57,7 +58,7 @@ export default function PayrollPayslipHistory() {
 
   // Approve = publish to the employee and email the PDF. Drafts are never visible to employees.
   const approve = async (body, confirmText) => {
-    const c = await Swal.fire({ icon: 'question', title: 'Approve and email?', text: confirmText, showCancelButton: true, confirmButtonText: 'Approve & email', cancelButtonText: 'Cancel', confirmButtonColor: '#2563eb' });
+    const c = await Swal.fire({ icon: 'question', title: 'Approve and email?', text: confirmText, showCancelButton: true, confirmButtonText: 'Approve & email', cancelButtonText: 'Cancel', confirmButtonColor: 'var(--brand)' });
     if (!c.isConfirmed) return;
     setApproving(true);
     try {
@@ -73,7 +74,7 @@ export default function PayrollPayslipHistory() {
   // Copies the approved payslips of the chosen month to Google Drive (folder "<Month> <Year>")
   const saveMonthToDrive = async () => {
     const label = `${months.find(m => m.value === month)?.label} ${year}`;
-    const c = await Swal.fire({ icon: 'question', title: 'Save to Google Drive?', text: `Save all approved payslips of ${label} in a Drive folder named "${label}"? Files already there are replaced.`, showCancelButton: true, confirmButtonText: 'Save', confirmButtonColor: '#2563eb' });
+    const c = await Swal.fire({ icon: 'question', title: 'Save to Google Drive?', text: `Save all approved payslips of ${label} in a Drive folder named "${label}"? Files already there are replaced.`, showCancelButton: true, confirmButtonText: 'Save', confirmButtonColor: 'var(--brand)' });
     if (!c.isConfirmed) return;
     setApproving(true);
     try {
@@ -109,27 +110,25 @@ export default function PayrollPayslipHistory() {
 
   const openEmailPreview = (p) => {
     if (p.email_sent_at) {
-      if (!window.confirm(`Payslip was already emailed to ${p.employee_email} on ${new Date(p.email_sent_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Send again?`)) return;
+      if (!window.confirm(`Payslip was already emailed to ${p.employee_email} on ${new Date(p.email_sent_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Send again?`)) return;
     }
-    const monthLabel = monthNames[p.month - 1] || p.month;
-    setEmailPreview({
-      id: p.id,
-      to: p.employee_email,
-      employeeName: p.employee_name,
-      subject: `Payslip for ${monthLabel} ${p.year}`,
-      month: monthLabel,
-      year: p.year,
-    });
+    setEmailPreview({ id: p.id, to: p.employee_email, subject: '', html: '', cc: '', bcc: '', filename: '', loading: true });
+    fetch(`${API}/payroll/payslips/${p.id}/send-email`, { headers: auth() })
+      .then(async res => { const d = await res.json(); if (!res.ok) throw new Error(d.detail || 'Could not load the mail'); return d; })
+      .then(d => setEmailPreview({ id: p.id, to: d.to || p.employee_email, cc: d.cc || '', bcc: d.bcc || '', subject: d.subject, html: (d.logo_data_url ? String(d.html).split('cid:company-logo').join(d.logo_data_url) : d.html), logo: d.logo_data_url || '', filename: d.filename, loading: false }))
+      .catch(e => { setEmailPreview(null); alert(e.message); });
   };
 
   const sendEmailPayslip = async () => {
     if (!emailPreview) return;
     setSendingEmail(true);
     try {
-      const res = await fetch(`${API}/payroll/payslips/${emailPreview.id}/send-email`, { method: 'POST', headers: auth() });
+      // the text HR may have edited goes along; the logo picture is turned back into the form a mail needs
+      const html = emailPreview.logo ? String(emailPreview.html).split(emailPreview.logo).join('cid:company-logo') : emailPreview.html;
+      const res = await fetch(`${API}/payroll/payslips/${emailPreview.id}/send-email`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: emailPreview.subject, html, cc: emailPreview.cc || '', bcc: emailPreview.bcc || '' }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || 'Failed to send email');
-      setPayslips(prev => prev.map(p => p.id === emailPreview.id ? { ...p, email_sent_at: d.email_sent_at } : p));
+      setPayslips(prev => prev.map(p => p.id === emailPreview.id ? { ...p, email_sent_at: new Date().toISOString() } : p));
       setEmailPreview(null);
     } catch (e) {
       alert(e.message);
@@ -176,7 +175,7 @@ export default function PayrollPayslipHistory() {
           <h2 className="pr-title">Payslip History</h2>
           <p className="pr-subtitle">Payslips are prepared as drafts. Check them, then approve - approving publishes the payslip to the employee and emails it.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="pr-header-btns">
         {month && year && (
           <button className="pr-btn pr-btn-secondary" disabled={approving} onClick={saveMonthToDrive} title="Save the approved payslips of this month to Google Drive">Save month to Drive</button>
         )}
@@ -252,7 +251,7 @@ export default function PayrollPayslipHistory() {
                         ? <span style={{ background: '#fffbeb', color: '#b45309', padding: '2px 9px', borderRadius: 20, fontSize: 11.5, fontWeight: 700 }}>Draft</span>
                         : <span style={{ background: '#f0fdf4', color: '#15803d', padding: '2px 9px', borderRadius: 20, fontSize: 11.5, fontWeight: 700 }}>{p.email_sent_at ? 'Approved · Emailed' : 'Approved'}</span>}
                     </td>
-                    <td style={{ fontSize: '.8rem', color: '#64748b' }}>{p.generated_at ? new Date(p.generated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                    <td style={{ fontSize: '.8rem', color: '#64748b' }}>{p.generated_at ? new Date(p.generated_at).toLocaleDateString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {String(p.status || 'APPROVED').toUpperCase() === 'DRAFT' && (
@@ -260,7 +259,7 @@ export default function PayrollPayslipHistory() {
                         )}
                         <button className="pr-action-btn" onClick={() => viewDetails(p.id, p.employee_name)} title="View">👁</button>
                         <button className="pr-action-btn" onClick={() => downloadPayslip(p.id)} title="Download">⬇</button>
-                        {String(p.status || 'APPROVED').toUpperCase() !== 'DRAFT' && <button className={`pr-action-btn ${p.email_sent_at ? 'pr-emailed' : ''}`} onClick={() => openEmailPreview(p)} title={p.email_sent_at ? `Sent: ${new Date(p.email_sent_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Send Email'}>{p.email_sent_at ? '✅' : '✉'}</button>}
+                        {String(p.status || 'APPROVED').toUpperCase() !== 'DRAFT' && <button className={`pr-action-btn ${p.email_sent_at ? 'pr-emailed' : ''}`} onClick={() => openEmailPreview(p)} title={p.email_sent_at ? `Sent: ${new Date(p.email_sent_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Send Email'}>{p.email_sent_at ? '✅' : '✉'}</button>}
                         <button className="pr-action-btn" onClick={() => deletePayslip(p.id, p.employee_name)} title="Delete" style={{ color: '#dc2626' }}>🗑</button>
                       </div>
                     </td>
@@ -282,19 +281,27 @@ export default function PayrollPayslipHistory() {
             </div>
             <div className="pr-modal-body">
               <div className="pe-field"><span className="pe-label">To:</span><span className="pe-value">{emailPreview.to}</span></div>
-              <div className="pe-field"><span className="pe-label">Subject:</span><span className="pe-value">{emailPreview.subject}</span></div>
-              <div className="pe-divider" />
-              <div className="pe-body">
-                Dear {emailPreview.employeeName},<br /><br />
-                Please find attached your payslip for the month of {emailPreview.month} {emailPreview.year}.<br /><br />
-                This is a system-generated document. For any queries, please contact the HR department.<br /><br />
-                Regards,<br />
-                HR Team
+              <div className="pe-field"><span className="pe-label">CC:</span>
+                <input className="pe-input" value={emailPreview.cc || ''} disabled={emailPreview.loading} placeholder="Separate addresses with a comma" onChange={e => setEmailPreview(v => ({ ...v, cc: e.target.value }))} />
               </div>
+              <div className="pe-field"><span className="pe-label">BCC:</span>
+                <input className="pe-input" value={emailPreview.bcc || ''} disabled={emailPreview.loading} placeholder="Hidden copy" onChange={e => setEmailPreview(v => ({ ...v, bcc: e.target.value }))} />
+              </div>
+              <div className="pe-field"><span className="pe-label">Subject:</span>
+                <input className="pe-input" value={emailPreview.subject} disabled={emailPreview.loading} onChange={e => setEmailPreview(v => ({ ...v, subject: e.target.value }))} />
+              </div>
+              <div className="pe-field"><span className="pe-label">Attached:</span><span className="pe-value">{emailPreview.filename ? <span className="pe-file">📎 {emailPreview.filename}</span> : '...'} <span style={{ color: '#94a3b8' }}>(added automatically)</span></span></div>
+              <div className="pe-divider" />
+              <div className="pe-hint">You can edit the message below before sending.</div>
+              {emailPreview.loading
+                ? <div className="pe-body">Loading...</div>
+                : <div className="pe-body pe-edit" contentEditable suppressContentEditableWarning
+                    dangerouslySetInnerHTML={{ __html: emailPreview.html }}
+                    onBlur={e => { const h = e.currentTarget.innerHTML; setEmailPreview(v => ({ ...v, html: h })); }} />}
             </div>
             <div className="pr-modal-footer">
               <button className="pr-btn pr-btn-secondary" onClick={() => setEmailPreview(null)}>Cancel</button>
-              <button className="pr-btn pr-btn-primary" onClick={sendEmailPayslip} disabled={sendingEmail}>
+              <button className="pr-btn pr-btn-primary" onClick={sendEmailPayslip} disabled={sendingEmail || emailPreview.loading}>
                 {sendingEmail ? 'Sending...' : 'Send Email'}
               </button>
             </div>
@@ -307,18 +314,19 @@ export default function PayrollPayslipHistory() {
 
 function formatNum(v) {
   const n = parseFloat(v) || 0;
-  return '₹ ' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currencySymbol() + ' ' + n.toLocaleString(appLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const pgStyles = `
 .pr-page { padding: 0; }
-.pr-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.pr-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.pr-header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .pr-title { margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
 .pr-subtitle { margin: 4px 0 0; font-size: .88rem; color: #64748b; }
 .pr-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; overflow: hidden; }
 .pr-toolbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 16px 15px; border-bottom: 1.5px solid #e2e8f0; align-items: center; }
 .pr-search { flex: 1; min-width: 200px; padding: 9px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .88rem; outline: none; font-family: 'Inter', sans-serif; }
-.pr-search:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+.pr-search:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(111,78,55,.15); }
 .pr-filter-select { padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: .88rem; outline: none; background: #fff; cursor: pointer; font-family: 'Inter', sans-serif; }
 .pr-loading { padding: 30px; text-align: center; color: #94a3b8; }
 .pr-empty { padding: 36px 15px; text-align: center; color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -333,11 +341,19 @@ const pgStyles = `
 .pr-action-btn.pr-emailed { position: relative; color: #059669; }
 .pr-action-btn.pr-emailed::after { content: ''; position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; background: #059669; border-radius: 50%; border: 2px solid #fff; }
 .pr-btn { padding: 10px 17px; border-radius: 10px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; font-family: 'Outfit', sans-serif; border: none; display: inline-flex; align-items: center; gap: 6px; }
-.pr-btn-primary { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #fff; }
-.pr-btn-primary:hover { box-shadow: 0 4px 14px rgba(37,99,235,.35); transform: translateY(-1px); }
+.pr-btn-primary { background: linear-gradient(135deg,var(--brand),var(--brand-mid)); color: #fff; }
+.pr-btn-primary:hover { box-shadow: 0 4px 14px rgba(111,78,55,.35); transform: translateY(-1px); }
 .pr-btn-secondary { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
 .pr-btn-secondary:hover { background: #f1f5f9; }
-.pr-pagination { display: flex; justify-content: space-between; align-items: center; padding: 14px 15px; border-top: 1.5px solid #e2e8f0; }
+.pr-pagination { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 15px; border-top: 1.5px solid #e2e8f0; }
+@media (max-width: 640px) {
+  .pr-header-btns { width: 100%; }
+  .pr-header-btns .pr-btn { flex: 1 1 100%; justify-content: center; }
+  .pr-search { min-width: 100%; }
+  .pr-filter-select { flex: 1; min-width: 0; }
+  .pr-table th, .pr-table td { padding: 10px 10px; }
+  .pr-pagination { justify-content: center; }
+}
 .pr-page-btns { display: flex; align-items: center; gap: 4px; }
 .pr-page-btn { width: 32px; height: 32px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; font-size: .82rem; color: #475569; display: flex; align-items: center; justify-content: center; }
 .pr-page-btn:hover:not(:disabled) { background: #f1f5f9; }
@@ -362,5 +378,12 @@ const pgStyles = `
 .pe-label { font-weight: 600; color: #475569; min-width: 70px; }
 .pe-value { color: #0f172a; word-break: break-all; }
 .pe-divider { border-top: 1px solid #e2e8f0; margin: 12px 0; }
-.pe-body { font-size: .88rem; color: #334155; line-height: 1.6; white-space: pre-line; }
+.pe-body { font-size: .88rem; color: #334155; line-height: 1.6; }
+.pe-edit { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; min-height: 140px; max-height: 45vh; overflow: auto; outline: none; background: #fff; }
+.pe-edit:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(111,78,55,.15); }
+.pe-edit img { max-width: 100%; }
+.pe-input { flex: 1; min-width: 0; padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: .88rem; font-family: inherit; outline: none; }
+.pe-input:focus { border-color: var(--brand); }
+.pe-file { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: .82rem; word-break: break-all; }
+.pe-hint { font-size: .78rem; color: #64748b; margin-bottom: 8px; }
 `;

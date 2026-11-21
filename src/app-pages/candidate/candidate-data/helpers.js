@@ -1,3 +1,4 @@
+import { appLocale } from '@/lib/app-config-client';
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
 
@@ -5,7 +6,7 @@ const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token')
 export const getInterviewTime = (interviewDate) => {
     if (!interviewDate) return '';
     try {
-        return new Date(interviewDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return new Date(interviewDate).toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit', hour12: true });
     } catch {
         return '';
     }
@@ -93,10 +94,10 @@ export const parseVars = (raw) => {
 };
 
 export const CHIP_COLORS = [
-    { bg: '#dbeafe', color: '#2563eb' },
-    { bg: '#dbeafe', color: '#1d4ed8' },
+    { bg: 'var(--brand-soft-2)', color: 'var(--brand)' },
+    { bg: 'var(--brand-soft-2)', color: 'var(--brand-dark)' },
     { bg: '#dcfce7', color: '#15803d' },
     { bg: '#fef3c7', color: '#b45309' },
     { bg: '#fce7f3', color: '#be185d' },
-    { bg: '#e0f2fe', color: '#0369a1' },
+    { bg: 'var(--brand-soft)', color: 'var(--brand-dark)' },
 ];

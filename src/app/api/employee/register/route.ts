@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, now } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -13,7 +14,7 @@ const DOC_COLUMNS = {
   InternshipCertificate: 'internship_certificate', Photograph: 'photograph', BankDocument: 'bank_document',
 };
 
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
 
@@ -119,3 +120,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

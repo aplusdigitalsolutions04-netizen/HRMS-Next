@@ -1,10 +1,11 @@
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { importTeamOfficeMonth, ImportError } from '@/lib/attendance-import';
 
 // "Sync from TeamOffice" for a whole month. The work itself lives in lib/attendance-import so
 // the background job and the automatic page sync use exactly the same code.
-export async function POST(req: NextRequest) {
+async function POST_handler(req: NextRequest) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -22,3 +23,5 @@ export async function POST(req: NextRequest) {
     return jsonError(e, 500);
   }
 }
+
+export const POST = withApiLog(POST_handler);

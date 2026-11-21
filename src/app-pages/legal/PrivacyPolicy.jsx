@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useCompany } from '../shared/useCompany';
 
 export default function PrivacyPolicy() {
+    const company = useCompany();
     return (
         <>
             <style>{`
@@ -22,7 +24,7 @@ export default function PrivacyPolicy() {
                 <div className="legal-card">
                     <div className="legal-header">
                         <div className="legal-brand">
-                            <img src="/api/company-logo" alt="A Plus Digital Solutions" />
+                            <img src="/api/company-logo" alt={company.company_name} />
                         </div>
                         <Link to="/login" className="legal-back">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -34,7 +36,7 @@ export default function PrivacyPolicy() {
 
                     <p>
                         This Privacy Policy describes how the HR Management System ("HRMS", "we", "us") operated by
-                        A Plus Digital Solutions collects, uses, and protects information about employees, candidates,
+                        {company.company_name} collects, uses, and protects information about employees, candidates,
                         and administrators who use this platform.
                     </p>
 
@@ -95,7 +97,7 @@ export default function PrivacyPolicy() {
                     <h2>8. Contact Us</h2>
                     <p>
                         For any privacy-related questions or requests, please contact your HR department or write to us
-                        at <a href="mailto:support@aplusdigitalsolutions.com" style={{ color: '#10b981' }}>support@aplusdigitalsolutions.com</a>.
+                        at {company.company_email ? <a href={`mailto:${company.company_email}`} style={{ color: '#10b981' }}>{company.company_email}</a> : 'the HR department'}.
                     </p>
                 </div>
             </div>

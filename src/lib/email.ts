@@ -172,6 +172,11 @@ export async function sendEmailDetailed(
 
     const toList = addrs(to);
     const rcpt = [...toList, ...ccList, ...bccList];
+    // Employees brought in from TeamOffice carry a made-up address (teamoffice_0003@placeholder.local) until HR enters the real one.
+    // The mail server accepts such a mail and it is simply never delivered, so refuse it here with a reason HR can act on.
+    const fake = (x: string) => /@placeholder\.local$|\.(local|invalid|test|example)$/i.test(x);
+    const fakeTo = toList.filter(fake);
+    if (fakeTo.length && fakeTo.length === toList.length) return { success: false, error: `${fakeTo[0]} is not a real email address, so nothing was sent. Enter the employee's real email in Employee > Edit first.` };
     const raw: Buffer = await new MailComposer(mailOptions).compile().build();
     const info: any = await transporter.sendMail({ envelope: { from: s.sender_email, to: rcpt }, raw });
     const rejected: string[] = (info?.rejected || []).map(String);

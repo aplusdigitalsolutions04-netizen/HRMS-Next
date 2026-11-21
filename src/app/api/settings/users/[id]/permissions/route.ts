@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, requireRole } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
@@ -23,7 +24,7 @@ function normalisePerms(raw: any): Record<string, boolean> {
   return {};
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -32,18 +33,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const rows = await query<RowDataPacket[]>('SELECT id, email, full_name, role, is_active, permissions FROM hr_admins WHERE id=?', [id]);
     if (rows.length === 0) return jsonError('User not found', 404);
     const r = rows[0];
+    // what a role made on the Roles page gives (the person's own settings are added on top of it)
+    let rolePerms: Record<string, boolean> = {}, roleName = r.role === 'HR_STAFF' ? 'HR Staff' : r.role;
+    if (!['ADMIN', 'HR', 'HR_STAFF'].includes(r.role)) {
+      const ro = (await query<RowDataPacket[]>('SELECT name, permissions FROM system_roles WHERE id = ?', [r.role]).catch(() => []))[0];
+      if (ro) { rolePerms = normalisePerms(ro.permissions); roleName = ro.name; }
+    }
     return jsonSuccess({
       id: r.id,
       email: r.email,
       name: r.full_name,
       role: r.role,
+      role_name: roleName,
+      role_permissions: rolePerms,
       is_active: r.is_active,
       permissions: normalisePerms(r.permissions),
     });
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser(req);
     if (!user) return jsonError('Not authenticated', 401);
@@ -80,7 +89,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (e: any) { return jsonError(e, 500); }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return PUT(req, { params });
 }
 
+export const GET = withApiLog(GET_handler);
+export const PUT = withApiLog(PUT_handler);
+export const POST = withApiLog(POST_handler);

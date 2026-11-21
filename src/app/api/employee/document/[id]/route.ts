@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { withApiLog } from '@/lib/api-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
@@ -13,7 +14,7 @@ const ALLOWED_FIELDS = [
   'internship_certificate', 'photograph', 'bank_document',
 ];
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GET_handler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Callers fetch this with the usual Authorization header and open the
     // resulting blob themselves (see getDocumentUrl in src/lib/clientDocs.js)
@@ -55,3 +56,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return friendly ? jsonError(friendly, 503) : jsonError(e, 500);
   }
 }
+
+export const GET = withApiLog(GET_handler);
