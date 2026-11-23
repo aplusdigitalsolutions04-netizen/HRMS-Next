@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission, parsePagination, createNotification } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { letterTypes, ensureLetterTemplates, letterVars, fillLetter, letterWords, checkLetterRef } from '@/lib/letters';
+import { maxLetterLen, letterTypes, ensureLetterTemplates, letterVars, fillLetter, letterWords, checkLetterRef } from '@/lib/letters';
 import { auditFrom } from '@/lib/audit';
 
 // Letters. GET: HR sees every letter that was made (?type= &search= &page= &per_page=); an employee sees their own.
@@ -52,7 +52,7 @@ async function POST_handler(req: NextRequest) {
       text = fillLetter(t?.body || '', built.vars);
     }
     if (text.length < 20) return jsonError('The letter is empty', 422);
-    if (text.length > 20000) return jsonError('The letter is too long', 422);
+    if (text.length > maxLetterLen(text)) return jsonError('The letter is too long', 422);
 
     // HR may type a reference number for the letter (it can be left empty); a number that is typed must be new
     const chk = await checkLetterRef(b.ref_no);

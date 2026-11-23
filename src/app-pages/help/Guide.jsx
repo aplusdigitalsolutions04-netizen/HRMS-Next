@@ -1,12 +1,36 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { SECTIONS as PAYROLL, Table, Steps, P, Note } from '../payroll/PayrollGuide';
+import { SECTIONS as PAYROLL, Table, Steps, P, Note, Shot } from '../payroll/PayrollGuide';
 
 // The guide of the whole HRMS: what every page is for, how the main jobs are done step by step, where each setting is, and how a salary
 // is worked out. HR and admins see all of it; an employee sees the guide of the employee portal. It describes the program only: every
 // number it mentions (days, percentages, limits) is a setting, and the guide says where it is set.
 
 const H = ({ children }) => <h4 style={{ margin: '12px 0 2px', fontSize: '.9rem' }}>{children}</h4>;
+const LIST = { margin: '4px 0 10px 20px', fontSize: '.86rem', lineHeight: 1.8 };
+// the picture(s) shown at the top of a section: [file in public/guide, caption]. The names and amounts in them are blurred.
+const SHOTS = {
+  'start': [['dashboard', 'The Dashboard: what needs attention today']],
+  'roles': [['users', 'Settings > Users & Access']],
+  'emp-join': [['invite', 'Employees > Invite an employee'], ['pending', 'Employees > Pending approval']],
+  'emp-manage': [['employees', 'Employee Management']],
+  'emp-org': [['org', 'Org Chart']],
+  'recruit': [['recruit', 'Recruitment > Candidates']],
+  'att': [['attendance', 'Attendance > Daily records']],
+  'leave': [['leave', 'Leave Management']],
+  'docs': [['docs-expiry', 'Document Expiry']],
+  'helpdesk': [['helpdesk', 'Help Desk > Manage']],
+  'exit': [['exits', 'Exit & Full and Final']],
+  'assets': [['assets', 'Assets']],
+  'mail': [['email-log', 'Communications > Email log']],
+  'reports': [['reports', 'Reports']],
+  'settings': [['settings', 'Settings']],
+  'masters': [['masters', 'Masters: the lists used in forms']],
+  'adminTools': [['audit', 'Audit Log']],
+  'pay-flow': [['pay-structures', 'Payroll > Salary Structures'], ['pay-sheet', 'Payroll > Salary Sheet']],
+  'pay-pages': [['pay-generate', 'Payroll > Generate Payslips'], ['pay-history', 'Payroll > Payslip History'], ['pay-statutory', 'Payroll > Statutory Deductions']],
+  'pay-howto': [['pay-generate', 'Payroll > Generate Payslips']],
+};
 const L = ({ to, children }) => <Link to={to} style={{ color: 'var(--brand)', fontWeight: 600 }}>{children}</Link>;
 
 const START = [
@@ -114,13 +138,67 @@ const SERVICES = [
     </>) },
   { id: 'letters', title: 'Letters', body: (
     <>
+      <H>1. Make a letter</H>
+      <Shot src="/guide/letters-make.jpg" alt="Make a letter page" caption="Letters > Make a Letter" />
       <Steps items={[
-        <><L to="/letters/make">Letters &gt; Make a Letter</L>: pick the employee and the letter (offer, appointment, confirmation, experience, relieving), give the dates it needs. The reference number and the letter date are optional: leave them empty and the letter is printed without them.</>,
-        'Press "Prepare the letter": the template is filled with the employee\'s details. A list shows any detail that is still empty. Read it and change the text if you like.',
-        'Press "Make the PDF". It has the header (see Letterhead below) and the signature of the authorised person (Payslip Settings), and it is saved.',
+        <><L to="/letters/make">Letters &gt; Make a Letter</L>: pick the employee and the letter (offer, appointment, confirmation, experience, relieving).</>,
+        'Give the dates the letter needs. The reference number and the letter date are optional: leave them empty and the letter is printed without them.',
+        'Offer, appointment and appraisal letters also ask for the Monthly salary and the Variable pay (the salary table needs them). Other letters do not ask.',
+        'Press "Prepare the letter". The details of the employee are filled in and a list shows any detail still empty.',
+        'Read the text. You can change it here (same editor as Letter Texts); a change here is for this one letter only.',
+        'Press "Preview the PDF" to see how it will print, then "Make the PDF". It has the header and the authorised signature, and it is saved.',
         'The employee sees it in My Letters and gets a bell alert.',
       ]} />
-      <P>The other pages of the <b>Letters</b> menu: <L to="/letters/made">Letters Made</L> (open the PDF, email it, edit the reference number, date or text, or delete a letter), <L to="/letters/texts">Letter Texts</L> (the text of each letter, with bold, italic, lists and alignment; "Standard text" undoes your changes; "+ Add a letter" makes a new kind), <L to="/letters/words">Letter Words</L> (the words filled in for each employee) and <L to="/letters/letterhead">Letterhead</L> (the company header, your own letterhead picture, or none for printed paper). The same header is used on the Full and Final statement of <L to="/exits">Exit &amp; Full and Final</L>.</P>
+      <H>2. Letter Texts: write a letter like a Word document</H>
+      <Shot src="/guide/letter-texts.jpg" alt="Letter texts cards" caption="Letters > Letter Texts: a card for each letter" />
+      <ul style={LIST}>
+        <li>The page opens with a card for each letter and <b>+ Add a letter</b> (give it a name and write it).</li>
+        <li>Click a card: the letter opens on its own page with <b>Edit</b> and <b>Preview</b>.</li>
+        <li><b>Preview</b> shows the real PDF pages (letterhead and page breaks) with a sample salary, so you can see what goes on which page.</li>
+        <li><b>Save</b>: the text is used for every letter made from now on. Letters already made are not changed.</li>
+        <li><b>Standard text</b> brings back the ready-made wording. <b>Remove</b> deletes a letter you added.</li>
+        <li>If you leave with unsaved changes it asks first.</li>
+        <li>An old letter (written with marks like ** or [line]) opens converted and is saved in the new style the first time you save.</li>
+        <li>Letters are made for existing employees only.</li>
+      </ul>
+      <Shot src="/guide/letter-editor.jpg" alt="The letter editor" caption="The editor: tools on top, the words on the right" />
+      <ul style={LIST}>
+        <li><b>Text:</b> Normal and Heading 1 to 3; font (Calibri, Arial, Times New Roman, Courier New) and size; bold, italic, underline, strikethrough; text colour and highlight.</li>
+        <li><b>Paragraph:</b> left, centre, right, justified; bullet and numbered lists; indent and outdent; clear formatting; undo and redo.</li>
+        <li><b>Table:</b> pick the size from a grid. With the cursor in a table a second bar adds or deletes a row or column, merges or splits cells, makes a heading row, colours a cell, or deletes the table.</li>
+        <li><b>Picture:</b> a PNG or JPG (made smaller by itself); a box sets its width.</li>
+        <li><b>Line</b> draws a rule. <b>Page break</b> starts a new page (for an Annexure). <b>Signature</b> puts the authorised person's signature there (if there is none, it is added at the end).</li>
+        <li><b>Words</b> on the right: click one to put it in the text. Words such as {'{{name}}'} or {'{{designation}}'} are shown in colour and are replaced by the employee's details when a letter is made.</li>
+        <li>The notice period, probation and working hours are words set in <L to="/letters/words">Letter Words</L>; the HR contact is typed when the letter is made.</li>
+      </ul>
+      <H>3. The salary table (Annexure I)</H>
+      <Shot src="/guide/salary-table.jpg" alt="Salary table in the editor" caption="Name and Designation above the salary table" />
+      <ul style={LIST}>
+        <li>In Letter Texts press <b>Salary table (calculated)</b> where the table should come. The editor shows a sample; each letter gets the figures of that employee.</li>
+        <li>Name and Designation above it are the words {'{{name}}'} and {'{{designation}}'}. They come from the employee's profile (Employees &gt; Edit).</li>
+        <li>The monthly salary is the Grand Total. The variable pay is a part of it, shown as its own line.</li>
+        <li>If the employee has a salary structure the monthly salary is filled in; if not, type it in Make a Letter. Leave it empty and the table is left out.</li>
+      </ul>
+      <H>4. Salary Breakup: the rows of the table</H>
+      <Shot src="/guide/salary-breakup.jpg" alt="Salary Breakup page" caption="Letters > Salary Breakup" />
+      <ul style={LIST}>
+        <li><L to="/letters/breakup">Salary Breakup</L> sets the components (Basic 50, HRA 30, Travel 15, Food 5 to start with).</li>
+        <li>Give each component a <b>percent</b> or a fixed <b>amount in Rs. a month</b>.</li>
+        <li>The fixed amounts are taken first; the percents share what is left. The percents must add up to 100 and at least one component must have a percent.</li>
+        <li>The yearly amount is the monthly amount x 12.</li>
+        <li><b>+ Add a column</b> (up to 3) adds a column of your own, for example "Paid": type its text against each component.</li>
+        <li><b>Try it</b> only shows the table for a sample salary. It saves nothing.</li>
+        <li>A letter that is already made is not changed when the breakup is changed.</li>
+      </ul>
+      <H>5. The other Letters pages</H>
+      <Shot src="/guide/letters-made.jpg" alt="Letters Made" caption="Letters > Letters Made" />
+      <Shot src="/guide/letter-words.jpg" alt="Letter Words" caption="Letters > Letter Words" />
+      <Shot src="/guide/letterhead.jpg" alt="Letterhead" caption="Letters > Letterhead" />
+      <ul style={LIST}>
+        <li><L to="/letters/made">Letters Made</L>: open the PDF, email it, edit the reference number, date or text, or delete a letter.</li>
+        <li><L to="/letters/words">Letter Words</L>: the words filled in for each employee.</li>
+        <li><L to="/letters/letterhead">Letterhead</L>: the company header, your own letterhead picture, or none for printed paper. The same header is used on the Full and Final statement of <L to="/exits">Exit &amp; Full and Final</L>.</li>
+      </ul>
     </>) },
   { id: 'helpdesk', title: 'Help Desk', body: (
     <P>An employee asks HR a question in <b>Help Desk</b> (portal) and gets a ticket number such as HD-0001. HR sees every ticket in <L to="/helpdesk/manage">Help Desk</L>, answers it (the employee is told in the portal and by mail), and sets the status: Open, In Progress, Resolved, Closed. "Take this ticket" shows who is on it. A reply from the employee opens a resolved ticket again. The <b>Email alerts</b> tick on the page switches the mails on or off.</P>) },
@@ -268,7 +346,7 @@ export default function Guide() {
                 <button onClick={() => setOpen(o => (o === s.id ? null : s.id))} style={{ width: '100%', textAlign: 'left', background: '#f8fafc', border: 'none', padding: '11px 16px', fontWeight: 800, fontSize: '.92rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', fontFamily: 'inherit' }}>
                   <span>{s.title}</span><span style={{ color: '#94a3b8' }}>{searching || open === s.id ? '−' : '+'}</span>
                 </button>
-                {(searching || open === s.id) && <div style={{ padding: '6px 16px 14px' }}>{s.body}</div>}
+                {(searching || open === s.id) && <div style={{ padding: '6px 16px 14px' }}>{(SHOTS[s.id] || []).map(([f, c]) => <Shot key={f} src={`/guide/${f}.jpg`} alt={c} caption={c} />)}{s.body}</div>}
               </div>
             ))}
           </div>

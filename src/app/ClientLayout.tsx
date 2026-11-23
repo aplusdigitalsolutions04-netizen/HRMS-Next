@@ -65,6 +65,7 @@ const Directory = dynamic(() => import('@/app-pages/directory/Directory'), { ssr
 const DocumentExpiry = dynamic(() => import('@/app-pages/employee/DocumentExpiry'), { ssr: false });
 const SalaryRevisions = dynamic(() => import('@/app-pages/payroll/SalaryRevisions'), { ssr: false });
 const Letters = dynamic(() => import('@/app-pages/employee/Letters'), { ssr: false });
+const LetterTexts = dynamic(() => import('@/app-pages/employee/LetterTexts'), { ssr: false });
 const Exits = dynamic(() => import('@/app-pages/employee/Exits'), { ssr: false });
 const StatutoryDeductions = dynamic(() => import('@/app-pages/payroll/StatutoryDeductions'), { ssr: false });
 const Guide = dynamic(() => import('@/app-pages/help/Guide'), { ssr: false });
@@ -191,9 +192,12 @@ function MainLayout() {
                   <Route path="/letters" element={<Navigate to="/letters/make" replace />} />
                   <Route path="/letters/make" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="make" /></PrivateRoute>} />
                   <Route path="/letters/made" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="made" /></PrivateRoute>} />
-                  <Route path="/letters/texts" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="texts" /></PrivateRoute>} />
+                  <Route path="/letters/texts" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><LetterTexts mode="list" /></PrivateRoute>} />
+                  <Route path="/letters/texts/new" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><LetterTexts mode="edit" /></PrivateRoute>} />
+                  <Route path="/letters/texts/edit/:type" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><LetterTexts mode="edit" /></PrivateRoute>} />
                   <Route path="/letters/words" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="words" /></PrivateRoute>} />
                   <Route path="/letters/letterhead" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="letterhead" /></PrivateRoute>} />
+                  <Route path="/letters/breakup" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="breakup" /></PrivateRoute>} />
                   <Route path="/exits" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Exits /></PrivateRoute>} />
                   <Route path="/payroll/statutory" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><StatutoryDeductions /></PrivateRoute>} />
                   <Route path="/payroll/guide" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Guide /></PrivateRoute>} />

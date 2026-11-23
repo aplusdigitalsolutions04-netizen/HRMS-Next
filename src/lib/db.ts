@@ -98,7 +98,7 @@ const REQUIRED_TABLES: string[] = [
     slabs TEXT NULL, sort_order INT NOT NULL DEFAULT 100, UNIQUE KEY uq_stat_code (code))`,
   // Letters: the text templates (offer, appointment, ...) and every letter that was made for an employee.
   `CREATE TABLE IF NOT EXISTS letter_templates (
-    letter_type VARCHAR(30) PRIMARY KEY, name VARCHAR(80) NOT NULL, body TEXT NOT NULL, updated_by VARCHAR(150) NULL, updated_at DATETIME NULL)`,
+    letter_type VARCHAR(30) PRIMARY KEY, name VARCHAR(80) NOT NULL, body MEDIUMTEXT NOT NULL, updated_by VARCHAR(150) NULL, updated_at DATETIME NULL)`,
   // Words HR adds for the letters: a fixed text ({{hr_phone}}) or one that is asked for each time a letter is made.
   `CREATE TABLE IF NOT EXISTS letter_variables (
     var_key VARCHAR(40) PRIMARY KEY, label VARCHAR(80) NOT NULL, kind VARCHAR(10) NOT NULL DEFAULT 'text', value TEXT NULL,

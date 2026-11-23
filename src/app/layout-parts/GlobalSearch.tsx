@@ -37,6 +37,7 @@ const PAGES = [
   ['Letters made', '/letters/made', 'letters made issued list reference edit delete email pdf'],
   ['Letter texts', '/letters/texts', 'letter text template wording offer appointment edit add new letter'],
   ['Letter words', '/letters/words', 'letter words placeholders variables name designation salary'],
+  ['Salary Breakup', '/letters/breakup', 'letters salary breakup annexure compensation structure basic hra percent offer appointment appraisal'],
   ['Letterhead', '/letters/letterhead', 'letterhead header logo image company letters print paper'],
   ['Exit & Full and Final', '/exits', 'exit resignation notice period full and final settlement fnf checklist'],
   ['Salary Revisions', '/payroll/revisions', 'salary revision history hike appraisal increment promotion'],

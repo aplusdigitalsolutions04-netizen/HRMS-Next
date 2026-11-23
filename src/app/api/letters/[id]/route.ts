@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { renderLetterPdf, longDate, checkLetterRef } from '@/lib/letters';
+import { maxLetterLen, renderLetterPdf, longDate, checkLetterRef } from '@/lib/letters';
 import { auditFrom } from '@/lib/audit';
 
 // The PDF of a letter that was made (HR, or the employee it is for).
@@ -39,7 +39,7 @@ async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id:
     if (chk.ref === undefined) return jsonError(chk.error, chk.status);
     const text = String(b.text || '').trim();
     if (text.length < 20) return jsonError('The letter is empty', 422);
-    if (text.length > 20000) return jsonError('The letter is too long', 422);
+    if (text.length > maxLetterLen(text)) return jsonError('The letter is too long', 422);
     // the letter date is optional: not sent = unchanged, empty = no date on the letter
     const day = b.day === undefined ? l.day : String(b.day || '');
     if (day && (!/^\d{4}-\d{2}-\d{2}$/.test(day) || isNaN(new Date(day).getTime()))) return jsonError('Give a valid letter date', 422);

@@ -185,6 +185,7 @@ export default function Navigation({ collapsed, onToggleCollapse, pathname }) {
                 {navLink('/letters/made', null, 'Letters Made', 'view_employees', true)}
                 {navLink('/letters/texts', null, 'Letter Texts', 'view_employees', true)}
                 {navLink('/letters/words', null, 'Letter Words', 'view_employees', true)}
+                {navLink('/letters/breakup', null, 'Salary Breakup', 'view_employees', true)}
                 {navLink('/letters/letterhead', null, 'Letterhead', 'view_employees', true)}
               </>,
               ['view_employees']

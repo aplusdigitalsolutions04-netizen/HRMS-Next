@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 import Pagination from '../shared/Pagination';
-import { appLocale } from '@/lib/app-config-client';
-import { parseLetter } from '@/lib/letter-markup';
+import { appLocale, currencySymbol } from '@/lib/app-config-client';
+import LetterEditor from './LetterEditor';
+import { compensation, inr } from '@/lib/compensation';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -21,6 +22,18 @@ export async function openLetter(id) {
   } catch (e) { if (tab) tab.close(); Swal.fire({ icon: 'error', title: 'Not opened', text: e.message }); }
 }
 
+// The PDF of a letter text as it will be printed (letterhead, page breaks, tables), opened in a new tab; nothing is saved.
+async function previewLetterPdf(text, extra = {}) {
+  const tab = window.open('', '_blank');
+  try {
+    const res = await fetch(`${API}/letters/preview-pdf`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ text, ...extra }) });
+    if (!res.ok) { let m = 'Could not make the preview'; try { m = (await res.json()).detail || m; } catch { /* not json */ } throw new Error(m); }
+    const url = URL.createObjectURL(await res.blob());
+    if (tab) tab.location.href = url; else window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { if (tab) tab.close(); Swal.fire({ icon: 'error', title: 'No preview', text: e.message }); }
+}
+
 const input = { padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: '.88rem', outline: 'none', background: '#fff', fontFamily: 'inherit', width: '100%' };
 const label = { fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 };
 
@@ -31,6 +44,7 @@ const SECTIONS = {
   made: ['Letters made', 'Every letter that was made. Open the PDF, email it, edit it or delete it.'],
   texts: ['Letter texts', 'The text of each kind of letter. Change it, or add a new kind of letter.'],
   words: ['Letter words', 'The words that are filled in for each employee when a letter is made. Add your own.'],
+  breakup: ['Salary Breakup', 'How the salary is split in Annexure I of the offer, appointment and appraisal letters: the components and the percent of the fixed salary each one takes.'],
   letterhead: ['Letterhead', 'How the top of every letter and of the Full and Final statement looks: the company header, your own letterhead picture, or none.'],
 };
 export default function Letters({ section = 'make' }) {
@@ -46,9 +60,9 @@ export default function Letters({ section = 'make' }) {
       </div>
       {section === 'make' && <Issue onDone={() => navigate('/letters/made')} />}
       {section === 'made' && <Issued isHr />}
-      {section === 'texts' && <Templates />}
       {section === 'words' && <Words />}
       {section === 'letterhead' && <Letterhead />}
+      {section === 'breakup' && <Breakup />}
     </div>
   );
 }
@@ -68,6 +82,7 @@ function Issue({ onDone }) {
   const [mailFor, setMailFor] = useState(null);
   const [refNo, setRefNo] = useState('');
   const [letterDate, setLetterDate] = useState('');
+  const [salary, setSalary] = useState({ monthly_salary: '', variable_pay: '' });
 
   useEffect(() => { fetch(`${API}/letters`, { headers: auth() }).then(r => r.json()).then(d => { setTypes(d.types || []); setAskVars(d.ask_vars || []); setType(t => (d.types || []).some(x => x.key === t) ? t : ((d.types || [])[0] || {}).key || ''); }).catch(() => {}); }, []);
   useEffect(() => {
@@ -78,12 +93,20 @@ function Issue({ onDone }) {
     return () => clearTimeout(t);
   }, [q]);
 
+  // the monthly salary starts from the employee's salary structure (empty when there is none); an offer made before that can type it
+  useEffect(() => {
+    if (!emp) { setSalary({ monthly_salary: '', variable_pay: '' }); return; }
+    fetch(`${API}/letters/defaults?employee_id=${emp.id}`, { headers: auth() }).then(r => r.json())
+      .then(d => setSalary({ monthly_salary: d.monthly_salary ? String(d.monthly_salary) : '', variable_pay: '' })).catch(() => {});
+  }, [emp]);
+
   const clean = () => Object.fromEntries(Object.entries(fields).filter(([, v]) => v));
+  const typed = () => ({ monthly_salary: salary.monthly_salary, variable_pay: salary.variable_pay, letter_date: letterDate });
   const preview = async () => {
     if (!emp) { Swal.fire({ icon: 'warning', title: 'Pick an employee first' }); return; }
     setBusy(true);
     try {
-      const res = await fetch(`${API}/letters/preview`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: emp.id, letter_type: type, fields: { ...clean(), custom } }) });
+      const res = await fetch(`${API}/letters/preview`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: emp.id, letter_type: type, fields: { ...clean(), ...typed(), custom } }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || 'Could not prepare the letter');
       setText(d.text); setMissing(d.missing || []);
@@ -105,6 +128,7 @@ function Issue({ onDone }) {
     finally { setBusy(false); }
   };
 
+  const usesSalary = !!(types.find(t => t.key === type) || {}).uses_salary;
   const date = (k, l) => <div><label style={label}>{l}</label><input type="date" style={input} value={fields[k]} onChange={e => setFields(f => ({ ...f, [k]: e.target.value }))} /></div>;
   return (
     <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, padding: 16 }}>
@@ -130,6 +154,14 @@ function Issue({ onDone }) {
         {date('resignation_date', 'Resignation date')}
         {date('last_working_day', 'Last working day')}
         {date('effective_date', 'Effective date')}
+        {usesSalary && <div>
+          <label style={label} htmlFor="ltr-sal">Monthly salary (total, for the salary table)</label>
+          <input id="ltr-sal" type="number" min="0" style={input} value={salary.monthly_salary} onChange={e => setSalary(x => ({ ...x, monthly_salary: e.target.value }))} placeholder="From the salary structure" />
+        </div>}
+        {usesSalary && <div>
+          <label style={label} htmlFor="ltr-var">Variable pay (a part of the total)</label>
+          <input id="ltr-var" type="number" min="0" style={input} value={salary.variable_pay} onChange={e => setSalary(x => ({ ...x, variable_pay: e.target.value }))} placeholder="0" />
+        </div>}
         {askVars.map(v => <div key={v.key}><label style={label}>{v.label}</label><input style={input} value={custom[v.key] || ''} onChange={e => setCustom(c => ({ ...c, [v.key]: e.target.value }))} /></div>)}
       </div>
       <div style={{ marginTop: 14 }}><button className="btn-premium" onClick={preview} disabled={busy}>{text ? 'Prepare the text again' : 'Prepare the letter'}</button></div>
@@ -148,10 +180,13 @@ function Issue({ onDone }) {
               <input id="ltr-date" type="date" style={input} value={letterDate} onChange={e => setLetterDate(e.target.value)} />
             </div>
           </div>
-          <label style={label}>The text of the letter (you can change it)</label>
-          <textarea style={{ ...input, minHeight: 320, lineHeight: 1.55, fontFamily: 'inherit' }} value={text} onChange={e => setText(e.target.value)} />
-          <div style={{ fontSize: 12, color: '#64748b', margin: '6px 0 12px' }}>A blank line starts a new paragraph. Write **bold**, *italic* or __underline__; start a line with "# " for a heading, "- " for a bullet, or &lt;center&gt; / &lt;right&gt; to align it. The company logo, name, address and the signature are added by themselves.</div>
-          <button className="btn-premium" onClick={make} disabled={busy}>{busy ? 'Working...' : 'Make the PDF'}</button>
+          <label style={label}>The letter (you can change anything, like in Word)</label>
+          <LetterEditor value={text} onChange={setText} salary={false} height={560} />
+          <div style={{ fontSize: 12, color: '#64748b', margin: '8px 0 12px' }}><b>Preview the PDF</b> shows the letter exactly as it will print, with the letterhead and page breaks. The company logo, name, address and the signature are added by themselves.</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn-o" onClick={() => previewLetterPdf(text, { ref_no: refNo.trim(), letter_date: letterDate })} disabled={busy}>Preview the PDF</button>
+            <button className="btn-premium" onClick={make} disabled={busy}>{busy ? 'Working...' : 'Make the PDF'}</button>
+          </div>
         </div>
       )}
     </div>
@@ -249,7 +284,7 @@ function LetterEditModal({ id, onClose, onSaved }) {
   };
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', backdropFilter: 'blur(3px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: 'min(760px, 100%)', maxHeight: '92vh', overflow: 'auto', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: 'min(1000px, 100%)', maxHeight: '94vh', overflow: 'auto', padding: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Edit the letter{d ? ` - ${d.title}` : ''}</h3>
           <button onClick={onClose} aria-label="Close" style={{ border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', color: '#64748b' }}>&#10005;</button>
@@ -264,12 +299,12 @@ function LetterEditModal({ id, onClose, onSaved }) {
               <div><label style={label} htmlFor="le-day">Letter date (optional)</label><input id="le-day" type="date" style={input} value={day} onChange={e => setDay(e.target.value)} /></div>
             </div>
             <div>
-              <label style={label} htmlFor="le-text">The text of the letter</label>
-              <textarea id="le-text" style={{ ...input, minHeight: 340, lineHeight: 1.55 }} value={text} onChange={e => setText(e.target.value)} />
-              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>A blank line starts a new paragraph. Write **bold**, *italic* or __underline__; start a line with "# " for a heading, "- " for a bullet, or &lt;center&gt; / &lt;right&gt; to align it. The company logo, name, address and the signature are added by themselves.</div>
+              <label style={label}>The letter</label>
+              <LetterEditor value={text} onChange={setText} salary={false} height={460} />
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button className="btn-o" onClick={onClose}>Cancel</button>
+              <button className="btn-o" onClick={() => previewLetterPdf(text, { ref_no: ref.trim(), letter_date: day, title: d.title })}>Preview the PDF</button>
               <button className="btn-premium" onClick={save} disabled={busy || !changed}>{busy ? 'Saving...' : 'Save changes'}</button>
             </div>
           </div>
@@ -366,339 +401,6 @@ export function Issued({ isHr }) {
     </div>
   );
 }
-
-// The text of each letter: the letters on the left, the chosen one on the right with its words to click in.
-function Templates() {
-  const [data, setData] = useState({ templates: [], placeholders: [] });
-  const [key, setKey] = useState('');
-  const [saved, setSaved] = useState('');   // the text as last saved, to know when there are changes
-  const [body, setBody] = useState('');
-  const [adding, setAdding] = useState(null); // { name, body } while a new letter is being written
-  const [q, setQ] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [view, setView] = useState('write');
-  const area = useRef(null);
-
-  const open = (t) => { setKey(t ? t.letter_type : ''); setBody(t ? t.body : ''); setSaved(t ? t.body : ''); };
-  const load = (keep) => fetch(`${API}/letters/templates`, { headers: auth() }).then(r => r.json()).then(d => {
-    setData(d);
-    const list = d.templates || [];
-    open(list.find(x => x.letter_type === (keep ?? key)) || list[0]);
-  }).catch(() => {});
-  useEffect(() => { load(); }, []); // eslint-disable-line
-
-  const cur = data.templates.find(x => x.letter_type === key);
-  const text = adding ? adding.body : body;
-  const setText = (v) => (adding ? setAdding({ ...adding, body: v }) : setBody(v));
-  const dirty = !adding && body !== saved;
-
-  // leaving a letter with unsaved changes asks first
-  const guard = async () => {
-    if (!dirty && !(adding && (adding.name || adding.body))) return true;
-    const c = await Swal.fire({ icon: 'question', title: 'Leave without saving?', text: 'The changes you made to this text will be lost.', showCancelButton: true, confirmButtonText: 'Leave' });
-    return c.isConfirmed;
-  };
-  const pick = async (k) => { if (k === key && !adding) return; if (!(await guard())) return; setAdding(null); const t = data.templates.find(x => x.letter_type === k); open(t); };
-  const startAdd = async () => { if (adding) return; if (!(await guard())) return; setAdding({ name: '', body: '' }); };
-
-  // Every change goes through the browser's own typing command, so Ctrl+Z undoes it like normal typing.
-  const apply = (from, to, repl, selFrom, selTo) => {
-    const el = area.current;
-    if (!el) { setText(text.slice(0, from) + repl + text.slice(to)); return; }
-    el.focus(); el.setSelectionRange(from, to);
-    let ok = false;
-    try { ok = document.execCommand('insertText', false, repl); } catch { ok = false; }
-    const f = selFrom ?? from + repl.length, t = selTo ?? f;
-    if (ok) { el.setSelectionRange(f, t); return; } // the typing command has already changed the text
-    setText(text.slice(0, from) + repl + text.slice(to));
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(f, t); });
-  };
-  const caret = () => { const el = area.current; return el ? [el.selectionStart, el.selectionEnd] : [text.length, text.length]; };
-  // a clicked word goes where the cursor is (replacing any selected text), and the cursor lands after it
-  const put = (insertText) => { const [a, b] = caret(); apply(a, b, insertText); };
-
-  // **bold**, *italic*, __underline__ around the selected words (again to take it off); with nothing selected the cursor sits between the marks
-  const wrap = (m) => {
-    const [a, b] = caret(); const sel = text.slice(a, b);
-    const star = m === '*';
-    const outside = text.slice(a - m.length, a) === m && text.slice(b, b + m.length) === m && (!star || (text[a - 2] !== '*' && text[b + 1] !== '*'));
-    if (outside) return apply(a - m.length, b + m.length, sel, a - m.length, a - m.length + sel.length);
-    if (sel.length > 2 * m.length && sel.startsWith(m) && sel.endsWith(m) && (!star || !sel.startsWith('**'))) return apply(a, b, sel.slice(m.length, -m.length), a, b - 2 * m.length);
-    if (!sel) return apply(a, b, m + m, a + m.length);
-    apply(a, b, m + sel + m, a + m.length, a + m.length + sel.length);
-  };
-
-  // the lines the selection touches (start of the first line, end of the last)
-  const linesAt = () => {
-    const [a, b] = caret();
-    const from = text.lastIndexOf('\n', a - 1) + 1;
-    const last = b > a && text[b - 1] === '\n' ? b - 1 : b;
-    let to = text.indexOf('\n', last); if (to < 0) to = text.length;
-    return [from, to];
-  };
-  const ALIGN_RE = /^<(center|right|left)>/i, STRUCT_RE = /^(# |- |\d{1,3}[.)]\s+)/;
-  const split = (ln) => { const am = ALIGN_RE.exec(ln); const align = am ? am[0] : ''; const rest = ln.slice(align.length).replace(/^ /, align ? '' : ' '); const sm = STRUCT_RE.exec(rest); const struct = sm ? sm[0] : ''; return { align, struct, body: rest.slice(struct.length) }; };
-  const kindOf = (struct) => (struct === '# ' ? 'heading' : struct === '- ' ? 'bullet' : struct ? 'number' : 'text');
-  const editLines = (fn) => {
-    const [from, to] = linesAt();
-    const out = text.slice(from, to).split('\n').map(fn).join('\n');
-    apply(from, to, out, from, from + out.length);
-  };
-  // heading, bullet or numbered list on every selected line; pressed again on lines that already have it, it goes away
-  const structure = (kind) => {
-    const [from, to] = linesAt();
-    const lines = text.slice(from, to).split('\n');
-    const filled = lines.filter(l => l.trim());
-    const all = filled.length > 0 && filled.every(l => kindOf(split(l).struct) === kind);
-    let n = 1;
-    if (kind === 'number' && from > 0) { const prev = split(text.slice(text.lastIndexOf('\n', from - 2) + 1, from - 1)); const pm = /^(\d{1,3})/.exec(prev.struct); if (pm) n = Number(pm[1]) + 1; }
-    editLines(l => {
-      if (!l.trim()) return l;
-      const { align, body } = split(l);
-      if (all) return align + body;
-      const mark = kind === 'heading' ? '# ' : kind === 'bullet' ? '- ' : `${n++}. `;
-      return align + mark + body;
-    });
-  };
-  // left, centre or right: the line starts with <center> or <right> (a heading is centred, anything else left, unless told otherwise)
-  const align = (al) => editLines(l => {
-    if (!l.trim()) return l;
-    const { struct, body } = split(l);
-    const base = kindOf(struct) === 'heading' ? 'center' : 'left';
-    return (al === base ? '' : `<${al}>`) + struct + body;
-  });
-  // take the marks off the selected words (or the lines): bold, italic, underline, list and alignment
-  const clearFormat = () => {
-    const strip = (t) => t.replace(/\*\*|__/g, '').replace(/(?<!\*)\*(?!\*)/g, '');
-    editLines(l => strip(split(l).body));
-  };
-  const onKeys = (e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
-    const k = e.key.toLowerCase();
-    if (k === 'b') { e.preventDefault(); wrap('**'); } else if (k === 'i') { e.preventDefault(); wrap('*'); } else if (k === 'u') { e.preventDefault(); wrap('__'); }
-  };
-
-  const create = async () => {
-    if (!adding.name.trim()) { Swal.fire({ icon: 'warning', title: 'Give the letter a name' }); return; }
-    if (adding.body.trim().length < 20) { Swal.fire({ icon: 'warning', title: 'Write the text of the letter', text: 'Add the content of the letter, or click the words on the right to put them in.' }); return; }
-    setBusy(true);
-    try {
-      const res = await fetch(`${API}/letters/templates`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ name: adding.name, body: adding.body }) });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.detail || 'Could not add');
-      setAdding(null); await load(d.letter_type);
-      Swal.fire({ icon: 'success', title: 'Letter added', timer: 1400, showConfirmButton: false });
-    } catch (e) { Swal.fire({ icon: 'error', title: 'Not added', text: e.message }); }
-    finally { setBusy(false); }
-  };
-  const remove = async () => {
-    if (!cur) return;
-    const c = await Swal.fire({ icon: 'warning', title: `Remove "${cur.name}"?`, text: 'Letters already made stay as they are. New ones of this kind cannot be made.', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#dc2626' });
-    if (!c.isConfirmed) return;
-    try {
-      const res = await fetch(`${API}/letters/templates?letter_type=${encodeURIComponent(key)}`, { method: 'DELETE', headers: auth() });
-      const d = await res.json(); if (!res.ok) throw new Error(d.detail || 'Could not remove');
-      setKey(''); load('');
-    } catch (e) { Swal.fire({ icon: 'error', title: 'Not removed', text: e.message }); }
-  };
-  const save = async (reset) => {
-    if (reset) { const c = await Swal.fire({ icon: 'question', title: 'Bring back the standard text?', text: 'Your changes to this letter are lost.', showCancelButton: true, confirmButtonText: 'Bring it back' }); if (!c.isConfirmed) return; }
-    setBusy(true);
-    try {
-      const res = await fetch(`${API}/letters/templates`, { method: 'PUT', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ letter_type: key, body, reset: !!reset }) });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.detail || 'Could not save');
-      Swal.fire({ icon: 'success', title: d.message, timer: 1500, showConfirmButton: false });
-      await load(key);
-    } catch (e) { Swal.fire({ icon: 'error', title: 'Not saved', text: e.message }); }
-    finally { setBusy(false); }
-  };
-
-  const words = data.placeholders.filter(([k, l]) => !q.trim() || (k + ' ' + l).toLowerCase().includes(q.trim().toLowerCase()));
-  const used = (k) => text.includes(`{{${k}}}`);
-  return (
-    <div className="lt-wrap">
-      <style>{LT_CSS}</style>
-
-      <aside className="lt-list">
-        <div className="lt-list-h">Letters <span>{data.templates.length}</span></div>
-        {data.templates.map(t => (
-          <button key={t.letter_type} type="button" className={`lt-item${!adding && key === t.letter_type ? ' on' : ''}`} onClick={() => pick(t.letter_type)}>
-            <b>{t.name}</b>
-            <small>{t.has_standard ? 'Standard letter' : 'Your own letter'}</small>
-          </button>
-        ))}
-        <button type="button" className={`lt-add${adding ? ' on' : ''}`} onClick={startAdd}>+ Add a letter</button>
-      </aside>
-
-      <section className="lt-main">
-        <div className="lt-head">
-          <div className="lt-title">
-            {adding
-              ? <><label htmlFor="lt-new-name">New letter</label><input id="lt-new-name" className="lt-name" maxLength={80} autoFocus value={adding.name} onChange={e => setAdding({ ...adding, name: e.target.value })} placeholder="Name, for example Salary certificate" /></>
-              : <><h3>{cur ? cur.name : 'No letter'}</h3>{cur && cur.updated_at && <small>Last saved {when(cur.updated_at)}{cur.updated_by ? ` by ${String(cur.updated_by).split('@')[0]}` : ''}</small>}</>}
-          </div>
-          <div className="lt-actions">
-            {adding ? (
-              <>
-                <button className="btn-o" onClick={() => setAdding(null)} disabled={busy}>Cancel</button>
-                <button className="btn-premium" onClick={create} disabled={busy}>{busy ? 'Adding...' : 'Add this letter'}</button>
-              </>
-            ) : cur && (
-              <>
-                {dirty && <span className="lt-dirty">Unsaved changes</span>}
-                {cur.has_standard && <button className="btn-o" onClick={() => save(true)} disabled={busy} title="Puts back the text the letter came with">Standard text</button>}
-                <button className="btn-o lt-del" onClick={remove} disabled={busy}>Remove</button>
-                <button className="btn-premium" onClick={() => save(false)} disabled={busy || !dirty}>Save</button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="lt-bar" role="toolbar" aria-label="Text formatting">
-          <div className="lt-tabs">
-            <button type="button" className={view === 'write' ? 'on' : ''} onClick={() => setView('write')}>Write</button>
-            <button type="button" className={view === 'preview' ? 'on' : ''} onClick={() => setView('preview')}>Preview</button>
-          </div>
-          <span className="lt-sep" />
-          <TbBtn label="B" title="Bold (Ctrl+B)" off={view !== 'write'} onClick={() => wrap('**')} style={{ fontWeight: 800 }} />
-          <TbBtn label="I" title="Italic (Ctrl+I)" off={view !== 'write'} onClick={() => wrap('*')} style={{ fontStyle: 'italic', fontFamily: 'serif' }} />
-          <TbBtn label="U" title="Underline (Ctrl+U)" off={view !== 'write'} onClick={() => wrap('__')} style={{ textDecoration: 'underline' }} />
-          <span className="lt-sep" />
-          <button type="button" className="lt-tb wide" title="Heading: bold and centred" disabled={view !== 'write'} onMouseDown={e => e.preventDefault()} onClick={() => structure('heading')}>Heading</button>
-          <button type="button" className="lt-tb wide" title="Bulleted list" disabled={view !== 'write'} onMouseDown={e => e.preventDefault()} onClick={() => structure('bullet')}>&bull; List</button>
-          <button type="button" className="lt-tb wide" title="Numbered list" disabled={view !== 'write'} onMouseDown={e => e.preventDefault()} onClick={() => structure('number')}>1. List</button>
-          <span className="lt-sep" />
-          <TbBtn title="Align left" off={view !== 'write'} onClick={() => align('left')} label={<AlignIcon kind="left" />} />
-          <TbBtn title="Centre" off={view !== 'write'} onClick={() => align('center')} label={<AlignIcon kind="center" />} />
-          <TbBtn title="Align right" off={view !== 'write'} onClick={() => align('right')} label={<AlignIcon kind="right" />} />
-          <span className="lt-sep" />
-          <button type="button" className="lt-tb wide" title="Remove bold, italic, underline, list and alignment from the selected lines" disabled={view !== 'write'} onMouseDown={e => e.preventDefault()} onClick={clearFormat}>Clear</button>
-        </div>
-
-        <div className="lt-edit">
-          <div className="lt-pane">
-            {view === 'write'
-              ? <textarea ref={area} className="lt-text" value={text} onChange={e => setText(e.target.value)} onKeyDown={onKeys} disabled={!adding && !cur}
-                  placeholder={adding ? 'Write the text of the letter here. Click a word on the right to put it in, for example the employee name.' : ''} />
-              : <LetterPreview text={text} />}
-            <div className="lt-count">{view === 'write' ? `${text.length.toLocaleString()} characters` : 'The words in { } are filled in for each employee when the letter is made'}</div>
-          </div>
-          <div className="lt-words">
-            <div className="lt-words-h">Words</div>
-            <input className="lt-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search words" aria-label="Search words" />
-            <p>Click a word to put it where the cursor is. It is filled in for each employee. Add your own on the "Letter words" tab.</p>
-            <div className="lt-chips">
-              {words.length === 0 && <span className="lt-none">No word matches.</span>}
-              {words.map(([k, l]) => <button type="button" key={k} title={l} className={used(k) ? 'used' : ''} onClick={() => put(`{{${k}}}`)}>{k}</button>)}
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-// a toolbar button: pressing it keeps the cursor and the selection in the text
-function TbBtn({ label, title, onClick, off, style }) {
-  return <button type="button" className="lt-tb" title={title} aria-label={title} disabled={off} onMouseDown={e => e.preventDefault()} onClick={onClick} style={style}>{label}</button>;
-}
-function AlignIcon({ kind }) {
-  const rows = { left: [[3, 21], [3, 15], [3, 19]], center: [[3, 21], [7, 17], [5, 19]], right: [[3, 21], [9, 21], [5, 21]] }[kind];
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      {rows.map(([x1, x2], i) => <line key={i} x1={x1} y1={6 + i * 6} x2={x2} y2={6 + i * 6} />)}
-    </svg>
-  );
-}
-
-// the letter as it will read, with the words that get filled in marked
-function LetterPreview({ text }) {
-  const paras = parseLetter(text);
-  const words = (t) => String(t).split(/(\{\{[^}]+\}\})/).map((p, i) => (/^\{\{[^}]+\}\}$/.test(p) ? <mark key={i} className="lt-ph">{p}</mark> : p));
-  if (!paras.length) return <div className="lt-paper" style={{ color: '#94a3b8' }}>Nothing written yet.</div>;
-  return (
-    <div className="lt-paper">
-      {paras.map((blk, i) => (
-        <div key={i} className="lt-para">
-          {blk.map((ln, j) => (
-            <div key={j} className={`lt-ln ${ln.kind}`} style={{ textAlign: ln.align }}>
-              {ln.label && <span className="lt-lab">{ln.label}</span>}
-              {ln.runs.map((r, k) => <span key={k} style={{ fontWeight: r.bold ? 700 : undefined, fontStyle: r.italic ? 'italic' : undefined, textDecoration: r.underline ? 'underline' : undefined }}>{words(r.text)}</span>)}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const LT_CSS = `
-.lt-wrap { display:grid; grid-template-columns:220px minmax(0,1fr); gap:14px; align-items:start; }
-.lt-list { background:#fff; border:1px solid #eadfd5; border-radius:12px; padding:8px; display:flex; flex-direction:column; gap:3px; position:sticky; top:12px; }
-.lt-list-h { display:flex; justify-content:space-between; align-items:center; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#94a3b8; padding:6px 10px 4px; }
-.lt-list-h span { background:var(--brand-soft-2,#f4ede7); color:var(--brand-dark); border-radius:20px; padding:0 8px; font-size:.68rem; }
-.lt-item { text-align:left; border:1px solid transparent; background:transparent; border-radius:9px; padding:8px 10px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; gap:1px; }
-.lt-item b { font-size:.84rem; color:#334155; font-weight:600; }
-.lt-item small { font-size:.7rem; color:#94a3b8; }
-.lt-item:hover { background:var(--brand-soft,#f4ede7); }
-.lt-item.on { background:var(--brand-soft,#f4ede7); border-color:var(--brand-line,#d9c5b3); }
-.lt-item.on b { color:var(--brand-dark); }
-.lt-add { margin-top:4px; border:1px dashed #cbd5e1; background:transparent; color:#475569; border-radius:9px; padding:8px 10px; font-size:.8rem; font-weight:600; cursor:pointer; font-family:inherit; }
-.lt-add:hover, .lt-add.on { border-color:var(--brand); color:var(--brand-dark); background:var(--brand-soft,#f4ede7); }
-.lt-main { background:#fff; border:1px solid #eadfd5; border-radius:12px; min-width:0; }
-.lt-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid #f1e8df; }
-.lt-title { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 240px; }
-.lt-title h3 { margin:0; font-size:1.02rem; }
-.lt-title small, .lt-title label { font-size:.72rem; color:#94a3b8; }
-.lt-title label { font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
-.lt-name { border:1px solid #e2e8f0; border-radius:8px; padding:7px 10px; font-size:.9rem; font-family:inherit; max-width:380px; width:100%; background:#fff; }
-.lt-name:focus, .lt-text:focus, .lt-search:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(111,78,55,.12); }
-.lt-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.lt-actions .btn-o, .lt-actions .btn-premium { height:32px; padding:0 14px; font-size:.8rem; }
-.lt-actions .btn-premium:disabled { opacity:.45; cursor:default; }
-.lt-del { color:#b91c1c !important; }
-.lt-del:hover { background:#fef2f2 !important; border-color:#fecaca !important; }
-.lt-dirty { font-size:.72rem; font-weight:700; color:#b45309; background:#fef3c7; border-radius:20px; padding:3px 10px; }
-.lt-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 16px; border-bottom:1px solid #f1e8df; background:#fcfaf8; }
-.lt-bar button { border:1px solid #e2e8f0; background:#fff; border-radius:7px; height:26px; padding:0 10px; font-size:.74rem; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; }
-.lt-bar button:hover { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); }
-.lt-bar .lt-tb { min-width:28px; padding:0 7px; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; }
-.lt-bar .lt-tb.wide { padding:0 10px; font-size:.74rem; }
-.lt-bar .lt-tb:disabled { opacity:.4; cursor:default; }
-.lt-bar .lt-sep { width:1px; height:18px; background:#e2e8f0; margin:0 4px; }
-.lt-tabs { display:inline-flex; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; }
-.lt-tabs button { border:none !important; border-radius:0 !important; height:26px; background:#fff; }
-.lt-tabs button.on { background:var(--brand) !important; color:#fff !important; }
-.lt-paper { min-height:440px; border:1px solid #e2e8f0; border-radius:10px; padding:26px 32px; background:#fff; color:#1e293b; font-family:Arial, Helvetica, sans-serif; font-size:.88rem; line-height:1.6; }
-.lt-para { margin-bottom:12px; }
-.lt-ln.heading { font-size:1.05rem; margin:6px 0; }
-.lt-ln.bullet, .lt-ln.number { padding-left:14px; }
-.lt-lab { display:inline-block; min-width:22px; }
-.lt-ph { background:var(--brand-soft-2, #ebdfd3); color:var(--brand-dark); border-radius:4px; padding:0 3px; font-family:monospace; font-size:.8em; }
-.lt-edit { display:grid; grid-template-columns:minmax(0,1fr) 270px; }
-.lt-pane { padding:14px 16px; min-width:0; }
-.lt-text { width:100%; box-sizing:border-box; min-height:440px; resize:vertical; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; font-size:.9rem; line-height:1.65; font-family:inherit; color:#1e293b; background:#fff; }
-.lt-count { text-align:right; font-size:.7rem; color:#94a3b8; margin-top:4px; }
-.lt-words { border-left:1px solid #f1e8df; padding:14px 14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
-.lt-words-h { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#94a3b8; }
-.lt-search { border:1px solid #e2e8f0; border-radius:8px; padding:7px 10px; font-size:.82rem; font-family:inherit; background:#fff; width:100%; box-sizing:border-box; }
-.lt-words p { margin:0; font-size:.72rem; color:#94a3b8; line-height:1.45; }
-.lt-chips { display:flex; flex-wrap:wrap; gap:5px; max-height:430px; overflow:auto; }
-.lt-chips button { background:var(--brand-soft); color:var(--brand-dark); border:1px solid var(--brand-line); border-radius:6px; padding:2px 8px; font-family:monospace; font-size:.74rem; cursor:pointer; }
-.lt-chips button:hover { background:var(--brand-soft-2,#ebdfd3); }
-.lt-chips button.used { background:var(--brand); color:#fff; border-color:var(--brand); }
-.lt-none { font-size:.78rem; color:#94a3b8; }
-.lt-text { min-height:440px; }
-@media (max-width:900px) {
-  .lt-wrap { grid-template-columns:1fr; }
-  .lt-list { position:static; flex-direction:row; flex-wrap:wrap; }
-  .lt-list-h { width:100%; }
-  .lt-edit { grid-template-columns:1fr; }
-  .lt-words { border-left:none; border-top:1px solid #f1e8df; }
-  .lt-text { min-height:320px; }
-}
-`;
 
 // How the letters get their header: the company header the app draws, HR's own letterhead picture behind every page, or none at all.
 const LH_MODES = [
@@ -877,6 +579,128 @@ const LH_CSS = `
 .lh-lines { position:absolute; left:11%; right:11%; padding-top:6%; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
 .lh-lines u { display:block; height:4px; background:#cbd5e1; border-radius:2px; text-decoration:none; }
 @media (max-width:820px) { .lh-wrap { grid-template-columns:1fr; } }
+`;
+
+// Letters > Salary Breakup: the components of Annexure I and the percent of the fixed salary each takes. The table of an offer, appointment or
+// appraisal letter is worked out from these: fixed salary = monthly salary - variable pay; each component = its percent of the fixed salary.
+function Breakup() {
+  const [rows, setRows] = useState(null);
+  const [saved, setSaved] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [total, setTotal] = useState('33000');
+  const [variable, setVariable] = useState('3000');
+  const [cols, setCols] = useState([]); // headings of the extra columns
+  const norm = (r, c = cols) => r.map(x => ({ name: String(x.name).trim(), percent: x.mode === 'amount' ? 0 : (x.percent !== undefined && x.value === undefined ? Number(x.percent) || 0 : Number(x.value) || 0), amount: x.mode === 'amount' ? Math.round(Number(x.value) || 0) : (x.amount || 0), variable: false, extra: c.map((_, i) => String((x.extra || [])[i] || '').trim()) }));
+  const load = () => fetch(`${API}/letters/breakup`, { headers: auth() }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Could not load'); return d; })
+    .then(d => { const c = d.columns || []; setCols(c); setRows(d.rows.map(r => ({ name: r.name, mode: r.amount > 0 ? 'amount' : 'percent', value: String(r.amount > 0 ? r.amount : r.percent), variable: false, extra: c.map((_, i) => (r.extra || [])[i] || '') }))); setSaved(JSON.stringify({ c, r: norm(d.rows, c) })); })
+    .catch(e => Swal.fire({ icon: 'error', title: 'Error', text: e.message }));
+  useEffect(() => { load(); }, []);
+  if (!rows) return <div style={{ padding: 20, color: '#94a3b8' }}>Loading...</div>;
+
+  const list = norm(rows);
+  const sum = Math.round(list.reduce((a, b) => a + b.percent, 0) * 100) / 100;
+  const noPercent = list.length > 0 && !list.some(x => !(x.amount > 0));
+  const dirty = JSON.stringify({ c: cols.map(x => x.trim()), r: list }) !== saved;
+  const names = list.map(x => x.name.toLowerCase());
+  const problem = list.length === 0 ? 'Add at least one component' : list.some(x => !x.name) ? 'Every component needs a name' : list.some(x => !(x.percent > 0) && !(x.amount > 0)) ? 'Every component needs a percent or an amount' : noPercent ? 'At least one component must take a percent (it gets what is left after the fixed amounts)' : new Set(names).size !== names.length ? 'A component name is there twice' : Math.abs(sum - 100) > 0.01 ? `The percents add up to ${sum}. They must add up to 100 (the amounts are not counted).` : '';
+  const comp = compensation(Number(total) || 0, Number(variable) || 0, problem ? [] : list);
+  const set = (i, k, v) => setRows(r => r.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  const setExtra = (i, c, v) => setRows(r => r.map((x, j) => (j === i ? { ...x, extra: cols.map((_, k) => (k === c ? v : (x.extra || [])[k] || '')) } : x)));
+  const addCol = () => { setCols(c => [...c, '']); setRows(r => r.map(x => ({ ...x, extra: [...(x.extra || []), ''] }))); };
+  const delCol = (c) => { setCols(x => x.filter((_, k) => k !== c)); setRows(r => r.map(x => ({ ...x, extra: (x.extra || []).filter((_, k) => k !== c) }))); };
+  const colProblem = cols.some(x => !x.trim()) ? 'Every extra column needs a heading' : '';
+  const grid = { gridTemplateColumns: `minmax(0,1.2fr) 120px 150px ${cols.map(() => 'minmax(0,1fr)').join(' ')} auto` };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/letters/breakup`, { method: 'PUT', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: list, columns: cols.map(x => x.trim()) }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.detail || 'Could not save');
+      Swal.fire({ icon: 'success', title: d.message, timer: 1400, showConfirmButton: false });
+      await load();
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Not saved', text: e.message }); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bk-wrap">
+      <style>{BK_CSS}</style>
+      <section className="bk-card">
+        <h3>Components</h3>
+        <p className="bk-help">Each component takes a percent of the <b>fixed salary</b> (the monthly salary minus the variable pay typed for the letter), or a fixed amount in Rs. a month. The fixed amounts are taken first and the percents share what is left. The percents must add up to 100. The yearly amount is the monthly amount x 12.</p>
+        <div className="bk-rows">
+          <div className="bk-row bk-head" style={grid}><span>Component</span><span>Percent (%)</span><span>Or amount (Rs. a month)</span>{cols.map((c, k) => (
+            <span key={k} className="bk-pct"><input className="bk-in" value={c} maxLength={30} placeholder="Column heading" aria-label="Column heading" onChange={e => setCols(x => x.map((v, j) => (j === k ? e.target.value : v)))} /><button type="button" className="um-b bk-del" title="Remove this column" onClick={() => delCol(k)}>x</button></span>
+          ))}<span /></div>
+          {rows.map((r, i) => (
+            <div key={i} className="bk-row" style={grid}>
+              <input className="bk-in" value={r.name} maxLength={40} onChange={e => set(i, 'name', e.target.value)} aria-label="Component name" placeholder="Name, for example Basic" />
+              <input className="bk-in" type="number" min="0" step="0.5" value={r.mode === 'amount' ? '' : r.value} placeholder="%" onChange={e => setRows(x => x.map((y, j) => (j === i ? { ...y, mode: 'percent', value: e.target.value } : y)))} aria-label="Percent" />
+              <input className="bk-in" type="number" min="0" step="1" value={r.mode === 'amount' ? r.value : ''} placeholder="Rs." onChange={e => setRows(x => x.map((y, j) => (j === i ? { ...y, mode: e.target.value === '' ? 'percent' : 'amount', value: e.target.value } : y)))} aria-label="Amount" />
+
+              {cols.map((c, k) => <input key={k} className="bk-in" value={(r.extra || [])[k] || ''} maxLength={60} onChange={e => setExtra(i, k, e.target.value)} aria-label={c || 'Extra column'} placeholder={c || 'Details'} />)}
+              <button type="button" className="um-b bk-del" disabled={rows.length <= 1} onClick={() => setRows(x => x.filter((_, j) => j !== i))}>Remove</button>
+            </div>
+          ))}
+        </div>
+        <div className="bk-foot">
+          <button type="button" className="um-b" disabled={rows.length >= 10} onClick={() => setRows(x => [...x, { name: '', mode: 'percent', value: '', variable: false, extra: cols.map(() => '') }])}>+ Add a component</button>
+          <button type="button" className="um-b" disabled={cols.length >= 3} onClick={addCol}>+ Add a column</button>
+          <span className={`bk-sum${problem || colProblem ? ' bad' : ' ok'}`}>Total {sum}%{problem || colProblem ? ` - ${problem || colProblem}` : ''}</span>
+        </div>
+        <div className="bk-actions">
+          <button className="btn-premium" onClick={save} disabled={busy || !dirty || !!problem || !!colProblem}>{busy ? 'Saving...' : 'Save'}</button>
+          <button className="btn-o" onClick={() => load()} disabled={busy || !dirty}>Discard</button>
+          {dirty && <span className="lt-dirty">Unsaved changes</span>}
+        </div>
+      </section>
+
+      <section className="bk-card">
+        <h3>Try it</h3>
+        <p className="bk-help">Type a salary to see the table a letter would get. The variable pay is a part of the monthly salary and is shown as its own line.</p>
+        <div className="bk-try">
+          <div><label className="bk-lab" htmlFor="bk-total">Monthly salary (total)</label><input id="bk-total" className="bk-in" type="number" min="0" value={total} onChange={e => setTotal(e.target.value)} /></div>
+          <div><label className="bk-lab" htmlFor="bk-var">Variable pay</label><input id="bk-var" className="bk-in" type="number" min="0" value={variable} onChange={e => setVariable(e.target.value)} /></div>
+        </div>
+        {comp.total > 0 && !problem ? (
+          <table className="lt-table bk-table"><tbody>
+            <tr><th>Salary Component</th><th>Monthly (&#8377;)</th><th>Yearly (&#8377;)</th>{cols.map((c, k) => <th key={k}>{c}</th>)}</tr>
+            {comp.rows.map(r => <tr key={r.name}><td>{r.name}</td><td>{inr(r.monthly)}</td><td>{inr(r.yearly)}</td>{cols.map((_, k) => <td key={k}>{(r.extra || [])[k] || '-'}</td>)}</tr>)}
+            {comp.variable > 0 && !comp.listed && <tr><td>Variable Pay</td><td>{inr(comp.variable)}</td><td>{inr(comp.variable * 12)}</td>{cols.map((_, k) => <td key={k}>-</td>)}</tr>}
+            <tr><th>Grand Total</th><th>{inr(comp.total)}</th><th>{inr(comp.total * 12)}</th>{cols.map((_, k) => <th key={k}>-</th>)}</tr>
+          </tbody></table>
+        ) : <div className="bk-help">{problem || 'Type a monthly salary.'}</div>}
+      </section>
+    </div>
+  );
+}
+
+const BK_CSS = `
+.bk-wrap { display:grid; gap:14px; width:100%; }
+.bk-head { font-size:.75rem; font-weight:600; color:#64748b; }
+.bk-card { background:#fff; border:1px solid #eadfd5; border-radius:12px; padding:14px 18px 18px; }
+.bk-card h3 { margin:0 0 4px; font-size:.98rem; } .bk-help { font-size:.78rem; color:#64748b; line-height:1.5; margin:0 0 10px; }
+.bk-rows { display:grid; gap:8px; }
+.bk-row { display:grid; grid-template-columns:minmax(0,1fr) 120px auto; gap:10px; align-items:center; }
+.bk-in { width:100%; box-sizing:border-box; border:1px solid #e2e8f0; border-radius:9px; padding:8px 11px; font-size:.88rem; font-family:inherit; background:#fff; color:#1e293b; }
+.bk-in:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(111,78,55,.12); }
+.bk-mode { width:64px; padding:8px 4px; }
+.bk-pct { display:flex; align-items:center; gap:6px; } .bk-pct b { color:#64748b; }
+.bk-foot { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px; }
+.bk-sum { font-size:.8rem; font-weight:700; border-radius:20px; padding:3px 12px; } .bk-sum.ok { background:#dcfce7; color:#166534; } .bk-sum.bad { background:#fee2e2; color:#b91c1c; }
+.bk-actions { display:flex; gap:8px; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid #f1e8df; }
+.bk-actions .btn-premium:disabled { opacity:.45; cursor:default; }
+.bk-try { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.bk-lab { display:block; font-size:.74rem; font-weight:700; color:#475569; margin-bottom:4px; }
+.bk-table { margin:6px 0 0; min-width:100%; }
+.bk-table th, .bk-table td { border:1px solid #334155; }
+.um-b { height:28px; padding:0 11px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.um-b:hover:not(:disabled) { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); } .um-b:disabled { opacity:.45; cursor:default; }
+.um-b.bk-del { color:#b91c1c; }
+.lt-dirty { font-size:.72rem; font-weight:700; color:#b45309; background:#fef3c7; border-radius:20px; padding:3px 10px; }
+.lt-table { border-collapse:collapse; margin:8px auto 14px; min-width:70%; } .lt-table th, .lt-table td { padding:5px 12px; text-align:center; font-size:.84rem; }
+@media (max-width:600px) { .bk-row { grid-template-columns:1fr 96px; } .bk-row .bk-del { grid-column:1 / -1; } .bk-try { grid-template-columns:1fr; } }
 `;
 
 // The words of the letters. Every word can be added, changed and removed. A word is filled from a piece of data (the employee's profile,

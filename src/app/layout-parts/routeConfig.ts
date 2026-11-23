@@ -46,6 +46,7 @@ export const ROUTE_ROLES: Record<string, string[]> = {
   '/letters/texts': ADMIN_HR_STAFF,
   '/letters/words': ADMIN_HR_STAFF,
   '/letters/letterhead': ADMIN_HR_STAFF,
+  '/letters/breakup': ADMIN_HR_STAFF,
   '/exits': ADMIN_HR_STAFF,
   '/payroll/statutory': ADMIN_HR_STAFF,
   '/payroll/guide': ADMIN_HR_STAFF,
@@ -55,6 +56,7 @@ export const ROUTE_ROLES: Record<string, string[]> = {
 export function getRouteRole(pathname: string): string[] {
   if (ROUTE_ROLES[pathname]) return ROUTE_ROLES[pathname];
   if (pathname.startsWith('/employees/detail/')) return ADMIN_HR_STAFF;
+  if (pathname.startsWith('/letters/texts/')) return ADMIN_HR_STAFF;
   if (pathname.startsWith('/employees/edit/')) return ADMIN_HR;
   if (pathname.startsWith('/masters/departments/edit/')) return ADMIN_HR;
   if (pathname.startsWith('/masters/designations/edit/')) return ADMIN_HR;

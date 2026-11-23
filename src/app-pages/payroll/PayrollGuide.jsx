@@ -16,7 +16,37 @@ export const Table = ({ head, rows, widths }) => (
   </div>
 );
 export const Steps = ({ items }) => <ol style={{ margin: '6px 0 6px 20px', padding: 0, fontSize: '.86rem', lineHeight: 1.7 }}>{items.map((x, i) => <li key={i}>{x}</li>)}</ol>;
-export const P = ({ children }) => <p style={{ margin: '6px 0', fontSize: '.86rem', lineHeight: 1.65 }}>{children}</p>;
+// A paragraph of the guide is shown as points: one point for each sentence (a one-sentence paragraph stays a line).
+const ABBR = /(?:e\.g|i\.e|etc|vs|Rs|No|approx|incl|Dr|Mr|Mrs)\.$/i;
+const toPoints = (children) => {
+  const items = [[]];
+  const nodes = React.Children.toArray(children);
+  nodes.forEach((n) => {
+    if (typeof n !== 'string') { items[items.length - 1].push(n); return; }
+    const re = /[.!?]["')]?\s+(?=[A-Z0-9"(₹])/g;
+    let last = 0, m;
+    while ((m = re.exec(n))) {
+      const end = m.index + m[0].trimEnd().length;
+      if (ABBR.test(n.slice(0, end))) continue;
+      items[items.length - 1].push(n.slice(last, end));
+      items.push([]); last = m.index + m[0].length;
+    }
+    items[items.length - 1].push(n.slice(last));
+  });
+  return items.filter(it => it.some(x => typeof x !== 'string' || x.trim()));
+};
+export const P = ({ children }) => {
+  const items = toPoints(children);
+  if (items.length < 2) return <p style={{ margin: '6px 0', fontSize: '.86rem', lineHeight: 1.65 }}>{children}</p>;
+  return <ul style={{ margin: '6px 0 8px 20px', padding: 0, fontSize: '.86rem', lineHeight: 1.7 }}>{items.map((it, i) => <li key={i}>{it.map((x, j) => <React.Fragment key={j}>{x}</React.Fragment>)}</li>)}</ul>;
+};
+// a picture of the page being described
+export const Shot = ({ src, alt, caption }) => (
+  <figure style={{ margin: '8px 0 12px', maxWidth: 640 }}>
+    <img src={src} alt={alt} loading="lazy" style={{ width: '100%', border: '1px solid var(--border, #e2e8f0)', borderRadius: 10, display: 'block' }} />
+    {caption && <figcaption style={{ fontSize: '.74rem', color: 'var(--text-muted, #64748b)', marginTop: 4 }}>{caption}</figcaption>}
+  </figure>
+);
 export const Note = ({ children, tone = '#fff7ed', border = '#fed7aa' }) => <div style={{ background: tone, border: '1px solid ' + border, borderRadius: 10, padding: '8px 12px', margin: '8px 0', fontSize: '.82rem', lineHeight: 1.6 }}>{children}</div>;
 const Formula = ({ children }) => <div style={{ background: '#0f172a', color: '#e2e8f0', borderRadius: 10, padding: '10px 14px', margin: '8px 0', fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '.82rem', overflowX: 'auto' }}>{children}</div>;
 

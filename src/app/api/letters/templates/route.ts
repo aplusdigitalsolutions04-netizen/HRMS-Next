@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { allPlaceholders, DEFAULT_TEMPLATES, ensureLetterTemplates } from '@/lib/letters';
+import { maxLetterLen, allPlaceholders, DEFAULT_TEMPLATES, ensureLetterTemplates } from '@/lib/letters';
 import { auditFrom } from '@/lib/audit';
 
 // The text of each letter. GET lists them with the placeholders that can be used; PUT { letter_type, body } saves one (reset: true
@@ -32,7 +32,7 @@ async function PUT_handler(req: NextRequest) {
     if (b.reset && !DEFAULT_TEMPLATES[b.letter_type]) return jsonError('This letter has no standard text', 422);
     const body = b.reset ? DEFAULT_TEMPLATES[b.letter_type] : String(b.body || '').trim();
     if (body.length < 20) return jsonError('The text is too short', 422);
-    if (body.length > 20000) return jsonError('The text is too long', 422);
+    if (body.length > maxLetterLen(body)) return jsonError('The text is too long', 422);
     await execute('UPDATE letter_templates SET body = ?, updated_by = ?, updated_at = NOW() WHERE letter_type = ?', [body, user.email || String(user.id), b.letter_type]);
     await auditFrom(user, 'letter_template_changed', 'settings', b.letter_type, { reset: !!b.reset });
     return jsonSuccess({ message: b.reset ? 'Standard text restored' : 'Saved', body });
