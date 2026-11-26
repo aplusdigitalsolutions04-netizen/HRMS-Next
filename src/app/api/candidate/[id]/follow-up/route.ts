@@ -6,7 +6,7 @@ import { query, execute } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { sendEmailDetailed } from '@/lib/email';
 import { auditFrom } from '@/lib/audit';
-import { plainToHtml } from '@/lib/mail-format';
+import { plainToHtml, htmlToPlain } from '@/lib/mail-format';
 import { ensureFollowUpTemplate, FOLLOW_UP_CATEGORY } from '@/lib/masters';
 
 const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -82,7 +82,7 @@ async function GET_handler(req: NextRequest, { params }: { params: Promise<{ id:
       interview_date: fmtDate(c.interview_date), company_name: company.company_name || '', hr_name: user.name || 'HR Team', hr_email: user.email || '',
       office_address: off.office_address || '', office_map_link: off.office_map_link || '',
     };
-    return jsonSuccess({ templates: tpls.map(t => ({ id: t.id, name: t.name, category: t.category, subject: tidy(fill(t.subject, vals)), message: tidy(fill(t.body, vals)) })) });
+    return jsonSuccess({ templates: tpls.map(t => ({ id: t.id, name: t.name, category: t.category, subject: tidy(fill(t.subject, vals)), message: tidy(htmlToPlain(fill(t.body, vals))) })) });
   } catch (e: any) { return jsonError(e, 500); }
 }
 

@@ -7,7 +7,7 @@ const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;'
 // true when the text already has HTML layout tags (paragraphs, tables, lists ...); such a mail is sent as it is
 export const hasBlockHtml = (s: string) => /<\/?(p|div|br|table|tr|td|ul|ol|li|h[1-6])\b/i.test(String(s || ''));
 
-const STYLE = 'font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6';
+export const STYLE = 'font-family:Arial,sans-serif;font-size:14px;color:#1f2937;line-height:1.6';
 
 // Plain words to HTML: a blank line starts a new paragraph, a single new line becomes <br>.
 // Inline tags the author typed (<b>, <a>, <img>) are kept unless escapeText is true.

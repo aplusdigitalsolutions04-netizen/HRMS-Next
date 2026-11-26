@@ -80,26 +80,13 @@ export default function TemplateEditor() {
     };
 
     const insertVariable = (varText) => {
-        const el = bodyRef.current;
-        let cursorPos = null;
-        setPreview(p => {
-            if (!p) return p;
-            const currentBody = p.body || '';
-            let body;
-            if (el && typeof el.selectionStart === 'number') {
-                const start = el.selectionStart, end = el.selectionEnd;
-                body = currentBody.slice(0, start) + varText + currentBody.slice(end);
-                cursorPos = start + varText.length;
-            } else {
-                body = currentBody ? `${currentBody} ${varText}` : varText;
-                cursorPos = body.length;
-            }
-            const m = varText.match(/^\{\{(.+)\}\}$/);
-            const varName = m ? m[1] : varText.replace(/[{}]/g, '');
-            const variables = p.variables.includes(varName) ? p.variables : [...p.variables, varName];
-            return { ...p, body, variables };
-        });
-        if (el) requestAnimationFrame(() => { el.focus(); if (cursorPos != null) el.setSelectionRange(cursorPos, cursorPos); });
+        // the word is put where the cursor is in the mail editor (the editor then reports the new text)
+        const ed = bodyRef.current;
+        if (ed && ed.insert) ed.insert(varText);
+        else setPreview(p => (p ? { ...p, body: p.body ? `${p.body} ${varText}` : varText } : p));
+        const m = varText.match(/^\{\{(.+)\}\}$/);
+        const varName = m ? m[1] : varText.replace(/[{}]/g, '');
+        setPreview(p => (p ? { ...p, variables: p.variables.includes(varName) ? p.variables : [...p.variables, varName] } : p));
     };
 
     const title = id ? 'Edit Template' : preview && preview.fromFile ? 'Review Template from File' : 'Create Template';

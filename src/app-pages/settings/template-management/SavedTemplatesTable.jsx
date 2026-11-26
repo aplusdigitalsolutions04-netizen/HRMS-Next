@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { fmt, parseVars, CHIP_COLORS } from './helpers';
 import { Link } from 'react-router-dom';
+// a template written as plain words is shown with its new lines; one written in the mail editor is HTML
+const showBody = (b) => (/<\/?(p|div|br|table|ul|ol|li|blockquote)\b/i.test(b || '') ? b : String(b || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'));
 import Pagination, { paginate } from '../../shared/Pagination';
 
 const PAGE_SIZE = 10;
@@ -155,7 +157,7 @@ export default function SavedTemplatesTable({ templates: allTemplates, categorie
                                                     </div>
                                                     <div className="expand-field">
                                                         <div className="expand-label">📝 Email Body</div>
-                                                        <div className="expand-value">{t.body}</div>
+                                                        <div className="expand-value" dangerouslySetInnerHTML={{ __html: showBody(t.body) }} />
                                                     </div>
                                                     {parseVars(t.variables).length > 0 && (
                                                         <div className="expand-field" style={{ marginBottom: 0 }}>

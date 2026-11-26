@@ -4,7 +4,7 @@ import { query } from './db';
 import { RowDataPacket } from 'mysql2';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { decryptSecret, saveToSent } from './mailbox';
-import { hasBlockHtml, plainToHtml, htmlToPlain, linkify, signatureHtml } from './mail-format';
+import { hasBlockHtml, plainToHtml, htmlToPlain, linkify, signatureHtml, STYLE } from './mail-format';
 
 interface SmtpRow extends RowDataPacket {
   smtp_host: string;
@@ -22,7 +22,8 @@ interface SmtpRow extends RowDataPacket {
 // markup, wrap it so newlines/indentation are preserved as the author typed
 // them, instead of touching every call site that composes an email body.
 function toHtmlBody(content: string): string {
-  if (hasBlockHtml(content)) return content;
+  // a mail written in the mail editor is paragraphs and lists: it gets the usual font and spacing
+  if (hasBlockHtml(content)) return /^\s*<(p|ul|ol|blockquote)\b/i.test(content) ? `<div style="${STYLE}">${content}</div>` : content;
   return plainToHtml(content);
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import Swal from 'sweetalert2';
 import { appLocale } from '@/lib/app-config-client';
-import AddLinkButton from '../../shared/AddLinkButton';
+import MailEditor from '../../shared/MailEditor';
 
 const EmailComposeModal = ({
     isOpen, candidateName, candidateEmail, applyPost, roundSelect, interviewDate, modeSelect,
@@ -163,8 +163,7 @@ const EmailComposeModal = ({
 
                                 <div className="em-field">
                                     <label className="em-label">📝 Email Body</label>
-                                    <textarea className="em-textarea" value={emailBody} onChange={e => setEmailBody(e.target.value)} placeholder="Select a template above, or type your email here…" rows={8} />
-                                    <AddLinkButton />
+                                    <MailEditor value={emailBody} onChange={setEmailBody} placeholder="Select a template above, or type your email here…" minHeight={200} />
                                 </div>
 
                                 {emailSending === 'sending' && (

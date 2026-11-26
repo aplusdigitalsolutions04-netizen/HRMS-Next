@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import AddLinkButton from '../shared/AddLinkButton';
+import MailEditor from '../shared/MailEditor';
 import Pagination, { paginate } from '../shared/Pagination';
 import { appLocale } from '@/lib/app-config-client';
 
@@ -337,15 +337,7 @@ const formatEmailBody = (body) => {
             </div>
             <div className="el-view-field-label" style={{ marginBottom:8 }}>Body</div>
             {isEditing ? (
-                <>
-                <textarea 
-                    className="premium-input" 
-                    style={{ width: '100%', minHeight: '300px', padding: '16px', fontSize: '0.9rem', lineHeight: '1.6' }} 
-                    value={viewingDraft.body || ''} 
-                    onChange={e => setViewingDraft({...viewingDraft, body: e.target.value})}
-                />
-                <AddLinkButton />
-                </>
+                <MailEditor value={viewingDraft.body || ''} onChange={html => setViewingDraft(d => ({ ...d, body: html }))} minHeight={300} />
             ) : (
                 <div className="el-view-body-box" dangerouslySetInnerHTML={{ __html: formatEmailBody(viewingDraft.body) }} />
             )}
