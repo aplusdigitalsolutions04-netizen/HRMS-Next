@@ -41,6 +41,7 @@ async function POST_handler(req: NextRequest, { params }: { params: Promise<{ id
 const FILL: Record<string, string[]> = {
   candidate_name: ['candidate_name', 'name'], position: ['position', 'job_role', 'apply_post'], interview_round: ['interview_round', 'round'],
   interview_date: ['interview_date', 'date'], company_name: ['company_name'], hr_name: ['hr_name', 'sender_name'], hr_email: ['hr_email', 'sender_email'],
+  office_address: ['office_address'], office_map_link: ['office_map_link'],
 };
 function fill(text: string, vals: Record<string, string>) {
   let out = String(text || '');
@@ -74,9 +75,12 @@ async function GET_handler(req: NextRequest, { params }: { params: Promise<{ id:
        WHERE COALESCE(is_deleted,0) = 0 AND COALESCE(template_type, '') NOT IN ('Employee Invite', 'employee')
        ORDER BY (template_type = ?) DESC, template_type, created_on, name`, [FOLLOW_UP_CATEGORY]);
     const company = (await query<RowDataPacket[]>('SELECT company_name FROM company_settings LIMIT 1'))[0] || {};
+    const office = await query<RowDataPacket[]>("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('office_address','office_map_link')");
+    const off: Record<string, string> = {}; for (const r of office) off[r.setting_key] = r.setting_value || '';
     const vals = {
       candidate_name: c.candidate_name || '', position: c.apply_post || '', interview_round: c.interview_round || '',
       interview_date: fmtDate(c.interview_date), company_name: company.company_name || '', hr_name: user.name || 'HR Team', hr_email: user.email || '',
+      office_address: off.office_address || '', office_map_link: off.office_map_link || '',
     };
     return jsonSuccess({ templates: tpls.map(t => ({ id: t.id, name: t.name, category: t.category, subject: tidy(fill(t.subject, vals)), message: tidy(fill(t.body, vals)) })) });
   } catch (e: any) { return jsonError(e, 500); }

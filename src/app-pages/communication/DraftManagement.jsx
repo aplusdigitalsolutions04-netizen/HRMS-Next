@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import AddLinkButton from '../shared/AddLinkButton';
 import Pagination, { paginate } from '../shared/Pagination';
 import { appLocale } from '@/lib/app-config-client';
 
@@ -56,7 +57,7 @@ const DraftManagement = () => {
     const matches = textToScan.match(/\{{1,2}[A-Za-z0-9_]+\}{1,2}/gi) || [];
     
     // Ignore known standard variables handled elsewhere or manually
-    const standardVars = ['{candidate_name}', '{{candidate_name}}', '{name}', '{{name}}', '{{email}}', '{{password}}', '{{official_email}}', '{{official_no}}', '{{login_url}}', '{{official_details_section}}', '{position}', '{interview_date}', '{interview_mode}', '{round}', '{company_name}'];
+    const standardVars = ['{candidate_name}', '{{candidate_name}}', '{name}', '{{name}}', '{{email}}', '{{password}}', '{{official_email}}', '{{official_no}}', '{{login_url}}', '{{official_details_section}}', '{position}', '{interview_date}', '{interview_mode}', '{round}', '{company_name}', '{office_address}', '{office_map_link}', '{{office_address}}', '{{office_map_link}}'];
     
     const customVarsFound = [...new Set(matches)].filter(m => !standardVars.includes(m.toLowerCase()));
 
@@ -336,12 +337,15 @@ const formatEmailBody = (body) => {
             </div>
             <div className="el-view-field-label" style={{ marginBottom:8 }}>Body</div>
             {isEditing ? (
+                <>
                 <textarea 
                     className="premium-input" 
                     style={{ width: '100%', minHeight: '300px', padding: '16px', fontSize: '0.9rem', lineHeight: '1.6' }} 
                     value={viewingDraft.body || ''} 
                     onChange={e => setViewingDraft({...viewingDraft, body: e.target.value})}
                 />
+                <AddLinkButton />
+                </>
             ) : (
                 <div className="el-view-body-box" dangerouslySetInnerHTML={{ __html: formatEmailBody(viewingDraft.body) }} />
             )}

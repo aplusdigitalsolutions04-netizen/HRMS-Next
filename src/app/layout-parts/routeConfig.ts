@@ -46,7 +46,6 @@ export const ROUTE_ROLES: Record<string, string[]> = {
   '/letters/texts': ADMIN_HR_STAFF,
   '/letters/words': ADMIN_HR_STAFF,
   '/letters/letterhead': ADMIN_HR_STAFF,
-  '/letters/breakup': ADMIN_HR_STAFF,
   '/exits': ADMIN_HR_STAFF,
   '/payroll/statutory': ADMIN_HR_STAFF,
   '/payroll/guide': ADMIN_HR_STAFF,

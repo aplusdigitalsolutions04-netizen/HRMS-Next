@@ -2,7 +2,7 @@ import { query, execute } from './db';
 import { RowDataPacket } from 'mysql2';
 import { uuidv4 } from './utils';
 import { getWeeklyOffDays } from './teamoffice';
-import { getHolidayDates } from './holidays';
+import { getHolidayDates, getNoSandwichHolidayDates } from './holidays';
 import { attendanceByBehavior, attendanceCodesByBehavior } from './status-master';
 
 const pad = (v: number) => String(v).padStart(2, '0');
@@ -82,6 +82,7 @@ export async function markLeaveDays(employeeId: string, start: any, end: any, du
 
   const weeklyOff = await getWeeklyOffDays();
   const holidays = await getHolidayDates(ymd(fromD), ymd(toD));
+  const noSandwichHolidays = await getNoSandwichHolidayDates(ymd(fromD), ymd(toD)); // holidays HR marked as not counting in sandwich leave
   const keepCodes = await attendanceCodesByBehavior('week_off', 'holiday', 'extra_work');
   const halfDayCode = (await attendanceByBehavior('half_day'))?.code || 'HD';
   const rules = await getClRules();
@@ -132,7 +133,7 @@ export async function markLeaveDays(employeeId: string, start: any, end: any, du
     for (let i = firstW; i <= lastW; i++) {
       if (!days[i].off) continue;
       const isHoliday = holidays.has(ymd(days[i].d));
-      if (isHoliday ? sandwich.holiday : sandwich.weekoff) days[i].sandwiched = true;
+      if (isHoliday ? sandwich.holiday && !noSandwichHolidays.has(ymd(days[i].d)) : sandwich.weekoff) days[i].sandwiched = true;
     }
   }
 

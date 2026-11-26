@@ -8,6 +8,8 @@ const VARS = [
     { var: '{INTERVIEW_MODE}', desc: 'Interview mode (Online/Offline)' },
     { var: '{ROUND}', desc: 'Interview round' },
     { var: '{COMPANY_NAME}', desc: 'Company name' },
+    { var: '{OFFICE_ADDRESS}', desc: 'Office address (Settings > Interview)' },
+    { var: '{OFFICE_MAP_LINK}', desc: 'Google Maps link of the office (Settings > Interview); it is a clickable link in the mail' },
     { var: '{{name}}', desc: 'Employee Name (For Welcome Email)' },
     { var: '{{email}}', desc: 'Employee Email (For Welcome Email)' },
     { var: '{{password}}', desc: 'Login Password (For Welcome Email)' },

@@ -33,6 +33,7 @@ const CandidateData = () => {
     const [currentCandidateEmail, setCurrentCandidateEmail] = useState('');
     const [currentCandidateMobile, setCurrentCandidateMobile] = useState('');
     const [companyName, setCompanyName] = useState('');
+    const [office, setOffice] = useState({ address: '', map: '' });
     const [companyLogo, setCompanyLogo] = useState('');
 
     const [currentInterviewId, setCurrentInterviewId] = useState(null);
@@ -100,6 +101,11 @@ const CandidateData = () => {
         fetch(`${API}/settings/company`, { headers: auth() })
             .then(res => res.ok ? res.json() : {})
             .then(data => { setCompanyName(data.company_name || ''); setCompanyLogo(data.company_logo || ''); })
+            .catch(() => {});
+        // the office address and its Google Maps link (Settings > Interview) fill {OFFICE_ADDRESS} and {OFFICE_MAP_LINK} in the templates
+        fetch(`${API}/settings/system`, { headers: auth() })
+            .then(res => res.ok ? res.json() : {})
+            .then(d => setOffice({ address: d.office_address || '', map: d.office_map_link || '' }))
             .catch(() => {});
     }, []);
 
@@ -293,7 +299,7 @@ const CandidateData = () => {
         candidateEmail: currentCandidateEmail,
         candidateMobile: currentCandidateMobile,
         applyPost, roundSelect, interviewDate, modeSelect,
-        companyName, senderEmail, companyLogo,
+        companyName, senderEmail, companyLogo, office,
     });
 
     /* ── Handle template selection in action modal ── */
@@ -327,8 +333,8 @@ const CandidateData = () => {
         setActionSaving('draft');
         setActionMessage('');
         const vars = currentTemplateVars();
-        const subject = actionTemplateSubject || fillVariables(tpl.subject, vars);
-        const body = actionTemplateBody || fillVariables(tpl.body, vars);
+        const subject = actionTemplateSubject || (tpl ? fillVariables(tpl.subject, vars) : '');
+        const body = actionTemplateBody || (tpl ? fillVariables(tpl.body, vars) : '');
         try {
             await saveEmailDraft({
                 candidate_id: currentCandidateId,
@@ -748,6 +754,8 @@ const CandidateData = () => {
             hr_name:          'Yashi Mishra',
             sender_email:     senderEmail || '',
             hr_email:         senderEmail || '',
+            office_address:   office.address,
+            office_map_link:  office.map,
         };
 
         setEmailSubject(fillVariables(tpl.subject, variableMap));

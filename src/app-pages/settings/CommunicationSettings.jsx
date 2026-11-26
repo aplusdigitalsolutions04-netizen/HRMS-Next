@@ -117,8 +117,65 @@ export default function CommunicationSettings({ saving, setSaving }) {
         <SaveButton onClick={save} saving={saving} />
       </div>
     </SettingsCard>
+    <MailSignature saving={saving} setSaving={setSaving} />
     <CandidateReminderManagement saving={saving} setSaving={setSaving} />
     </>
+  );
+}
+
+/* ════════════════════════════════════════
+   Email signature: closes every mail that is sent
+   ════════════════════════════════════════ */
+const SIG_GAP = { compact: 10, normal: 22, wide: 38 };
+const sigLinks = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+  .replace(/\b((?:https?:\/\/|www\.)[^\s<>"')]+[^\s<>"').,;:!?])|\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/gi, (m, url, mail) => (mail ? `<a href="mailto:${mail}">${mail}</a>` : `<a href="${/^www\./i.test(url) ? 'https://' + url : url}">${url}</a>`));
+function MailSignature({ saving, setSaving }) {
+  const [on, setOn] = useState(false);
+  const [text, setText] = useState('');
+  const [gap, setGap] = useState('normal');
+  const [line, setLine] = useState(false);
+  useEffect(() => {
+    fetch(`${API}/settings/system`, { headers: auth() }).then(r => r.json()).then(d => {
+      setOn(d.mail_signature_on === 'true'); setText(d.mail_signature || ''); setGap(d.mail_signature_gap || 'normal'); setLine(d.mail_signature_line === 'true');
+    }).catch(() => {});
+  }, []);
+  const save = () => {
+    setSaving(true);
+    fetch(`${API}/settings/system`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify([
+      { setting_key: 'mail_signature_on', setting_value: on ? 'true' : 'false' }, { setting_key: 'mail_signature', setting_value: text },
+      { setting_key: 'mail_signature_gap', setting_value: gap }, { setting_key: 'mail_signature_line', setting_value: line ? 'true' : 'false' },
+    ]) }).then(async r => ({ ok: r.ok, d: await r.json() })).then(({ ok, d }) => {
+      setSaving(false);
+      Swal.fire(ok ? { icon: 'success', title: 'Saved!', text: 'The signature is added to every mail that is sent.', timer: 1600, showConfirmButton: false } : { icon: 'error', title: 'Error', text: d.detail || 'Failed to save.' });
+    }).catch(() => { setSaving(false); Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save.' }); });
+  };
+  return (
+    <SettingsCard title="Email signature" desc="Closes every mail that is sent from the system. A web address or an email address in it becomes a link. A mail whose text already ends with this signature does not get it twice.">
+      <div className="settings-grid">
+        <FormField label="Add the signature to every mail">
+          <select className="settings-input" value={on ? 'true' : 'false'} onChange={e => setOn(e.target.value === 'true')}><option value="true">ON</option><option value="false">OFF</option></select>
+        </FormField>
+        <FormField label="Space above the signature">
+          <select className="settings-input" value={gap} onChange={e => setGap(e.target.value)}><option value="compact">Compact</option><option value="normal">Normal</option><option value="wide">Wide</option></select>
+        </FormField>
+        <FormField label="Signature" fullWidth>
+          <textarea className="settings-input" rows={6} value={text} onChange={e => setText(e.target.value)} placeholder={'Regards,\nHR Team\nCompany name\nwww.example.com | hr@example.com'} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+        </FormField>
+        <FormField label="A thin line above the signature">
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '.88rem' }}><input type="checkbox" checked={line} onChange={e => setLine(e.target.checked)} /> Show the line</label>
+        </FormField>
+      </div>
+      {text.trim() && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>How it ends a mail</div>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px 18px', background: '#fff', fontFamily: 'Arial,sans-serif', fontSize: 14, color: '#1f2937', lineHeight: 1.6 }}>
+            <p style={{ margin: 0 }}>Dear Name,<br />...the text of the mail...</p>
+            <div style={{ marginTop: SIG_GAP[gap], ...(line ? { borderTop: '1px solid #d1d5db', paddingTop: 12 } : {}), lineHeight: 1.5, color: '#374151' }} dangerouslySetInnerHTML={{ __html: sigLinks(text.trim()) }} />
+          </div>
+        </div>
+      )}
+      <div className="settings-actions"><SaveButton onClick={save} saving={saving} /></div>
+    </SettingsCard>
   );
 }
 

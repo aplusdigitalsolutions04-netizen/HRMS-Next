@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router-dom';
 import { CHIP_COLORS } from './helpers';
+import AddLinkButton from '../../shared/AddLinkButton';
 
 const REQUEST_WORDS = ['employee_name', 'emp_code', 'leave_type', 'request_type', 'from_date', 'to_date', 'duration', 'date', 'in_time', 'out_time', 'reason', 'message', 'manager_name', 'remarks', 'status', 'review_link', 'company_name'];
 
@@ -113,6 +114,7 @@ export default function PreviewSection({ preview, setPreview, saving, saveTempla
                     placeholder="Email body with {{variables}}…"
                     rows={10}
                 />
+                <AddLinkButton />
                 <div style={{ fontSize: '.78rem', color: '#94a3b8', marginTop: '5px' }}>
                     💡 Use <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: 4 }}>{'{CANDIDATE_NAME}'}</code> or <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: 4 }}>{'{{variable_name}}'}</code> for dynamic placeholders
                 </div>

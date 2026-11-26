@@ -135,6 +135,7 @@ const REQUIRED_TABLES: string[] = [
   `CREATE TABLE IF NOT EXISTS document_expiry (
     id INT AUTO_INCREMENT PRIMARY KEY, employee_id VARCHAR(36) NOT NULL, document_type VARCHAR(60) NOT NULL, expiry_date DATE NOT NULL,
     last_notice VARCHAR(10) NULL, updated_by VARCHAR(150) NULL, updated_at DATETIME NULL, UNIQUE KEY uq_doc_expiry (employee_id, document_type))`,
+  `CREATE TABLE IF NOT EXISTS template_variables (id VARCHAR(64) PRIMARY KEY, name VARCHAR(100) NOT NULL, description VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
   // API log: one row per call to /api (and per call refused before reaching a route, or failed in the browser). See lib/api-log.ts.
   `CREATE TABLE IF NOT EXISTS api_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(12) NULL, created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

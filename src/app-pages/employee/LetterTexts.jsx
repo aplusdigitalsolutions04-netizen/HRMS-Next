@@ -40,7 +40,16 @@ export default function LetterTexts({ mode = 'list' }) {
 
 function List() {
   const navigate = useNavigate();
-  const { data, ready } = useTemplates();
+  const { data, ready, load } = useTemplates();
+  const removeCard = async (t) => {
+    const c = await Swal.fire({ icon: 'warning', title: `Remove "${t.name}"?`, text: 'Letters already made stay as they are. New ones of this kind cannot be made.', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#dc2626' });
+    if (!c.isConfirmed) return;
+    try {
+      const res = await fetch(`${API}/letters/templates?letter_type=${encodeURIComponent(t.letter_type)}`, { method: 'DELETE', headers: auth() });
+      const r = await res.json().catch(() => ({})); if (!res.ok) throw new Error(r.detail || 'Could not remove');
+      load();
+    } catch (e) { Swal.fire({ icon: 'error', title: 'Not removed', text: e.message }); }
+  };
   return (
     <>
       <div className="ph">
@@ -51,12 +60,15 @@ function List() {
       {ready && data.templates.length === 0 && <div className="ltx-empty">No letter yet. Add one with the button above.</div>}
       <div className="ltx-cards">
         {data.templates.map(t => (
-          <button type="button" key={t.letter_type} className="ltx-card" onClick={() => navigate(`/letters/texts/edit/${t.letter_type}`)}>
+          <div key={t.letter_type} className="ltx-wrap">
+          <button type="button" className="ltx-card" onClick={() => navigate(`/letters/texts/edit/${t.letter_type}`)}>
             <div className="ltx-top"><span className="ltx-ico">&#9998;</span><span className={`ltx-tag${t.has_standard ? '' : ' own'}`}>{t.has_standard ? 'Standard' : 'Your own'}</span></div>
             <b>{t.name}</b>
             <p>{snippet(t.body) || 'No text yet.'}</p>
             <small>{t.updated_at ? `Saved ${when(t.updated_at)}${t.updated_by ? ' by ' + String(t.updated_by).split('@')[0] : ''}` : 'Not changed yet'}</small>
           </button>
+          <button type="button" className="ltx-rm" title="Remove this letter" aria-label={`Remove ${t.name}`} onClick={() => removeCard(t)}>Remove</button>
+          </div>
         ))}
         <button type="button" className="ltx-card ltx-new" onClick={() => navigate('/letters/texts/new')}><span>+</span><b>Add a letter</b><small>A new kind of letter</small></button>
       </div>
@@ -190,6 +202,8 @@ function Edit() {
 const LTX_CSS = `
 .ltx-empty { background:#fff; border:1px dashed #d9c5b3; border-radius:12px; padding:30px; text-align:center; color:#94a3b8; }
 .ltx-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+.ltx-wrap { position:relative; display:flex; } .ltx-wrap .ltx-card { flex:1; }
+.ltx-rm { position:absolute; right:12px; bottom:12px; background:none; border:none; color:#b91c1c; font-size:.74rem; font-weight:600; cursor:pointer; padding:2px 6px; border-radius:6px; font-family:inherit; } .ltx-rm:hover { background:#fee2e2; }
 .ltx-card { text-align:left; background:#fff; border:1px solid #eadfd5; border-radius:14px; padding:16px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; gap:6px; transition:box-shadow .15s, border-color .15s, transform .15s; min-height:170px; }
 .ltx-card:hover { border-color:var(--brand,#6f4e37); box-shadow:0 8px 22px rgba(111,78,55,.14); transform:translateY(-2px); }
 .ltx-card b { font-size:1rem; color:#1e293b; } .ltx-card p { margin:0; font-size:.8rem; color:#64748b; line-height:1.45; flex:1; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; } .ltx-card small { color:#94a3b8; font-size:.72rem; }

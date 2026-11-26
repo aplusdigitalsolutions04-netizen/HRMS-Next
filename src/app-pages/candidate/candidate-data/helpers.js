@@ -16,7 +16,7 @@ export const getInterviewTime = (interviewDate) => {
 export const buildTemplateVars = ({
     candidateName, candidateEmail, candidateMobile,
     applyPost, roundSelect, interviewDate, modeSelect,
-    companyName, senderEmail, companyLogo,
+    companyName, senderEmail, companyLogo, office = {},
 }) => ({
     candidate_name: candidateName,
     candidate_email: candidateEmail,
@@ -33,6 +33,8 @@ export const buildTemplateVars = ({
     hr_name: 'Yashi Mishra',
     sender_email: senderEmail || '',
     hr_email: senderEmail || '',
+    office_address: office.address || '',
+    office_map_link: office.map || '',
 });
 
 /* ── save an email draft ─────────────────────────────────────────── */
@@ -80,6 +82,8 @@ export const fillVariables = (text, vars) => {
         COMPANY_NAME:   vars.company_name || 'N/A',
         HR_NAME:        'Yashi Mishra',
         HR_EMAIL:       vars.sender_email || vars.hr_email || '',
+        OFFICE_ADDRESS: vars.office_address || '',
+        OFFICE_MAP_LINK: vars.office_map_link || '',
     };
     Object.entries(placeholderMap).forEach(([key, val]) => {
         result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), val);

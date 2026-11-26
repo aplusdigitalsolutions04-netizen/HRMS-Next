@@ -7,7 +7,7 @@ import { getConfig } from './app-config';
 import { parseLetter } from './letter-markup';
 import { isDocBody, parseDoc, fillDoc } from './letter-doc';
 import { drawDoc } from './letter-pdf';
-import { compensation, compensationMarkup, numberToWords, inr, DEFAULT_BREAKUP, BreakupRow } from './compensation';
+import { compensationMarkup, cleanComponents, componentsTotal, numberToWords, inr, CompLine } from './compensation';
 
 // Letters (offer, appointment, confirmation, experience, relieving) made from a template with the employee's details filled in, as a PDF.
 // A template is plain text: a blank line starts a new paragraph, a line starting with "- " is a bullet, a line starting with "# " is a
@@ -45,7 +45,7 @@ export const SOURCES: [string, string][] = [
   ['tenure', 'Time worked (joining to last working day, or to today)'],
   ['today', 'Date of the letter'], ['month_year', 'Current month and year'], ['year', 'Current year'],
   ['letter_date_long', 'Date of the letter with the day name (Monday, 25 May 2026)'], ['joining_date_long', 'Date of joining with the day name'],
-  ['salary_monthly_words', 'Monthly salary in words'], ['variable_pay', 'Variable pay (typed in the form)'], ['compensation_table', 'Salary breakup table (Annexure I)'], ['department', 'Department'],
+  ['salary_monthly_words', 'Monthly salary in words'], ['variable_pay', 'Variable pay (the salary component named Variable)'], ['compensation_table', 'Salary breakup table (Annexure I)'], ['department', 'Department'],
   ['company_name', 'Company name'], ['company_address', 'Company address'], ['signatory_name', 'Authorised signatory'],
 ];
 const SOURCE_IDS = new Set(SOURCES.map(x => x[0]));
@@ -592,59 +592,17 @@ export async function ensureLetterTemplates() {
   }
 }
 
-// ---- the salary breakup (Annexure I of the offer, appointment and appraisal letters) ----
-// The components and their percent of the fixed part of the salary are set by HR on Letters > Salary Breakup; DEFAULT_BREAKUP is only the start.
-const BREAKUP_KEY = 'letter_comp_breakup';
-const COLS_KEY = 'letter_comp_columns';
-// the extra columns of the table (heading of each); up to 3
-export function cleanColumns(raw: any): string[] {
-  return (Array.isArray(raw) ? raw : []).map((x: any) => String(x ?? '').trim().replace(/\|/g, '/').slice(0, 30)).filter(Boolean).slice(0, 3);
-}
-export function cleanBreakup(raw: any, columns: string[] = []): { rows?: BreakupRow[]; error?: string } {
-  if (!Array.isArray(raw) || raw.length === 0) return { error: 'Add at least one component' };
-  if (raw.length > 10) return { error: 'At most 10 components' };
-  const rows: BreakupRow[] = [];
-  for (const r of raw) {
-    const name = String(r?.name ?? '').trim().replace(/\|/g, '/').slice(0, 40);
-    const amount = Math.round(Number(r?.amount) || 0);
-    const percent = amount > 0 ? 0 : Number(r?.percent);
-    if (!name) return { error: 'Every component needs a name' };
-    if (amount < 0 || amount > 100000000) return { error: `The amount of "${name}" is not right` };
-    if (amount <= 0 && !(percent > 0 && percent <= 100)) return { error: `Give "${name}" a percent from 0 to 100, or an amount` };
-    if (rows.some(x => x.name.toLowerCase() === name.toLowerCase())) return { error: `"${name}" is there twice` };
-    const extra = columns.map((_, i) => String(r?.extra?.[i] ?? '').trim().replace(/\|/g, '/').replace(/\s+/g, ' ').slice(0, 60));
-    rows.push({ name, percent: Math.round(percent * 100) / 100, ...(amount > 0 ? { amount } : {}), ...(columns.length ? { extra } : {}) });
-  }
-  if (!rows.some(x => !x.amount)) return { error: 'At least one component must take a percent: it gets what is left after the fixed amounts' };
-  const sum = rows.reduce((a, b) => a + b.percent, 0);
-  if (Math.abs(sum - 100) > 0.01) return { error: `The percents add up to ${Math.round(sum * 100) / 100}. They must add up to 100.` };
-  return { rows };
-}
-export async function getBreakup(): Promise<BreakupRow[]> {
-  try {
-    const r = (await query<RowDataPacket[]>('SELECT setting_value FROM system_settings WHERE setting_key = ?', [BREAKUP_KEY]))[0];
-    if (r?.setting_value) { const c = cleanBreakup(JSON.parse(r.setting_value), await getBreakupColumns()); if (c.rows) return c.rows; }
-  } catch { /* the starting list is used */ }
-  return DEFAULT_BREAKUP.map(x => ({ ...x }));
-}
-export async function getBreakupColumns(): Promise<string[]> {
-  try {
-    const r = (await query<RowDataPacket[]>('SELECT setting_value FROM system_settings WHERE setting_key = ?', [COLS_KEY]))[0];
-    if (r?.setting_value) return cleanColumns(JSON.parse(r.setting_value));
-  } catch { /* no extra columns */ }
-  return [];
-}
-export async function saveBreakupColumns(columns: string[]) {
-  const value = JSON.stringify(columns);
-  const r = await query<RowDataPacket[]>('SELECT id FROM system_settings WHERE setting_key = ?', [COLS_KEY]);
-  if (r.length) await execute('UPDATE system_settings SET setting_value = ?, updated_on = NOW() WHERE setting_key = ?', [value, COLS_KEY]);
-  else await execute('INSERT INTO system_settings (setting_key, setting_value, updated_on) VALUES (?,?,NOW())', [COLS_KEY, value]);
-}
-export async function saveBreakup(rows: BreakupRow[]) {
-  const value = JSON.stringify(rows);
-  const r = await query<RowDataPacket[]>('SELECT id FROM system_settings WHERE setting_key = ?', [BREAKUP_KEY]);
-  if (r.length) await execute('UPDATE system_settings SET setting_value = ?, updated_on = NOW() WHERE setting_key = ?', [value, BREAKUP_KEY]);
-  else await execute('INSERT INTO system_settings (setting_key, setting_value, updated_on) VALUES (?,?,NOW())', [BREAKUP_KEY, value]);
+// ---- the salary table (Annexure I) ----
+// The components of an employee's salary structure as the lines of the table (Basic, HRA, Travel Allowance, Food Voucher and custom earnings).
+export function structureComponents(ss: any): CompLine[] {
+  if (!ss) return [];
+  const snap = snapshotOf(ss);
+  const lines: CompLine[] = [
+    { name: 'Basic', amount: snap.basic_pay }, { name: 'HRA', amount: snap.hra },
+    { name: 'Travel Allowance', amount: snap.conveyance_allowance }, { name: 'Food Voucher', amount: snap.food_vouchers },
+    ...(snap.extra_components || []).filter((x: any) => x.type !== 'deduction').map((x: any) => ({ name: String(x.label || x.key || ''), amount: Number(x.amount) || 0 })),
+  ];
+  return cleanComponents(lines);
 }
 
 // ---- values for the placeholders ----
@@ -685,19 +643,16 @@ export async function letterVars(employeeId: string, fields: Record<string, any>
   const cfg = await getConfig();
   const co = (await query<RowDataPacket[]>('SELECT company_name, company_address FROM company_settings LIMIT 1'))[0] || {};
   const ss = (await query<RowDataPacket[]>('SELECT * FROM salary_structures WHERE emp_code = ?', [e.emp_code]))[0];
-  const fromStructure = ss ? monthlyTotal(snapshotOf(ss)) : 0;
-  // the salary typed in the form wins over the salary structure (an offer is often made before there is a structure)
-  const typed = Number(fields.monthly_salary);
-  const monthly = typed > 0 ? typed : fromStructure;
-  const variablePay = Math.min(monthly, Math.max(0, Number(fields.variable_pay) || 0));
+  // the salary table: the components typed for this letter, else those of the salary structure
+  const typedLines = cleanComponents(fields.components);
+  const lines = fields.no_salary ? [] : typedLines.length ? typedLines : structureComponents(ss);
+  const monthly = componentsTotal(lines);
+  const variablePay = lines.filter(l => /variable/i.test(l.name)).reduce((a, l) => a + l.amount, 0);
   const letterDay = /^\d{4}-\d{2}-\d{2}$/.test(String(fields.letter_date || '')) ? String(fields.letter_date) : '';
   const sig = await getPayslipSignatories();
   const today = new Date();
   const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const lwd = String(fields.last_working_day || '').slice(0, 10);
-  const breakup = await getBreakup();
-  // components marked Variable make the variable pay themselves; otherwise it is the amount typed for the letter
-  const variableShown = monthly && breakup.some(b => b.variable) ? compensation(monthly, 0, breakup).variable : variablePay;
   const department = e.designation
     ? String((await query<RowDataPacket[]>('SELECT d.name FROM designations ds JOIN departments d ON d.id = ds.department_id WHERE ds.name = ? AND COALESCE(ds.is_deleted,0) = 0 LIMIT 1', [e.designation]).catch(() => []))[0]?.name || '')
     : '';
@@ -709,8 +664,8 @@ export async function letterVars(employeeId: string, fields: Record<string, any>
     effective_date: longDate(fields.effective_date), salary_monthly: monthly ? rupees(monthly, cfg) : '', ctc_annual: monthly ? rupees(monthly * 12, cfg) : '',
     today: longDate(letterDay || ymd),
     letter_date_long: weekdayDate(letterDay || ymd), joining_date_long: weekdayDate(String(fields.joining_date || e.joined || '').slice(0, 10)),
-    salary_monthly_words: monthly ? numberToWords(monthly) + ' Only' : '', variable_pay: variableShown ? rupees(variableShown, cfg) : '',
-    compensation_table: monthly ? compensationMarkup(monthly, variablePay, breakup, cfg.currency_label, undefined, await getBreakupColumns()) : '', department,
+    salary_monthly_words: monthly ? numberToWords(monthly) + ' Only' : '', variable_pay: variablePay ? rupees(variablePay, cfg) : '',
+    compensation_table: lines.length ? compensationMarkup(lines, cfg.currency_label) : '', department,
     company_name: co.company_name || '', company_address: co.company_address || '', signatory_name: sig.authorised_by || 'Authorised Signatory',
     email: e.email_id || '', official_email: e.official_email || '', mobile: e.mobile_no || '', date_of_birth: longDate(e.dob), father_spouse_name: e.father_spouse_name || '',
     present_address: e.present_address || '', permanent_address: e.permanent_address || '', pan: e.pan || '', uan: e.uan || '', bank_name: e.bank_name || '',

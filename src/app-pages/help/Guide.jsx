@@ -143,7 +143,7 @@ const SERVICES = [
       <Steps items={[
         <><L to="/letters/make">Letters &gt; Make a Letter</L>: pick the employee and the letter (offer, appointment, confirmation, experience, relieving).</>,
         'Give the dates the letter needs. The reference number and the letter date are optional: leave them empty and the letter is printed without them.',
-        'Offer, appointment and appraisal letters also ask for the Monthly salary and the Variable pay (the salary table needs them). Other letters do not ask.',
+        'Offer, appointment and appraisal letters also ask for the salary components (see Salary components below). Other letters do not ask.',
         'Press "Prepare the letter". The details of the employee are filled in and a list shows any detail still empty.',
         'Read the text. You can change it here (same editor as Letter Texts); a change here is for this one letter only.',
         'Press "Preview the PDF" to see how it will print, then "Make the PDF". It has the header and the authorised signature, and it is saved.',
@@ -167,28 +167,32 @@ const SERVICES = [
         <li><b>Paragraph:</b> left, centre, right, justified; bullet and numbered lists; indent and outdent; clear formatting; undo and redo.</li>
         <li><b>Table:</b> pick the size from a grid. With the cursor in a table a second bar adds or deletes a row or column, merges or splits cells, makes a heading row, colours a cell, or deletes the table.</li>
         <li><b>Picture:</b> a PNG or JPG (made smaller by itself); a box sets its width.</li>
-        <li><b>Line</b> draws a rule. <b>Page break</b> starts a new page (for an Annexure). <b>Signature</b> puts the authorised person's signature there (if there is none, it is added at the end).</li>
+        <li><b>Line</b> draws a rule. <b>Add page</b> (INSERT row, or Ctrl+Enter) starts a new page where the cursor is (for an Annexure), and <b>+ Add page</b> under the sheet adds an empty page at the end; a dashed line shows where the new page starts, and the grey bands show about where each page ends (Preview shows the exact pages). <b>Signature</b> puts the authorised person's signature there (if there is none, it is added at the end).</li>
         <li><b>Words</b> on the right: click one to put it in the text. Words such as {'{{name}}'} or {'{{designation}}'} are shown in colour and are replaced by the employee's details when a letter is made.</li>
         <li>The notice period, probation and working hours are words set in <L to="/letters/words">Letter Words</L>; the HR contact is typed when the letter is made.</li>
       </ul>
       <H>3. The salary table (Annexure I)</H>
       <Shot src="/guide/salary-table.jpg" alt="Salary table in the editor" caption="Name and Designation above the salary table" />
       <ul style={LIST}>
-        <li>In Letter Texts press <b>Salary table (calculated)</b> where the table should come. The editor shows a sample; each letter gets the figures of that employee.</li>
+        <li>In Letter Texts press <b>Salary table (calculated)</b> where the table should come. The editor shows a sample; each letter gets the components of that employee.</li>
         <li>Name and Designation above it are the words {'{{name}}'} and {'{{designation}}'}. They come from the employee's profile (Employees &gt; Edit).</li>
-        <li>The monthly salary is the Grand Total. The variable pay is a part of it, shown as its own line.</li>
-        <li>If the employee has a salary structure the monthly salary is filled in; if not, type it in Make a Letter. Leave it empty and the table is left out.</li>
+        <li>The Grand Total is the sum of the components; the yearly amount is the monthly amount x 12.</li>
       </ul>
-      <H>4. Salary Breakup: the rows of the table</H>
-      <Shot src="/guide/salary-breakup.jpg" alt="Salary Breakup page" caption="Letters > Salary Breakup" />
+      <H>4. Adding a salary table to a letter (Make a Letter)</H>
+      <Shot src="/guide/salary-components.jpg" alt="Salary components in Make a letter" caption="Make a Letter > Add a salary table to this letter" />
+      <Steps items={[
+        'In Make a Letter pick the employee and the letter. Under the dates there is a tick box "Add a salary table to this letter". It is already ticked for a letter whose text has a salary table (offer, appointment, appraisal); tick it for any other letter that should carry one.',
+        'When it is ticked, the "Salary components (monthly)" block opens. Untick it and the letter is made without a table.',
+        'The components start from the salary structure of the employee (Payroll > Salary Structures): Basic, HRA, Travel Allowance, Food Voucher and custom earnings. If there is none, the usual names are there with empty amounts.',
+        'Fill the data. Every employee has a different salary, so give each component a monthly Amount, or a Percent of the "Monthly salary (total)" typed above it. A component with neither is left out.',
+        '+ Add a component adds a row (for example Variable Pay or Medical Allowance); Remove takes one out; a name can be changed. The Monthly total and Yearly are shown under the rows.',
+        'Press "Prepare the letter". If the text of the letter has a salary table in it (the Salary table block), it is filled with these figures at that place.',
+        'If the text has no salary table, put the filled one in yourself: click in the letter text where it should go and press "Salary table (from the components)" in the editor bar (Insert row). It becomes a real table that can be edited like any other.',
+        'Read the letter, press "Preview the PDF", then "Make the PDF". A letter that is already made is not changed.',
+      ]} />
       <ul style={LIST}>
-        <li><L to="/letters/breakup">Salary Breakup</L> sets the components (Basic 50, HRA 30, Travel 15, Food 5 to start with).</li>
-        <li>Give each component a <b>percent</b> or a fixed <b>amount in Rs. a month</b>.</li>
-        <li>The fixed amounts are taken first; the percents share what is left. The percents must add up to 100 and at least one component must have a percent.</li>
-        <li>The yearly amount is the monthly amount x 12.</li>
-        <li><b>+ Add a column</b> (up to 3) adds a column of your own, for example "Paid": type its text against each component.</li>
-        <li><b>Try it</b> only shows the table for a sample salary. It saves nothing.</li>
-        <li>A letter that is already made is not changed when the breakup is changed.</li>
+        <li>The table: each component with its monthly and yearly amount (monthly x 12), and a Grand Total that is the sum of the components.</li>
+        <li>A letter text gets its table place once in Letter Texts (Salary table (calculated)); after that it is filled for every employee.</li>
       </ul>
       <H>5. The other Letters pages</H>
       <Shot src="/guide/letters-made.jpg" alt="Letters Made" caption="Letters > Letters Made" />

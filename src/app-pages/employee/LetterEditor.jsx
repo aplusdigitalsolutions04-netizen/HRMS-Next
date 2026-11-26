@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Node, Extension } from '@tiptap/core';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -15,6 +15,7 @@ import '@fontsource/carlito/700.css';
 import '@fontsource/carlito/400-italic.css';
 import '@fontsource/carlito/700-italic.css';
 import { isDocBody, parseDoc, docFromMarkup, emptyDoc, normalizeDoc } from '@/lib/letter-doc';
+import { SAMPLE_COMPONENTS, componentsTotal, inr } from '@/lib/compensation';
 
 // The Word-like editor of a letter. value / onChange are text: the document as JSON (an older letter written with marks like ** is opened as a
 // document and saved as one). The PDF is drawn from the same document, so what is seen here is what is printed.
@@ -38,26 +39,17 @@ const CELLS = ['#f1f5f9', '#dbeafe', '#dcfce7', '#fef9c3', '#fee2e2', '#ede9fe',
 
 const PageBreak = Node.create({
   name: 'pageBreak', group: 'block', atom: true, selectable: true,
+  addKeyboardShortcuts() { return { 'Mod-Enter': () => this.editor.commands.insertContent({ type: 'pageBreak' }) }; },
   parseHTML() { return [{ tag: 'div[data-page-break]' }]; },
-  renderHTML() { return ['div', { 'data-page-break': '', class: 'le-pb' }, ['span', {}, 'Page break']]; },
+  renderHTML() { return ['div', { 'data-page-break': '', class: 'le-pb' }, ['span', {}, 'New page starts here']]; },
 });
 const SignatureMark = Node.create({
   name: 'signatureMark', group: 'block', atom: true, selectable: true,
   parseHTML() { return [{ tag: 'div[data-signature]' }]; },
   renderHTML() { return ['div', { 'data-signature': '', class: 'le-sig' }, 'Signature of the authorised person']; },
 });
-// The salary table of a letter. Its figures are worked out for each letter (monthly salary x the Salary Breakup); here the table is shown
-// with a sample salary so the layout can be seen. It is one block: it can be moved or deleted, not edited cell by cell.
-const SAMPLE_SALARY = 60000;
-let breakupCache = null;
-const loadBreakup = () => {
-  if (!breakupCache) {
-    let token = ''; try { token = sessionStorage.getItem('token') || ''; } catch { /* none */ }
-    breakupCache = fetch('/api/letters/breakup', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).then(j => ({ rows: Array.isArray(j.rows) ? j.rows : [], columns: j.columns || [] })).catch(() => { breakupCache = null; return { rows: [], columns: [] }; });
-  }
-  return breakupCache;
-};
-const inr = (n) => Math.round(Number(n) || 0).toLocaleString('en-IN');
+// The salary table of a letter. Its components and amounts are given for each letter (Make a letter); here the table is shown
+// with a sample so the layout can be seen. It is one block: it can be moved or deleted, not edited cell by cell.
 const SalaryTable = Node.create({
   name: 'salaryTable', group: 'block', atom: true, selectable: true, draggable: true,
   parseHTML() { return [{ tag: 'div[data-salary-table]' }]; },
@@ -66,16 +58,99 @@ const SalaryTable = Node.create({
     return () => {
       const dom = document.createElement('div');
       dom.className = 'le-salary'; dom.setAttribute('data-salary-table', ''); dom.contentEditable = 'false';
-      const paint = ({ rows, columns }) => {
-        const esc = (t) => String(t || '').replace(/</g, '&lt;');
-        const list = rows.filter(r => r.name && r.percent > 0);
-        const body = list.map(r => { const m = Math.round(SAMPLE_SALARY * r.percent / 100); return `<tr><td>${r.name.replace(/</g, '&lt;')}</td><td>${inr(m)}</td><td>${inr(m * 12)}</td>${columns.map((_, k) => `<td>${esc((r.extra || [])[k]) || '-'}</td>`).join('')}</tr>`; }).join('');
-        dom.innerHTML = `<div class="le-salary-tag">Salary table - worked out for each letter from its monthly salary (sample: ${inr(SAMPLE_SALARY)} a month)</div>`
-          + `<table><tbody><tr><th>Salary Component</th><th>Monthly</th><th>Yearly</th>${columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${body}<tr><th>Grand Total</th><th>${inr(SAMPLE_SALARY)}</th><th>${inr(SAMPLE_SALARY * 12)}</th>${columns.map(() => '<th>-</th>').join('')}</tr></tbody></table>`;
-      };
-      paint({ rows: [], columns: [] }); loadBreakup().then(paint);
+      const rows = SAMPLE_COMPONENTS, total = componentsTotal(SAMPLE_COMPONENTS);
+      const esc = (t) => String(t || '').replace(/</g, '&lt;');
+      const body = rows.map(r => `<tr><td>${esc(r.name)}</td><td>${inr(r.amount)}</td><td>${inr(r.amount * 12)}</td></tr>`).join('');
+      dom.innerHTML = '<div class="le-salary-tag">Salary table - the components and amounts of each employee are filled in when the letter is made (sample shown)</div>'
+        + `<table><tbody><tr><th>Salary Component</th><th>Monthly</th><th>Yearly</th></tr>${body}<tr><th>Grand Total</th><th>${inr(total)}</th><th>${inr(total * 12)}</th></tr></tbody></table>`;
       return { dom };
     };
+  },
+});
+// Pages, as in Word: the sheet is drawn as separate A4 pages with a gap between them. The text is one document; where a page would be full
+// a spacer is put in front of the next paragraph, list item or table row so it starts on the next page. (The PDF is laid out by the server, so
+// "Preview" is the exact result; this is a close picture of it.)
+const PAGE_H = 1123, PAGE_PAD = 56, PAGE_GAP = 24;
+const PAGE_CONTENT = PAGE_H - 2 * PAGE_PAD, PAGE_STEP_PAD = PAGE_PAD + PAGE_GAP + PAGE_PAD;
+const pagesKey = new PluginKey('pages');
+function pageUnits(doc) {
+  const units = [];
+  doc.forEach((node, off) => {
+    const t = node.type.name;
+    if (t === 'bulletList' || t === 'orderedList') node.forEach((li, lo) => units.push({ pos: off + 1 + lo, kind: 'li' }));
+    else if (t === 'table') node.forEach((row, ro) => units.push({ pos: off + 1 + ro, kind: 'tr', cols: Math.max(1, row.childCount) }));
+    else units.push({ pos: off, kind: 'block', brk: t === 'pageBreak' });
+  });
+  return units;
+}
+function makeGap(g) {
+  let el;
+  if (g.kind === 'li') { el = document.createElement('li'); el.style.display = 'block'; el.style.listStyle = 'none'; }
+  else if (g.kind === 'tr') { el = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = g.cols || 1; td.style.height = g.h + 'px'; el.appendChild(td); }
+  else el = document.createElement('div');
+  el.className = 'le-gap'; el.contentEditable = 'false';
+  if (g.kind !== 'tr') el.style.height = g.h + 'px';
+  return el;
+}
+function layoutPages(view, onPages) {
+  const dom = view.dom;
+  if (!dom.isConnected) return;
+  const old = [...dom.querySelectorAll('.le-gap')];
+  old.forEach(e => { e.style.display = 'none'; });
+  const top0 = dom.getBoundingClientRect().top;
+  const units = pageUnits(view.state.doc);
+  let added = 0, pageStart = 0, pageEnd = PAGE_CONTENT, force = false, lastV = 0;
+  const gaps = [];
+  for (const u of units) {
+    const el = view.nodeDOM(u.pos);
+    if (!(el instanceof HTMLElement)) continue;
+    const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    const top = r.top - top0 - (parseFloat(cs.marginTop) || 0), bottom = r.bottom - top0 + (parseFloat(cs.marginBottom) || 0);
+    const vTop = top + added;
+    if (force || (bottom + added > pageEnd && vTop > pageStart + 1 && bottom - top <= PAGE_CONTENT)) {
+      const h = Math.max(0, pageEnd - vTop) + PAGE_STEP_PAD;
+      gaps.push({ pos: u.pos, kind: u.kind, cols: u.cols, h: Math.round(h) });
+      added += h; pageStart = pageEnd + PAGE_STEP_PAD; pageEnd = pageStart + PAGE_CONTENT; force = false;
+    }
+    if (u.brk) force = true;
+    // a unit taller than a page runs over the pages it covers
+    while (bottom + added > pageEnd + 1) { pageStart = pageEnd + PAGE_STEP_PAD; pageEnd = pageStart + PAGE_CONTENT; }
+    lastV = bottom + added;
+  }
+  // the last page is filled to its end, so the sheet always ends with a whole page
+  gaps.push({ pos: view.state.doc.content.size, kind: 'end', h: Math.round(Math.max(0, pageEnd - lastV)) });
+  old.forEach(e => { e.style.display = ''; });
+  if (onPages) onPages(gaps.length);
+  const prev = pagesKey.getState(view.state);
+  if (JSON.stringify(prev.gaps) === JSON.stringify(gaps)) return;
+  const decos = gaps.map(g => Decoration.widget(g.pos, () => makeGap(g), { side: g.kind === 'end' ? 1 : -1, key: `g${g.pos}:${g.h}:${g.kind}` }));
+  view.dispatch(view.state.tr.setMeta(pagesKey, { gaps, deco: DecorationSet.create(view.state.doc, decos) }).setMeta('addToHistory', false));
+}
+const Pagination = Extension.create({
+  name: 'pagination',
+  addOptions() { return { onPages: null }; },
+  addProseMirrorPlugins() {
+    const onPages = this.options.onPages;
+    return [new Plugin({
+      key: pagesKey,
+      state: {
+        init: () => ({ gaps: [], deco: DecorationSet.empty }),
+        apply(tr, old) { const m = tr.getMeta(pagesKey); if (m) return m; return tr.docChanged ? { gaps: old.gaps, deco: old.deco.map(tr.mapping, tr.doc) } : old; },
+      },
+      props: { decorations(state) { return pagesKey.getState(state).deco; } },
+      view(view) {
+        let raf = 0, dead = false;
+        let tries = 0;
+        // the view may not be on the page yet when the plugin starts: look again a few times
+        const run = () => { raf = 0; if (dead) return; if (!view.dom.isConnected) { if (tries++ < 60) raf = setTimeout(run, 40); return; } layoutPages(view, onPages); };
+        const schedule = () => { if (!raf && !dead) raf = setTimeout(run, 40); };
+        schedule();
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+        view.dom.addEventListener('load', schedule, true);
+        window.addEventListener('resize', schedule);
+        return { update: schedule, destroy() { dead = true; clearTimeout(raf); window.removeEventListener('resize', schedule); view.dom.removeEventListener('load', schedule, true); } };
+      },
+    })];
   },
 });
 // {{words}} are marked in the text
@@ -96,6 +171,43 @@ const WordMarks = Extension.create({
     })];
   },
 });
+// Find: the text that is searched is marked in the sheet (the one the cursor is on is darker)
+const findKey = new PluginKey('find');
+const FindMarks = Extension.create({
+  name: 'findMarks',
+  addOptions() { return { get: () => '' }; },
+  addProseMirrorPlugins() {
+    const get = this.options.get;
+    return [new Plugin({
+      key: findKey,
+      props: {
+        decorations(state) {
+          const needle = get();
+          if (!needle) return null;
+          const out = [], sel = state.selection;
+          for (const m of findInDoc(state.doc, needle)) out.push(Decoration.inline(m.from, m.to, { class: m.from === sel.from && m.to === sel.to ? 'le-find le-find-cur' : 'le-find' }));
+          return DecorationSet.create(state.doc, out);
+        },
+      },
+    })];
+  },
+});
+// every place of the needle in the text of the document (not case sensitive): [{from, to}]
+function findInDoc(doc, needle) {
+  const out = [], n = needle.toLowerCase();
+  if (!n) return out;
+  doc.descendants((node, pos) => {
+    if (!node.isTextblock) return true;
+    let str = ''; const segs = [];
+    node.forEach((ch, off) => { segs.push([str.length, pos + 1 + off]); str += ch.isText ? ch.text : '￼'; });
+    const low = str.toLowerCase();
+    const at = (i) => { let s = segs[0]; for (const g of segs) if (g[0] <= i) s = g; return s[1] + (i - s[0]); };
+    let i = 0;
+    while (n && (i = low.indexOf(n, i)) >= 0) { out.push({ from: at(i), to: at(i + n.length - 1) + 1 }); i += n.length; }
+    return false;
+  });
+  return out;
+}
 const cellBg = {
   backgroundColor: {
     default: null,
@@ -150,7 +262,21 @@ const ICON = {
   table: <I d={<><rect x="3" y="4" width="18" height="16" rx="1" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="4" x2="9" y2="20" /><line x1="15" y1="4" x2="15" y2="20" /></>} />,
   hr: <I d={<line x1="3" y1="12" x2="21" y2="12" />} />,
   clear: <I d={<><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></>} />,
+  outdent: <I d={<><line x1="11" y1="6" x2="21" y2="6" /><line x1="11" y1="12" x2="21" y2="12" /><line x1="11" y1="18" x2="21" y2="18" /><path d="M7 8l-4 4 4 4z" /></>} />,
+  indent: <I d={<><line x1="11" y1="6" x2="21" y2="6" /><line x1="11" y1="12" x2="21" y2="12" /><line x1="11" y1="18" x2="21" y2="18" /><path d="M3 8l4 4-4 4z" /></>} />,
+  paste: <I size={26} d={<><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4h6v3H9z" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="8" y1="16" x2="14" y2="16" /></>} />,
+  cut: <I size={14} d={<><circle cx="6" cy="18" r="3" /><circle cx="18" cy="18" r="3" /><path d="M8 16L19 3M16 16L5 3" /></>} />,
+  copy: <I size={14} d={<><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></>} />,
+  search: <I size={14} d={<><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16" y2="16" /></>} />,
+  replace: <I size={14} d={<><path d="M4 8h13l-3-3M20 16H7l3 3" /></>} />,
+  select: <I size={14} d={<><path d="M5 3l6 16 2-7 7-2z" /></>} />,
+  page: <I size={14} d={<><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /></>} />,
+  sign: <I size={14} d={<><path d="M3 18c3-6 5-10 7-10s-3 8-1 8 3-4 5-4 1 3 4 3" /><line x1="3" y1="21" x2="21" y2="21" /></>} />,
+  words: <I size={14} d={<><path d="M4 6h16M4 12h10M4 18h13" /></>} />,
 };
+function Grp({ label, children }) {
+  return <div className="rb-g"><div className="rb-gb">{children}</div><div className="rb-gl">{label}</div></div>;
+}
 
 function Btn({ title, on, off, onClick, children, wide, style }) {
   return <button type="button" className={`le-b${on ? ' on' : ''}${wide ? ' wide' : ''}`} title={title} aria-label={title} disabled={off} onMouseDown={e => e.preventDefault()} onClick={onClick} style={style}>{children}</button>;
@@ -195,10 +321,21 @@ function TablePicker({ onPick }) {
   );
 }
 
-export default function LetterEditor({ value, onChange, words, height = 620, salary = true, readOnly = false }) {
+// salary: the salary table block of a letter text (filled for each letter). salaryMarkup: in a letter being made, a function that gives the table
+// of this letter's salary components as text; its button puts that table where the cursor is.
+export default function LetterEditor({ value, onChange, words, height = 620, salary = true, salaryMarkup = null, readOnly = false }) {
   const last = useRef(null);
   const fileRef = useRef(null);
   const [q, setQ] = useState('');
+  const [tab, setTab] = useState('home');
+  const [marks, setMarks] = useState(false);
+  const [showWords, setShowWords] = useState(true);
+  const [pageCount, setPageCount] = useState(1);
+  const [find, setFind] = useState('');
+  const [findQ, setFindQ] = useState('');
+  const [repQ, setRepQ] = useState('');
+  const findRef = useRef('');
+  findRef.current = find ? findQ : '';
   const initial = useMemo(() => docOf(value), []); // eslint-disable-line
   const editor = useEditor({
     immediatelyRender: false,
@@ -211,8 +348,14 @@ export default function LetterEditor({ value, onChange, words, height = 620, sal
       Highlight.configure({ multicolor: true }),
       Pic.configure({ inline: false, allowBase64: true }),
       Table.configure({ resizable: true }), TableRow, Cell, HeadCell,
-      PageBreak, SignatureMark, SalaryTable, WordMarks,
+      PageBreak, SignatureMark, SalaryTable, WordMarks, Pagination.configure({ onPages: (n) => setPageCount(n) }), FindMarks.configure({ get: () => findRef.current }),
     ],
+    editorProps: {
+      handleKeyDown: (view, e) => {
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'f' || e.key === 'h')) { e.preventDefault(); setTab('home'); setFind(e.key === 'h' ? 'replace' : 'find'); return true; }
+        return false;
+      },
+    },
     onUpdate: ({ editor: ed }) => { const s = JSON.stringify(ed.getJSON()); last.current = s; onChange && onChange(s); },
   });
   // a text that comes from outside (another letter was opened, the text was filled) replaces the document
@@ -222,6 +365,9 @@ export default function LetterEditor({ value, onChange, words, height = 620, sal
     last.current = value;
     editor.commands.setContent(docOf(value), { emitUpdate: false });
   }, [value, editor]);
+
+  // the marked search text is drawn again when the search text is typed or the search is closed
+  useEffect(() => { if (editor && !editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false)); }, [find, findQ, editor]);
 
   const attrs = editor ? editor.getAttributes('textStyle') : {};
   const chain = () => editor.chain().focus();
@@ -237,6 +383,35 @@ export default function LetterEditor({ value, onChange, words, height = 620, sal
     try { const p = await readPicture(file); chain().setImage({ src: p.src }).updateAttributes('image', { width: p.width }).run(); }
     catch (e) { Swal.fire({ icon: 'error', title: 'No picture', text: e.message }); }
   };
+  const curTab = tab === 'table' && !inTable ? 'home' : tab;
+  const paste = async () => {
+    try { const t = await navigator.clipboard.readText(); if (t) chain().insertContent(t.split(/\r?\n/).map(s => (s ? { type: 'paragraph', content: [{ type: 'text', text: s }] } : { type: 'paragraph' }))).run(); }
+    catch { Swal.fire({ icon: 'info', title: 'Press Ctrl+V', text: 'The browser did not allow the Paste button. Click in the letter and press Ctrl+V.' }); }
+  };
+  const stepSize = (d) => {
+    const cur = sizePt || 11, i = SIZES.indexOf(cur);
+    const next = i >= 0 ? SIZES[Math.min(SIZES.length - 1, Math.max(0, i + d))] : (d > 0 ? SIZES.find(s => s > cur) : [...SIZES].reverse().find(s => s < cur)) || cur;
+    if (next === 11) chain().unsetFontSize().run(); else chain().setFontSize(`${next}pt`).run();
+  };
+  const findAll = (s) => findInDoc(editor.state.doc, s);
+  const redraw = () => setTimeout(() => editor && !editor.isDestroyed && editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false)), 0);
+  const goTo = (m) => { editor.chain().setTextSelection({ from: m.from, to: m.to }).scrollIntoView().run(); };
+  const findNext = () => {
+    const all = findAll(findQ); if (!all.length) return;
+    const end = editor.state.selection.to;
+    goTo(all.find(m => m.from >= end) || all[0]);
+  };
+  const replaceOne = () => {
+    const sel = editor.state.selection, cur = findAll(findQ).find(m => m.from === sel.from && m.to === sel.to);
+    if (cur) { const tr = repQ ? editor.state.tr.insertText(repQ, cur.from, cur.to) : editor.state.tr.delete(cur.from, cur.to); editor.view.dispatch(tr); }
+    findNext();
+  };
+  const replaceAll = () => {
+    const all = findAll(findQ); if (!all.length) return;
+    let tr = editor.state.tr;
+    for (const m of [...all].reverse()) tr = repQ ? tr.insertText(repQ, m.from, m.to) : tr.delete(m.from, m.to);
+    editor.view.dispatch(tr);
+  };
   const cellColor = (c) => editor.chain().focus().setCellAttribute('backgroundColor', c).run();
   if (!editor) return <div className="le-loading">Loading the editor...</div>;
 
@@ -245,75 +420,136 @@ export default function LetterEditor({ value, onChange, words, height = 620, sal
     <div className="le">
       <style>{LE_CSS}</style>
       {!readOnly && (
-        <div className="le-tools" role="toolbar" aria-label="Formatting">
-          <div className="le-row">
-            <Btn title="Undo (Ctrl+Z)" off={!editor.can().undo()} onClick={() => chain().undo().run()}>{ICON.undo}</Btn>
-            <Btn title="Redo (Ctrl+Y)" off={!editor.can().redo()} onClick={() => chain().redo().run()}>{ICON.redo}</Btn>
-            <span className="le-sep" />
-            <select className="le-sel" aria-label="Style" value={headingLevel} onChange={e => { const l = Number(e.target.value); if (l) chain().setHeading({ level: l }).run(); else chain().setParagraph().run(); }}>
-              <option value={0}>Normal text</option><option value={1}>Heading 1</option><option value={2}>Heading 2</option><option value={3}>Heading 3</option>
-            </select>
-            <select className="le-sel" aria-label="Font" style={{ width: 130 }} value={family ? family[1] : ''} onChange={e => (e.target.value ? chain().setFontFamily(e.target.value).run() : chain().unsetFontFamily().run())}>
-              <option value="">Calibri</option>
-              {FONTS.slice(1).map(([n, v]) => <option key={n} value={v}>{n}</option>)}
-            </select>
-            <select className="le-sel" aria-label="Font size" style={{ width: 64 }} value={sizePt || ''} onChange={e => (e.target.value ? chain().setFontSize(`${e.target.value}pt`).run() : chain().unsetFontSize().run())}>
-              <option value="">11</option>
-              {SIZES.filter(s => s !== 11).map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <span className="le-sep" />
-            <Btn title="Bold (Ctrl+B)" on={editor.isActive('bold')} onClick={() => chain().toggleBold().run()} style={{ fontWeight: 800 }}>B</Btn>
-            <Btn title="Italic (Ctrl+I)" on={editor.isActive('italic')} onClick={() => chain().toggleItalic().run()} style={{ fontStyle: 'italic', fontFamily: 'serif' }}>I</Btn>
-            <Btn title="Underline (Ctrl+U)" on={editor.isActive('underline')} onClick={() => chain().toggleUnderline().run()} style={{ textDecoration: 'underline' }}>U</Btn>
-            <Btn title="Strikethrough" on={editor.isActive('strike')} onClick={() => chain().toggleStrike().run()} style={{ textDecoration: 'line-through' }}>S</Btn>
-            <Swatches title="Text colour" label={<b style={{ fontSize: 14 }}>A</b>} colors={COLORS} value={attrs.color} onPick={c => chain().setColor(c).run()} onClear={() => chain().unsetColor().run()} clearText="Automatic" />
-            <Swatches title="Highlight" label={<b style={{ fontSize: 13, background: '#fde047', padding: '0 3px', borderRadius: 2 }}>ab</b>} colors={MARKS} value={editor.getAttributes('highlight').color} onPick={c => chain().setHighlight({ color: c }).run()} onClear={() => chain().unsetHighlight().run()} clearText="No highlight" />
-            <span className="le-sep" />
-            {['left', 'center', 'right', 'justify'].map(a => <Btn key={a} title={`Align ${a}`} on={editor.isActive({ textAlign: a })} onClick={() => chain().setTextAlign(a).run()}>{ICON[a]}</Btn>)}
-            <span className="le-sep" />
-            <Btn title="Bulleted list" on={editor.isActive('bulletList')} onClick={() => chain().toggleBulletList().run()}>{ICON.bullet}</Btn>
-            <Btn title="Numbered list" on={editor.isActive('orderedList')} onClick={() => chain().toggleOrderedList().run()}>{ICON.number}</Btn>
-            <Btn title="Make the list point go in" off={!editor.can().sinkListItem('listItem')} onClick={() => chain().sinkListItem('listItem').run()} wide>&rarr; Indent</Btn>
-            <Btn title="Make the list point come out" off={!editor.can().liftListItem('listItem')} onClick={() => chain().liftListItem('listItem').run()} wide>&larr; Outdent</Btn>
-            <Btn title="Remove the formatting of the selected text" onClick={() => chain().unsetAllMarks().clearNodes().run()}>{ICON.clear}</Btn>
+        <div className="rb" role="toolbar" aria-label="Formatting">
+          <div className="rb-tabs">
+            {[['home', 'Home'], ['insert', 'Insert'], ['view', 'View']].map(([k, l]) => <button key={k} type="button" className={`rb-tab${curTab === k ? ' on' : ''}`} onMouseDown={e => e.preventDefault()} onClick={() => setTab(k)}>{l}</button>)}
+            {inTable && <button type="button" className={`rb-tab ctx${curTab === 'table' ? ' on' : ''}`} onMouseDown={e => e.preventDefault()} onClick={() => setTab('table')}>Table</button>}
           </div>
-          <div className="le-row">
-            <span className="le-lab">Insert</span>
-            <TablePicker onPick={(r, c) => chain().insertTable({ rows: r, cols: c, withHeaderRow: true }).run()} />
-            {salary && <Btn wide title="The salary table, worked out for each letter from its monthly salary and the Salary Breakup" onClick={() => chain().insertContent({ type: 'salaryTable' }).run()}>{ICON.table} Salary table (calculated)</Btn>}
-            <Btn wide title="Insert a picture" onClick={() => fileRef.current && fileRef.current.click()}>{ICON.image} Picture</Btn>
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={e => { addPicture(e.target.files[0]); e.target.value = ''; }} />
-            <Btn wide title="A line across the page" onClick={() => chain().setHorizontalRule().run()}>{ICON.hr} Line</Btn>
-            <Btn wide title="The rest of the letter starts on a new page" onClick={() => chain().insertContent({ type: 'pageBreak' }).run()}>Page break</Btn>
-            <Btn wide title="The signature of the authorised person (Payslip Settings) goes here" onClick={() => chain().insertContent({ type: 'signatureMark' }).run()}>Signature</Btn>
-            {onImage && (
-              <label className="le-w">Picture width <input type="number" min={20} max={720} value={editor.getAttributes('image').width || ''} onChange={e => chain().updateAttributes('image', { width: Number(e.target.value) || null }).run()} /> px</label>
-            )}
+          <div className="rb-panel">
+            {curTab === 'home' && <>
+              <Grp label="Clipboard">
+                <button type="button" className="le-b rb-big" title="Paste (Ctrl+V)" onMouseDown={e => e.preventDefault()} onClick={paste}>{ICON.paste}<span>Paste</span></button>
+                <div className="rb-col">
+                  <Btn wide title="Cut (Ctrl+X)" onClick={() => document.execCommand('cut')}>{ICON.cut} Cut</Btn>
+                  <Btn wide title="Copy (Ctrl+C)" onClick={() => document.execCommand('copy')}>{ICON.copy} Copy</Btn>
+                </div>
+              </Grp>
+              <Grp label="Font">
+                <div className="rb-col">
+                  <div className="rb-r">
+                    <select className="le-sel" aria-label="Font" style={{ width: 150 }} value={family ? family[1] : ''} onChange={e => (e.target.value ? chain().setFontFamily(e.target.value).run() : chain().unsetFontFamily().run())}>
+                      <option value="">Calibri (Body)</option>
+                      {FONTS.slice(1).map(([n, v]) => <option key={n} value={v}>{n}</option>)}
+                    </select>
+                    <select className="le-sel" aria-label="Font size" style={{ width: 58 }} value={sizePt || 11} onChange={e => (Number(e.target.value) === 11 ? chain().unsetFontSize().run() : chain().setFontSize(`${e.target.value}pt`).run())}>
+                      {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <Btn title="Increase the font size" onClick={() => stepSize(1)}><b style={{ fontSize: 14 }}>A<sup style={{ fontSize: 9 }}>+</sup></b></Btn>
+                    <Btn title="Decrease the font size" onClick={() => stepSize(-1)}><b style={{ fontSize: 11 }}>A<sup style={{ fontSize: 9 }}>-</sup></b></Btn>
+                    <Btn title="Clear all formatting" onClick={() => chain().unsetAllMarks().clearNodes().run()}>{ICON.clear}</Btn>
+                  </div>
+                  <div className="rb-r">
+                    <Btn title="Bold (Ctrl+B)" on={editor.isActive('bold')} onClick={() => chain().toggleBold().run()} style={{ fontWeight: 800 }}>B</Btn>
+                    <Btn title="Italic (Ctrl+I)" on={editor.isActive('italic')} onClick={() => chain().toggleItalic().run()} style={{ fontStyle: 'italic', fontFamily: 'serif' }}>I</Btn>
+                    <Btn title="Underline (Ctrl+U)" on={editor.isActive('underline')} onClick={() => chain().toggleUnderline().run()} style={{ textDecoration: 'underline' }}>U</Btn>
+                    <Btn title="Strikethrough" on={editor.isActive('strike')} onClick={() => chain().toggleStrike().run()} style={{ textDecoration: 'line-through' }}>ab</Btn>
+                    <Swatches title="Highlight colour" label={<b style={{ fontSize: 13, background: '#fde047', padding: '0 3px', borderRadius: 2 }}>ab</b>} colors={MARKS} value={editor.getAttributes('highlight').color} onPick={c => chain().setHighlight({ color: c }).run()} onClear={() => chain().unsetHighlight().run()} clearText="No highlight" />
+                    <Swatches title="Font colour" label={<b style={{ fontSize: 14 }}>A</b>} colors={COLORS} value={attrs.color} onPick={c => chain().setColor(c).run()} onClear={() => chain().unsetColor().run()} clearText="Automatic" />
+                  </div>
+                </div>
+              </Grp>
+              <Grp label="Paragraph">
+                <div className="rb-col">
+                  <div className="rb-r">
+                    <Btn title="Bullets" on={editor.isActive('bulletList')} onClick={() => chain().toggleBulletList().run()}>{ICON.bullet}</Btn>
+                    <Btn title="Numbering" on={editor.isActive('orderedList')} onClick={() => chain().toggleOrderedList().run()}>{ICON.number}</Btn>
+                    <Btn title="Decrease the list level" off={!editor.can().liftListItem('listItem')} onClick={() => chain().liftListItem('listItem').run()}>{ICON.outdent}</Btn>
+                    <Btn title="Increase the list level" off={!editor.can().sinkListItem('listItem')} onClick={() => chain().sinkListItem('listItem').run()}>{ICON.indent}</Btn>
+                    <Btn title="Show / hide paragraph marks" on={marks} onClick={() => setMarks(m => !m)}><b style={{ fontSize: 15 }}>&para;</b></Btn>
+                  </div>
+                  <div className="rb-r">
+                    {['left', 'center', 'right', 'justify'].map(a => <Btn key={a} title={`Align ${a}`} on={editor.isActive({ textAlign: a })} onClick={() => chain().setTextAlign(a).run()}>{ICON[a]}</Btn>)}
+                  </div>
+                </div>
+              </Grp>
+              <Grp label="Styles">
+                <div className="rb-styles">
+                  {[[0, 'Normal', 'rb-st-n'], [1, 'Heading 1', 'rb-st-1'], [2, 'Heading 2', 'rb-st-2'], [3, 'Heading 3', 'rb-st-3']].map(([l, n, c]) => (
+                    <button key={n} type="button" className={`rb-st ${c}${headingLevel === l ? ' on' : ''}`} onMouseDown={e => e.preventDefault()} onClick={() => (l ? chain().setHeading({ level: l }).run() : chain().setParagraph().run())}>{n}</button>
+                  ))}
+                </div>
+              </Grp>
+              <Grp label="Editing">
+                <div className="rb-col">
+                  <Btn wide title="Find (Ctrl+F)" on={find === 'find'} onClick={() => setFind(f => (f === 'find' ? '' : 'find'))}>{ICON.search} Find</Btn>
+                  <Btn wide title="Find and replace (Ctrl+H)" on={find === 'replace'} onClick={() => setFind(f => (f === 'replace' ? '' : 'replace'))}>{ICON.replace} Replace</Btn>
+                  <Btn wide title="Select all (Ctrl+A)" onClick={() => chain().selectAll().run()}>{ICON.select} Select</Btn>
+                </div>
+              </Grp>
+            </>}
+            {curTab === 'insert' && <>
+              <Grp label="Tables"><TablePicker onPick={(r, c) => chain().insertTable({ rows: r, cols: c, withHeaderRow: true }).run()} /></Grp>
+              <Grp label="Illustrations">
+                <Btn wide title="Insert a picture" onClick={() => fileRef.current && fileRef.current.click()}>{ICON.image} Picture</Btn>
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={e => { addPicture(e.target.files[0]); e.target.value = ''; }} />
+                <Btn wide title="A line across the page" onClick={() => chain().setHorizontalRule().run()}>{ICON.hr} Line</Btn>
+                {onImage && <label className="le-w">Width <input type="number" min={20} max={720} value={editor.getAttributes('image').width || ''} onChange={e => chain().updateAttributes('image', { width: Number(e.target.value) || null }).run()} /> px</label>}
+              </Grp>
+              <Grp label="Pages">
+                <Btn wide title="The rest of the letter starts on a new page (Ctrl+Enter)" onClick={() => chain().insertContent({ type: 'pageBreak' }).run()}>{ICON.page} Page break</Btn>
+                <Btn wide title="The signature of the authorised person (Payslip Settings) goes here" onClick={() => chain().insertContent({ type: 'signatureMark' }).run()}>{ICON.sign} Signature</Btn>
+              </Grp>
+              {(salaryMarkup || salary) && <Grp label="Salary">
+                {salaryMarkup && <Btn wide title="Puts the salary table of the components typed above at the cursor" onClick={() => { const m = salaryMarkup(); const t = m ? (docFromMarkup(m).content || []).filter(x => x.type === 'table') : []; if (!t.length) { Swal.fire({ icon: 'info', title: 'No salary table yet', text: 'Type the amounts of the salary components above and press "Prepare the letter" again, or add at least one amount.' }); return; } chain().insertContent(t).run(); }}>{ICON.table} Salary table (from the components)</Btn>}
+                {salary && <Btn wide title="The salary table, filled for each letter from its salary components" onClick={() => chain().insertContent({ type: 'salaryTable' }).run()}>{ICON.table} Salary table (calculated)</Btn>}
+              </Grp>}
+            </>}
+            {curTab === 'view' && <>
+              <Grp label="Show">
+                <Btn wide title="Show / hide paragraph marks" on={marks} onClick={() => setMarks(m => !m)}><b>&para;</b> Paragraph marks</Btn>
+                {words && <Btn wide title="Show / hide the list of words" on={showWords} onClick={() => setShowWords(s => !s)}>{ICON.words} Words list</Btn>}
+              </Grp>
+            </>}
+            {curTab === 'table' && inTable && <>
+              <Grp label="Rows and columns">
+                <div className="rb-col">
+                  <div className="rb-r"><Btn wide title="A row above" onClick={() => chain().addRowBefore().run()}>+ Row above</Btn><Btn wide title="A row below" onClick={() => chain().addRowAfter().run()}>+ Row below</Btn><Btn wide title="Delete the row" onClick={() => chain().deleteRow().run()}>Delete row</Btn></div>
+                  <div className="rb-r"><Btn wide title="A column on the left" onClick={() => chain().addColumnBefore().run()}>+ Column left</Btn><Btn wide title="A column on the right" onClick={() => chain().addColumnAfter().run()}>+ Column right</Btn><Btn wide title="Delete the column" onClick={() => chain().deleteColumn().run()}>Delete column</Btn></div>
+                </div>
+              </Grp>
+              <Grp label="Merge">
+                <Btn wide title="Join the selected cells (drag over them first)" off={!editor.can().mergeCells()} onClick={() => chain().mergeCells().run()}>Merge cells</Btn>
+                <Btn wide title="Split a joined cell" off={!editor.can().splitCell()} onClick={() => chain().splitCell().run()}>Split cell</Btn>
+              </Grp>
+              <Grp label="Table style">
+                <Btn wide title="The first row as a heading" onClick={() => chain().toggleHeaderRow().run()}>Heading row</Btn>
+                <Swatches title="Colour of the cell" label={<span style={{ fontSize: 12, fontWeight: 700 }}>Shading</span>} colors={CELLS} value={editor.getAttributes('tableCell').backgroundColor || editor.getAttributes('tableHeader').backgroundColor} onPick={cellColor} onClear={() => chain().setCellAttribute('backgroundColor', null).run()} clearText="No colour" />
+              </Grp>
+              <Grp label="Delete"><Btn wide title="Delete the whole table" onClick={() => chain().deleteTable().run()}><span style={{ color: '#b91c1c' }}>Delete table</span></Btn></Grp>
+            </>}
           </div>
-          {inTable && (
-            <div className="le-row le-trow">
-              <span className="le-lab">Table</span>
-              <Btn wide title="A row above" onClick={() => chain().addRowBefore().run()}>+ Row above</Btn>
-              <Btn wide title="A row below" onClick={() => chain().addRowAfter().run()}>+ Row below</Btn>
-              <Btn wide title="A column on the left" onClick={() => chain().addColumnBefore().run()}>+ Column left</Btn>
-              <Btn wide title="A column on the right" onClick={() => chain().addColumnAfter().run()}>+ Column right</Btn>
-              <Btn wide title="Delete the row" onClick={() => chain().deleteRow().run()}>Delete row</Btn>
-              <Btn wide title="Delete the column" onClick={() => chain().deleteColumn().run()}>Delete column</Btn>
-              <Btn wide title="Join the selected cells (drag over them first)" off={!editor.can().mergeCells()} onClick={() => chain().mergeCells().run()}>Merge cells</Btn>
-              <Btn wide title="Split a joined cell" off={!editor.can().splitCell()} onClick={() => chain().splitCell().run()}>Split cell</Btn>
-              <Btn wide title="The first row as a heading" onClick={() => chain().toggleHeaderRow().run()}>Heading row</Btn>
-              <Swatches title="Colour of the cell" label={<span style={{ fontSize: 12, fontWeight: 700 }}>Cell colour</span>} colors={CELLS} value={editor.getAttributes('tableCell').backgroundColor || editor.getAttributes('tableHeader').backgroundColor} onPick={cellColor} onClear={() => chain().setCellAttribute('backgroundColor', null).run()} clearText="No colour" />
-              <Btn wide title="Delete the whole table" onClick={() => chain().deleteTable().run()}><span style={{ color: '#b91c1c' }}>Delete table</span></Btn>
+          {find && (
+            <div className="rb-find">
+              <input autoFocus placeholder="Find" aria-label="Find" value={findQ} onChange={e => { setFindQ(e.target.value); redraw(); }} onKeyDown={e => { if (e.key === 'Enter') findNext(); if (e.key === 'Escape') setFind(''); }} />
+              {find === 'replace' && <input placeholder="Replace with" aria-label="Replace with" value={repQ} onChange={e => setRepQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') replaceOne(); }} />}
+              <button type="button" onClick={findNext}>Find next</button>
+              {find === 'replace' && <><button type="button" onClick={replaceOne}>Replace</button><button type="button" onClick={replaceAll}>Replace all</button></>}
+              <span className="rb-fc">{findQ ? `${findAll(findQ).length} found` : ''}</span>
+              <button type="button" className="rb-x" aria-label="Close" onClick={() => setFind('')}>&times;</button>
             </div>
           )}
         </div>
       )}
       <div className="le-body">
         <div className="le-desk" style={{ maxHeight: height }}>
-          <div className="le-paper"><EditorContent editor={editor} /></div>
+          <div className={`le-paper${marks ? ' le-marks' : ''}`}><EditorContent editor={editor} /></div>
+          {!readOnly && <div className="le-addrow">
+            <button type="button" className="le-addpage" title="Adds a new page at the end of the letter" onClick={() => editor.chain().focus('end').insertContent([{ type: 'pageBreak' }, { type: 'paragraph' }]).run()}>+ Add page</button>
+            <span>Pages are shown as in Word. "Preview" shows the exact PDF pages.</span>
+          </div>}
         </div>
-        {words && !readOnly && (
-          <aside className="le-words">
+        {words && !readOnly && showWords && (
+          <aside className="le-words" style={{ maxHeight: height }}>
             <div className="le-words-h">Words</div>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search words" aria-label="Search words" />
             <p>Click a word to put it where the cursor is. It is filled in for each employee.</p>
@@ -324,11 +560,39 @@ export default function LetterEditor({ value, onChange, words, height = 620, sal
           </aside>
         )}
       </div>
+      <div className="le-status">
+        <span>Pages: {Math.max(1, pageCount)}</span>
+        <span>Words: {(editor.getText().match(/\S+/g) || []).length}</span>
+        {!readOnly && <span className="le-st-r">A4 &middot; Calibri 11 pt</span>}
+      </div>
     </div>
   );
 }
 
 const LE_CSS = `
+.rb { background:#f3f3f3; border-bottom:1px solid #d1d5db; }
+.rb-tabs { display:flex; gap:2px; padding:4px 10px 0; background:#f3f3f3; }
+.rb-tab { border:none; background:transparent; padding:6px 14px; font-size:.82rem; font-family:inherit; color:#334155; cursor:pointer; border-radius:6px 6px 0 0; border-bottom:2px solid transparent; }
+.rb-tab:hover { background:#e7e7e7; } .rb-tab.on { background:#fbfbfb; color:#111827; font-weight:600; border-bottom-color:var(--brand,#6f4e37); } .rb-tab.ctx { color:#7c3aed; }
+.rb-panel { display:flex; flex-wrap:wrap; align-items:stretch; background:#fbfbfb; border-top:1px solid #e5e7eb; padding:6px 6px 4px; min-height:84px; }
+.rb-g { display:flex; flex-direction:column; justify-content:space-between; padding:0 8px; border-right:1px solid #e1e1e1; }
+.rb-g:last-child { border-right:none; }
+.rb-gb { display:flex; gap:4px; align-items:flex-start; flex:1; }
+.rb-gl { font-size:.68rem; color:#6b7280; text-align:center; padding-top:3px; }
+.rb-col { display:flex; flex-direction:column; gap:3px; } .rb-r { display:flex; gap:2px; align-items:center; }
+.rb-big { flex-direction:column; height:62px; width:54px; gap:3px; font-size:.74rem; padding:4px; }
+.rb-big svg { flex:none; }
+.rb-styles { display:flex; gap:5px; align-items:stretch; }
+.rb-st { min-width:84px; height:56px; border:1px solid #d1d5db; background:#fff; border-radius:4px; cursor:pointer; padding:0 8px; font-family:Carlito,Calibri,sans-serif; color:#111827; text-align:center; }
+.rb-st:hover { border-color:#9ca3af; background:#f3f4f6; } .rb-st.on { border-color:var(--brand,#6f4e37); box-shadow:inset 0 0 0 1px var(--brand,#6f4e37); }
+.rb-st-n { font-size:11pt; } .rb-st-1 { font-size:18pt; font-weight:700; } .rb-st-2 { font-size:14pt; font-weight:700; } .rb-st-3 { font-size:12pt; font-weight:700; }
+.rb-find { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px 12px; background:#fff; border-top:1px solid #e5e7eb; }
+.rb-find input { height:28px; border:1px solid #cbd5e1; border-radius:6px; padding:0 8px; font-size:.82rem; font-family:inherit; width:190px; }
+.rb-find button { height:28px; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px; padding:0 10px; font-size:.78rem; cursor:pointer; font-family:inherit; color:#334155; } .rb-find button:hover { background:#eef2f7; }
+.rb-find .rb-x { font-size:1.1rem; line-height:1; padding:0 8px; } .rb-fc { font-size:.76rem; color:#64748b; }
+.le-find { background:#fde68a; } .le-find-cur { background:#fb923c; color:#000; }
+.le-marks .ProseMirror p::after, .le-marks .ProseMirror h1::after, .le-marks .ProseMirror h2::after, .le-marks .ProseMirror h3::after { content:'\\00B6'; color:#94a3b8; font-weight:400; font-size:10pt; margin-left:2px; }
+.le-status { display:flex; gap:18px; padding:4px 14px; font-size:.74rem; color:#475569; background:#f3f3f3; border-top:1px solid #d1d5db; } .le-st-r { margin-left:auto; }
 .le { border:1px solid #eadfd5; border-radius:12px; background:#fff; overflow:hidden; }
 .le-loading { padding:30px; color:#94a3b8; text-align:center; }
 .le-tools { background:#faf6f2; border-bottom:1px solid #eadfd5; padding:6px 8px; display:flex; flex-direction:column; gap:5px; }
@@ -348,10 +612,13 @@ const LE_CSS = `
 .le-grid { display:grid; grid-template-columns:repeat(8,18px); gap:3px; } .le-grid i { width:18px; height:18px; border:1px solid #cbd5e1; border-radius:3px; cursor:pointer; } .le-grid i.on { background:#d9c5b3; border-color:var(--brand,#6f4e37); }
 .le-gridl { font-size:.74rem; color:#64748b; margin-top:6px; text-align:center; }
 .le-w { display:inline-flex; align-items:center; gap:5px; font-size:.76rem; color:#475569; margin-left:6px; } .le-w input { width:64px; height:26px; border:1px solid #e2d6c9; border-radius:6px; padding:0 6px; font-family:inherit; }
-.le-body { display:flex; align-items:stretch; }
+.le-body { display:flex; align-items:flex-start; }
 .le-desk { flex:1; min-width:0; overflow:auto; background:#e8e2dc; padding:18px 12px; }
-.le-paper { width:794px; max-width:100%; margin:0 auto; background:#fff; box-shadow:0 2px 14px rgba(15,23,42,.18); padding:56px 75px; min-height:1000px; box-sizing:border-box; color:#000; }
-.le-paper .ProseMirror { outline:none; font-family:Carlito, Calibri, sans-serif; font-size:11pt; line-height:1.28; color:#000; min-height:880px; }
+.le-paper { width:794px; max-width:100%; margin:0 auto; background:repeating-linear-gradient(to bottom, #fff 0, #fff 1123px, #e8e2dc 1123px, #e8e2dc 1147px); padding:56px 75px; min-height:1123px; box-sizing:border-box; color:#000; }
+.le-gap { pointer-events:none; user-select:none; } .le-paper .ProseMirror tr.le-gap td { border:none !important; padding:0 !important; background:transparent !important; } .le-paper .ProseMirror li.le-gap { margin:0; padding:0; }
+.le-addrow { width:794px; max-width:100%; margin:12px auto 4px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:.76rem; color:#64748b; }
+.le-addpage { background:#fff; border:1px dashed #94a3b8; border-radius:8px; padding:7px 16px; font-weight:700; color:var(--brand,#6f4e37); cursor:pointer; font-family:inherit; } .le-addpage:hover { background:#f8f3ed; border-color:var(--brand,#6f4e37); }
+.le-paper .ProseMirror { outline:none; font-family:Carlito, Calibri, sans-serif; font-size:11pt; line-height:1.28; color:#000; }
 .le-paper .ProseMirror p { margin:0 0 6px; min-height:1.28em; } .le-paper .ProseMirror h1 { font-size:20pt; margin:6px 0; } .le-paper .ProseMirror h2 { font-size:15pt; margin:6px 0; } .le-paper .ProseMirror h3 { font-size:13pt; margin:6px 0; }
 .le-paper .ProseMirror h1, .le-paper .ProseMirror h2, .le-paper .ProseMirror h3 { color:#000 !important; font-weight:700; line-height:1.25; }
 .le-paper .ProseMirror ul, .le-paper .ProseMirror ol { margin:0 0 6px; padding-left:26px; } .le-paper .ProseMirror li p { margin:0 0 2px; }

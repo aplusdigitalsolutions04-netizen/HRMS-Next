@@ -434,6 +434,12 @@ html[data-theme="dark"] .le-b.on { background: rgba(217,197,179,.2); border-colo
 html[data-theme="dark"] .le-sel, html[data-theme="dark"] .le-w input, html[data-theme="dark"] .le-words input { background: #1e293b; color: var(--d-ink-2); border-color: var(--d-line); }
 html[data-theme="dark"] .le-menu { background: var(--d-surface-2); border-color: var(--d-line); }
 html[data-theme="dark"] .le-none { background: #1e293b; color: var(--d-ink-2); border-color: var(--d-line); }
+html[data-theme="dark"] .rb, html[data-theme="dark"] .rb-tabs { background: var(--d-surface-2); border-color: var(--d-line); }
+html[data-theme="dark"] .rb-panel, html[data-theme="dark"] .rb-find, html[data-theme="dark"] .le-status { background: var(--d-surface); border-color: var(--d-line); color: var(--d-ink-2); }
+html[data-theme="dark"] .rb-tab { color: var(--d-ink-2); } html[data-theme="dark"] .rb-tab:hover { background: rgba(255,255,255,.08); } html[data-theme="dark"] .rb-tab.on { background: var(--d-surface); color: #fff; }
+html[data-theme="dark"] .rb-g { border-color: var(--d-line); } html[data-theme="dark"] .rb-gl, html[data-theme="dark"] .rb-fc { color: #94a3b8; }
+html[data-theme="dark"] .rb-st { background: #1e293b; border-color: var(--d-line); color: var(--d-ink-2); } html[data-theme="dark"] .rb-st:hover { background: #273449; }
+html[data-theme="dark"] .rb-find input { background: #1e293b; color: var(--d-ink-2); border-color: var(--d-line); } html[data-theme="dark"] .rb-find button { background: #1e293b; color: var(--d-ink-2); border-color: var(--d-line); }
 html[data-theme="dark"] .le-desk { background: #0f172a; }
 html[data-theme="dark"] .le-words { background: var(--d-surface-2); border-color: var(--d-line); }
 html[data-theme="dark"] .le-chips button { background: #1e293b; color: #e2c9b0; border-color: var(--d-line); }
@@ -963,6 +969,8 @@ html[data-theme="dark"] .pr-emp-tag.ok, html[data-theme="dark"] .status-badge.co
 html[data-theme="dark"] .db-tag { color: #f9a8d4; }
 html[data-theme="dark"] .db-tag-violet { color: #c4b5fd; }
 html[data-theme="dark"] .lh-rm, html[data-theme="dark"] .ltx-del { color: #fca5a5; }
+html[data-theme="dark"] .ltx-rm { color: #fca5a5; }
+html[data-theme="dark"] .ltx-rm:hover { background: rgba(220,38,38,.2); }
 html[data-theme="dark"] .nav-link.active, html[data-theme="dark"] .nav-link.active .nav-icon { color: #fff; }
 html[data-theme="dark"] .nav-link:hover, html[data-theme="dark"] .nav-dropdown-btn:hover { background: rgba(255,255,255,.07); color: var(--d-ink); }
 html[data-theme="dark"] .app-main .db-card, html[data-theme="dark"] .app-main .db-kpi-c, html[data-theme="dark"] .app-main .settings-card, html[data-theme="dark"] .app-main .card, html[data-theme="dark"] .app-main .glass-card, html[data-theme="dark"] .app-main .premium-table-wrapper, html[data-theme="dark"] .app-main .db-q, html[data-theme="dark"] .app-main .db-hero { background: var(--glass); border-color: rgba(255,255,255,.06); outline-color: var(--glass-line); }

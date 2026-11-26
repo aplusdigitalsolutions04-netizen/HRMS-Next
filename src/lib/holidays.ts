@@ -15,6 +15,8 @@ export async function ensureHolidaySchema() {
     created_by VARCHAR(100) NULL,
     UNIQUE KEY uq_holiday_date (holiday_date)
   )`);
+  // in_sandwich: does this holiday count as a leave day when it falls between leave days (sandwich leave)? 1 = yes (the starting value).
+  try { await execute('ALTER TABLE holidays ADD COLUMN in_sandwich TINYINT(1) NOT NULL DEFAULT 1'); } catch { /* already there */ }
   schemaReady = true;
 }
 
@@ -23,6 +25,16 @@ export async function getHolidayDates(from: string, to: string): Promise<Set<str
   await ensureHolidaySchema();
   const rows = await query<RowDataPacket[]>(
     "SELECT DATE_FORMAT(holiday_date, '%Y-%m-%d') AS d FROM holidays WHERE holiday_date BETWEEN ? AND ?",
+    [from, to]
+  );
+  return new Set(rows.map(r => r.d));
+}
+
+// Holidays in the range that HR marked "does not count in sandwich leave".
+export async function getNoSandwichHolidayDates(from: string, to: string): Promise<Set<string>> {
+  await ensureHolidaySchema();
+  const rows = await query<RowDataPacket[]>(
+    "SELECT DATE_FORMAT(holiday_date, '%Y-%m-%d') AS d FROM holidays WHERE in_sandwich = 0 AND holiday_date BETWEEN ? AND ?",
     [from, to]
   );
   return new Set(rows.map(r => r.d));

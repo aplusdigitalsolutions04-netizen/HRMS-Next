@@ -2,9 +2,9 @@
 import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, checkPermission } from '@/lib/utils';
-import { maxLetterLen, renderLetterPdf, longDate, getBreakup, getBreakupColumns } from '@/lib/letters';
+import { maxLetterLen, renderLetterPdf, longDate } from '@/lib/letters';
 import { isDocBody, parseDoc, fillDoc } from '@/lib/letter-doc';
-import { compensationMarkup } from '@/lib/compensation';
+import { compensationMarkup, SAMPLE_COMPONENTS } from '@/lib/compensation';
 
 // The letter as the PDF it will become, before it is made (or before a change to a made letter is saved): the letterhead, the page breaks,
 // the tables and the signature are all in it. Nothing is saved. POST { text, ref_no?, letter_date? (YYYY-MM-DD), title? }
@@ -18,7 +18,7 @@ async function POST_handler(req: NextRequest) {
     if (text.length < 5) return jsonError('The letter is empty', 422);
     if (text.length > maxLetterLen(text)) return jsonError('The letter is too long', 422);
     // the text of a letter kind (not of a made letter): the words stay as they are, the salary table is shown with a sample salary
-    if (b.sample && isDocBody(text)) { const d = parseDoc(text); if (d) text = JSON.stringify(fillDoc(d, { compensation_table: compensationMarkup(60000, 0, await getBreakup(), 'Rs.', 'Variable Pay', await getBreakupColumns()) }, true).doc); }
+    if (b.sample && isDocBody(text)) { const d = parseDoc(text); if (d) text = JSON.stringify(fillDoc(d, { compensation_table: compensationMarkup(SAMPLE_COMPONENTS) }, true).doc); }
     const day = /^\d{4}-\d{2}-\d{2}$/.test(String(b.letter_date || '')) ? String(b.letter_date) : '';
     const pdf = await renderLetterPdf({ title: String(b.title || 'Letter preview').slice(0, 100), ref: String(b.ref_no || '').trim().slice(0, 30), date: longDate(day), text });
     return new Response(new Uint8Array(pdf), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="letter-preview.pdf"' } });

@@ -17,7 +17,7 @@ export default function HolidaySettings() {
   const [pageSize, setPageSize] = useState(10);
   // keep the page valid when the year changes or a holiday is removed
   useEffect(() => { setPage(p => Math.min(p, Math.max(1, Math.ceil(holidays.length / pageSize)))); }, [holidays.length, pageSize]);
-  const [form, setForm] = useState({ date: '', name: '', holiday_type: 'Government' });
+  const [form, setForm] = useState({ date: '', name: '', holiday_type: 'Government', in_sandwich: true });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -39,7 +39,7 @@ export default function HolidaySettings() {
   };
 
   const add = async () => {
-    if (await post(form, 'Holiday added')) setForm({ date: '', name: '', holiday_type: form.holiday_type });
+    if (await post(form, 'Holiday added')) setForm({ date: '', name: '', holiday_type: form.holiday_type, in_sandwich: form.in_sandwich });
   };
 
   const remove = async (h) => {
@@ -52,7 +52,7 @@ export default function HolidaySettings() {
   return (
     <SettingsCard
       title="Holiday Calendar"
-      desc="Government and company holidays. If an employee works on a holiday (or a weekly off) it is recorded as Extra Work (EW) and paid on the payslip."
+      desc="Government and company holidays. If an employee works on a holiday (or a weekly off) it is recorded as Extra Work (EW) and paid on the payslip. &quot;Counts in sandwich leave&quot; says whether the holiday becomes a leave day when an employee is on leave the day before and after it (it works only while Sandwich leave and Count holidays are on in Attendance Settings)."
       actions={
         <>
           <select className="settings-input" style={{ width: 100 }} value={year} onChange={e => setYear(Number(e.target.value))}>
@@ -70,26 +70,39 @@ export default function HolidaySettings() {
             <option>Government</option><option>Company</option>
           </select>
         </FormField>
+        <FormField label="Counts in sandwich leave?">
+          <select className="settings-input" value={form.in_sandwich ? '1' : '0'} onChange={e => setForm(f => ({ ...f, in_sandwich: e.target.value === '1' }))} title="Yes: if an employee is on leave the day before and the day after, this holiday also counts as a leave day. No: it never does.">
+            <option value="1">Yes</option><option value="0">No</option>
+          </select>
+        </FormField>
         <div><button className="btn-premium" onClick={add}>+ Add holiday</button></div>
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 18 }}>
         <thead>
           <tr style={{ textAlign: 'left', color: '#64748b', fontSize: 12, textTransform: 'uppercase' }}>
-            <th style={{ padding: '8px 10px', width: 44 }}>#</th><th style={{ padding: '8px 10px' }}>Date</th><th>Holiday</th><th>Type</th><th></th>
+            <th style={{ padding: '8px 10px', width: 44 }}>#</th><th style={{ padding: '8px 10px' }}>Date</th><th>Holiday</th><th>Type</th><th title="Does this holiday count as a leave day when it falls between leave days?">In sandwich leave</th><th></th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center' }}>Loading...</td></tr>
+            <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center' }}>Loading...</td></tr>
           ) : holidays.length === 0 ? (
-            <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No holidays added for {year}.</td></tr>
+            <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>No holidays added for {year}.</td></tr>
           ) : paginate(holidays, page, pageSize).map((h, idx) => (
             <tr key={h.id} style={{ borderTop: '1px solid #f1f5f9' }}>
               <td style={{ padding: '10px', color: '#94a3b8', fontSize: 13 }}>{(page - 1) * pageSize + idx + 1}</td>
               <td style={{ padding: '10px' }}>{fmt(h.holiday_date)}</td>
               <td style={{ fontWeight: 600 }}>{h.name}</td>
               <td>{h.holiday_type}</td>
+              <td>
+                <select className="settings-input" style={{ width: 90, padding: '4px 8px' }} value={Number(h.in_sandwich) === 0 ? '0' : '1'} aria-label={`Counts in sandwich leave: ${h.name}`} onChange={async e => {
+                  const v = e.target.value === '1';
+                  const res = await fetch(`${API}/settings/holidays`, { method: 'PATCH', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ id: h.id, in_sandwich: v }) });
+                  if (res.ok) setHolidays(list => list.map(x => (x.id === h.id ? { ...x, in_sandwich: v ? 1 : 0 } : x)));
+                  else { const d = await res.json().catch(() => ({})); Swal.fire({ icon: 'error', title: 'Not saved', text: d.detail || 'Could not save' }); }
+                }}><option value="1">Yes</option><option value="0">No</option></select>
+              </td>
               <td style={{ textAlign: 'right' }}><button onClick={() => remove(h)} style={{ border: 'none', background: '#fee2e2', color: '#991b1b', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontWeight: 600 }}>Delete</button></td>
             </tr>
           ))}

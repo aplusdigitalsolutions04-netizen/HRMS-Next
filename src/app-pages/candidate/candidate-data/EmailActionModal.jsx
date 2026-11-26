@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import AddLinkButton from '../../shared/AddLinkButton';
 
 const EmailActionModal = ({
     isOpen, candidateName, candidateEmail,
@@ -56,6 +57,7 @@ const EmailActionModal = ({
                         <input className="premium-input" value={templateSubject} onChange={e => onSubjectChange(e.target.value)} style={{ marginBottom: 10 }} />
                         <label className="premium-label">Message</label>
                         <textarea className="premium-input" value={templateBody} onChange={e => onBodyChange(e.target.value)} rows={12} style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' }} />
+                        <AddLinkButton />
                     </div>
                 )}
 

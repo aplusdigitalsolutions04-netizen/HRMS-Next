@@ -193,15 +193,16 @@ export default function ApiLogs() {
       <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table className="ap-t">
-            <thead><tr><th>When</th><th>Method</th><th>URL</th><th>Result</th><th className="ap-hide-sm">Time</th><th className="ap-hide-sm">Person</th><th>Error</th></tr></thead>
+            <thead><tr><th style={{ width: 44 }}>#</th><th>When</th><th>Method</th><th>URL</th><th>Result</th><th className="ap-hide-sm">Time</th><th className="ap-hide-sm">Person</th><th>Error</th></tr></thead>
             <tbody>
-              {loading ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: 26, color: '#94a3b8' }}>Loading...</td></tr>
-                : logs.length === 0 ? <tr><td colSpan="7" style={{ textAlign: 'center', padding: 30, color: '#94a3b8' }}>No entries for these filters.</td></tr>
-                : logs.map(l => {
+              {loading ? <tr><td colSpan="8" style={{ textAlign: 'center', padding: 26, color: '#94a3b8' }}>Loading...</td></tr>
+                : logs.length === 0 ? <tr><td colSpan="8" style={{ textAlign: 'center', padding: 30, color: '#94a3b8' }}>No entries for these filters.</td></tr>
+                : logs.map((l, i) => {
                   const tone = statusTone(l);
                   return (
                     <React.Fragment key={l.id}>
                       <tr className="ap-row" onClick={() => setOpen(open === l.id ? null : l.id)}>
+                        <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(page - 1) * pageSize + i + 1}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{when(l.created_at)}</td>
                         <td style={{ fontWeight: 700, color: METHOD_COLOR[l.method] || '#475569' }}>{l.method || '-'}</td>
                         <td style={{ wordBreak: 'break-all', maxWidth: 360 }}>{l.path}</td>
@@ -210,7 +211,7 @@ export default function ApiLogs() {
                         <td className="ap-hide-sm" style={{ whiteSpace: 'nowrap' }}>{l.user_email || '-'}</td>
                         <td style={{ color: '#b91c1c', maxWidth: 360, wordBreak: 'break-word' }}>{l.error_message ? String(l.error_message).slice(0, 120) : ''}</td>
                       </tr>
-                      {open === l.id && <tr><td colSpan="7" style={{ background: '#fff' }}><Detail l={l} /></td></tr>}
+                      {open === l.id && <tr><td colSpan="8" style={{ background: '#fff' }}><Detail l={l} /></td></tr>}
                     </React.Fragment>
                   );
                 })}

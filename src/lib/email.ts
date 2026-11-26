@@ -4,7 +4,7 @@ import { query } from './db';
 import { RowDataPacket } from 'mysql2';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { decryptSecret, saveToSent } from './mailbox';
-import { hasBlockHtml, plainToHtml, htmlToPlain } from './mail-format';
+import { hasBlockHtml, plainToHtml, htmlToPlain, linkify, signatureHtml } from './mail-format';
 
 interface SmtpRow extends RowDataPacket {
   smtp_host: string;
@@ -121,7 +121,14 @@ export async function sendEmailDetailed(
       console.warn('[email] transporter.verify() warning (continuing):', verifyErr?.message || verifyErr);
     }
 
-    const htmlBody = toHtmlBody(html);
+    let htmlBody = linkify(toHtmlBody(html));
+    // the signature HR set (Settings > Communication) closes the mail, unless the text already ends with it
+    try {
+      const sig = await query<RowDataPacket[]>("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('mail_signature_on','mail_signature','mail_signature_gap','mail_signature_line')");
+      const m: Record<string, string> = {}; for (const r of sig) m[r.setting_key] = r.setting_value;
+      const first = String(m.mail_signature || '').trim().split(String.fromCharCode(10))[0].trim();
+      if (m.mail_signature_on === 'true' && first && !htmlToPlain(htmlBody).includes(first)) htmlBody += signatureHtml(m.mail_signature, m.mail_signature_gap || 'normal', m.mail_signature_line === 'true');
+    } catch { /* no signature */ }
     const mailOptions: any = {
       from: s.sender_name ? `"${s.sender_name}" <${s.sender_email}>` : s.sender_email,
       to,

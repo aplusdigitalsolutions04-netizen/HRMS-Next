@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Pagination from '../shared/Pagination';
 import { appLocale, currencySymbol } from '@/lib/app-config-client';
 import LetterEditor from './LetterEditor';
-import { compensation, inr } from '@/lib/compensation';
+import { componentsTotal, compensationMarkup, cleanComponents, inr } from '@/lib/compensation';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -44,7 +44,6 @@ const SECTIONS = {
   made: ['Letters made', 'Every letter that was made. Open the PDF, email it, edit it or delete it.'],
   texts: ['Letter texts', 'The text of each kind of letter. Change it, or add a new kind of letter.'],
   words: ['Letter words', 'The words that are filled in for each employee when a letter is made. Add your own.'],
-  breakup: ['Salary Breakup', 'How the salary is split in Annexure I of the offer, appointment and appraisal letters: the components and the percent of the fixed salary each one takes.'],
   letterhead: ['Letterhead', 'How the top of every letter and of the Full and Final statement looks: the company header, your own letterhead picture, or none.'],
 };
 export default function Letters({ section = 'make' }) {
@@ -62,7 +61,6 @@ export default function Letters({ section = 'make' }) {
       {section === 'made' && <Issued isHr />}
       {section === 'words' && <Words />}
       {section === 'letterhead' && <Letterhead />}
-      {section === 'breakup' && <Breakup />}
     </div>
   );
 }
@@ -82,7 +80,17 @@ function Issue({ onDone }) {
   const [mailFor, setMailFor] = useState(null);
   const [refNo, setRefNo] = useState('');
   const [letterDate, setLetterDate] = useState('');
-  const [salary, setSalary] = useState({ monthly_salary: '', variable_pay: '' });
+  const [step, setStep] = useState(1); // 1: the details, 2: the letter text and making it
+  // the salary table of this letter: every employee has a different salary, so the components and their monthly amounts are given here.
+  // They start from the employee's salary structure; with none, the usual names are there to fill in.
+  const STARTER = ['Basic', 'HRA', 'Travel Allowance', 'Food Voucher'];
+  const [comps, setComps] = useState(STARTER.map(name => ({ name, amount: '', percent: '' })));
+  const [salaryOn, setSalaryOn] = useState(false); // add a salary table to this letter?
+  const [currency, setCurrency] = useState('Rs.');
+  const [grand, setGrand] = useState(''); // the monthly salary (total): a component may be given as a percent of it
+  // the amount of a component: the amount typed, else its percent of the monthly salary
+  const amountOf = (c) => (Number(c.amount) > 0 ? Number(c.amount) : Number(c.percent) > 0 && Number(grand) > 0 ? Math.round((Number(grand) * Number(c.percent)) / 100) : 0);
+  const resolved = comps.map(c => ({ name: c.name, amount: amountOf(c) }));
 
   useEffect(() => { fetch(`${API}/letters`, { headers: auth() }).then(r => r.json()).then(d => { setTypes(d.types || []); setAskVars(d.ask_vars || []); setType(t => (d.types || []).some(x => x.key === t) ? t : ((d.types || [])[0] || {}).key || ''); }).catch(() => {}); }, []);
   useEffect(() => {
@@ -95,13 +103,13 @@ function Issue({ onDone }) {
 
   // the monthly salary starts from the employee's salary structure (empty when there is none); an offer made before that can type it
   useEffect(() => {
-    if (!emp) { setSalary({ monthly_salary: '', variable_pay: '' }); return; }
+    if (!emp) { setComps(STARTER.map(name => ({ name, amount: '', percent: '' }))); setGrand(''); return; }
     fetch(`${API}/letters/defaults?employee_id=${emp.id}`, { headers: auth() }).then(r => r.json())
-      .then(d => setSalary({ monthly_salary: d.monthly_salary ? String(d.monthly_salary) : '', variable_pay: '' })).catch(() => {});
+      .then(d => { if (d.currency_label) setCurrency(d.currency_label); setGrand(''); setComps((d.components || []).length ? d.components.map(c => ({ name: c.name, amount: String(c.amount), percent: '' })) : STARTER.map(name => ({ name, amount: '', percent: '' }))); }).catch(() => {});
   }, [emp]);
 
   const clean = () => Object.fromEntries(Object.entries(fields).filter(([, v]) => v));
-  const typed = () => ({ monthly_salary: salary.monthly_salary, variable_pay: salary.variable_pay, letter_date: letterDate });
+  const typed = () => ({ components: salaryOn ? resolved : [], no_salary: !salaryOn, letter_date: letterDate });
   const preview = async () => {
     if (!emp) { Swal.fire({ icon: 'warning', title: 'Pick an employee first' }); return; }
     setBusy(true);
@@ -109,7 +117,7 @@ function Issue({ onDone }) {
       const res = await fetch(`${API}/letters/preview`, { method: 'POST', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: emp.id, letter_type: type, fields: { ...clean(), ...typed(), custom } }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || 'Could not prepare the letter');
-      setText(d.text); setMissing(d.missing || []);
+      setText(d.text); setMissing(d.missing || []); setStep(2);
     } catch (e) { Swal.fire({ icon: 'error', title: 'Error', text: e.message }); }
     finally { setBusy(false); }
   };
@@ -120,7 +128,7 @@ function Issue({ onDone }) {
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || 'Could not make the letter');
       const next = await Swal.fire({ icon: 'success', title: d.ref_no || 'Letter made', text: d.message + ' The employee can see it in their portal.', showDenyButton: true, showCancelButton: true, confirmButtonText: 'Email it to the employee', denyButtonText: 'Open the PDF', cancelButtonText: 'Done' });
-      setText(''); setRefNo(''); setLetterDate('');
+      setText(''); setRefNo(''); setLetterDate(''); setStep(1);
       if (next.isConfirmed) { setMailFor(d.id); return; }
       if (next.isDenied) openLetter(d.id);
       onDone();
@@ -129,69 +137,167 @@ function Issue({ onDone }) {
   };
 
   const usesSalary = !!(types.find(t => t.key === type) || {}).uses_salary;
-  const date = (k, l) => <div><label style={label}>{l}</label><input type="date" style={input} value={fields[k]} onChange={e => setFields(f => ({ ...f, [k]: e.target.value }))} /></div>;
+  // a letter that already has a salary table in its text starts with the option on
+  useEffect(() => { setSalaryOn(usesSalary); }, [type, usesSalary]);
+  const date = (k, l) => <div className="lw-f"><label>{l}</label><input type="date" value={fields[k]} onChange={e => setFields(f => ({ ...f, [k]: e.target.value }))} /></div>;
+  const typeLabel = (types.find(t => t.key === type) || {}).label || '';
+  const total = componentsTotal(resolved);
+  const off = Number(grand) > 0 && Math.abs(total - Number(grand)) > 0.5;
+  const initials = emp ? emp.full_name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() : '';
   return (
-    <div style={{ background: '#fff', border: '1px solid #eadfd5', borderRadius: 12, padding: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-        <div style={{ position: 'relative' }}>
-          <label style={label}>Employee</label>
-          {emp ? (
-            <div style={{ ...input, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span><b>{emp.full_name}</b> <span style={{ color: '#94a3b8' }}>({emp.emp_code})</span></span><button onClick={() => { setEmp(null); setText(''); }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>&#10005;</button></div>
-          ) : (
-            <>
-              <input style={input} value={q} onChange={e => setQ(e.target.value)} placeholder="Type a name..." />
-              {people.length > 0 && <div style={{ position: 'absolute', zIndex: 5, left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, marginTop: 4, boxShadow: '0 8px 24px rgba(15,23,42,.12)' }}>
-                {people.map(p => <div key={p.id} onClick={() => { setEmp(p); setQ(''); setPeople([]); }} style={{ padding: '8px 12px', cursor: 'pointer', borderTop: '1px solid #f1f5f9' }}><b>{p.full_name}</b> <span style={{ color: '#94a3b8' }}>({p.emp_code}) {p.designation || ''}</span></div>)}
-              </div>}
-            </>
-          )}
-        </div>
-        <div>
-          <label style={label}>Letter</label>
-          <select style={input} value={type} onChange={e => { setType(e.target.value); setText(''); }}>{types.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}</select>
-        </div>
-        {date('joining_date', 'Date of joining (if not on the profile)')}
-        {date('resignation_date', 'Resignation date')}
-        {date('last_working_day', 'Last working day')}
-        {date('effective_date', 'Effective date')}
-        {usesSalary && <div>
-          <label style={label} htmlFor="ltr-sal">Monthly salary (total, for the salary table)</label>
-          <input id="ltr-sal" type="number" min="0" style={input} value={salary.monthly_salary} onChange={e => setSalary(x => ({ ...x, monthly_salary: e.target.value }))} placeholder="From the salary structure" />
-        </div>}
-        {usesSalary && <div>
-          <label style={label} htmlFor="ltr-var">Variable pay (a part of the total)</label>
-          <input id="ltr-var" type="number" min="0" style={input} value={salary.variable_pay} onChange={e => setSalary(x => ({ ...x, variable_pay: e.target.value }))} placeholder="0" />
-        </div>}
-        {askVars.map(v => <div key={v.key}><label style={label}>{v.label}</label><input style={input} value={custom[v.key] || ''} onChange={e => setCustom(c => ({ ...c, [v.key]: e.target.value }))} /></div>)}
-      </div>
-      <div style={{ marginTop: 14 }}><button className="btn-premium" onClick={preview} disabled={busy}>{text ? 'Prepare the text again' : 'Prepare the letter'}</button></div>
-      {mailFor && <LetterEmailModal id={mailFor} onClose={() => { setMailFor(null); onDone(); }} />}
+    <div className="lw">
+      <style>{LW_CSS}</style>
+      <ol className="lw-steps" aria-label="Steps">
+        <li className={step === 1 ? 'on' : 'done'}><button type="button" onClick={() => setStep(1)}><i>{step === 1 ? 1 : '✓'}</i><span>Details<small>Employee, letter, dates, salary</small></span></button></li>
+        <li className="lw-line" />
+        <li className={step === 2 ? 'on' : ''}><button type="button" disabled={!text} onClick={() => setStep(2)}><i>2</i><span>Edit and issue<small>Read the letter, change it, make the PDF</small></span></button></li>
+      </ol>
 
-      {text && (
-        <div style={{ marginTop: 16 }}>
-          {missing.length > 0 && <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 10, padding: '8px 12px', fontSize: '.82rem', marginBottom: 10 }}>These details are empty, so the letter has a gap where they belong: <b>{missing.join(', ')}</b>. Fill the dates above and prepare the letter again, or type them into the text below.</div>}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 320px))', gap: 12, marginBottom: 12 }}>
-            <div>
-              <label style={label} htmlFor="ltr-ref">Reference number (optional)</label>
-              <input id="ltr-ref" style={input} maxLength={30} value={refNo} onChange={e => setRefNo(e.target.value)} placeholder="Leave empty for a letter without one" />
+      {step === 1 && (
+        <>
+          <section className="lw-card">
+            <header><h2>Employee and letter</h2><p>Who the letter is for and which letter to make.</p></header>
+            <div className="lw-grid">
+              <div className="lw-f" style={{ position: 'relative' }}>
+                <label>Employee</label>
+                {emp ? (
+                  <div className="lw-pick"><span className="lw-av">{initials}</span><span><b>{emp.full_name}</b><small>{emp.emp_code}{emp.designation ? ' · ' + emp.designation : ''}</small></span><button type="button" aria-label="Change the employee" onClick={() => { setEmp(null); setText(''); setStep(1); }}>&#10005;</button></div>
+                ) : (
+                  <>
+                    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Type a name or employee code..." />
+                    {people.length > 0 && <div className="lw-drop">
+                      {people.map(p => <div key={p.id} onClick={() => { setEmp(p); setQ(''); setPeople([]); }}><b>{p.full_name}</b><small>{p.emp_code} {p.designation ? '· ' + p.designation : ''}</small></div>)}
+                    </div>}
+                  </>
+                )}
+              </div>
+              <div className="lw-f">
+                <label>Letter</label>
+                <select value={type} onChange={e => { setType(e.target.value); setText(''); setStep(1); }}>{types.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}</select>
+              </div>
             </div>
-            <div>
-              <label style={label} htmlFor="ltr-date">Letter date (optional)</label>
-              <input id="ltr-date" type="date" style={input} value={letterDate} onChange={e => setLetterDate(e.target.value)} />
+          </section>
+
+          <section className="lw-card">
+            <header><h2>Dates and details</h2><p>Fill only what this letter needs. A date that is already on the employee&apos;s profile is taken from there.</p></header>
+            <div className="lw-grid">
+              {date('joining_date', 'Date of joining')}
+              {date('resignation_date', 'Resignation date')}
+              {date('last_working_day', 'Last working day')}
+              {date('effective_date', 'Effective date')}
+              {askVars.map(v => <div className="lw-f" key={v.key}><label>{v.label}</label><input value={custom[v.key] || ''} onChange={e => setCustom(c => ({ ...c, [v.key]: e.target.value }))} /></div>)}
             </div>
+          </section>
+
+          <section className="lw-card">
+            <header className="lw-row">
+              <div><h2>Salary table</h2><p>For letters that carry a salary annexure (offer, appointment, appraisal).</p></div>
+              <label className="lw-sw"><input type="checkbox" checked={salaryOn} onChange={e => setSalaryOn(e.target.checked)} /><span>Add a salary table to this letter</span></label>
+            </header>
+            {salaryOn && (
+              <>
+                <p className="lw-note">Each employee has a different salary. Give each component an <b>amount</b>, or a <b>percent</b> of the monthly salary (type the monthly salary first). The yearly amount and the Grand Total are worked out. They start from the employee&apos;s salary structure when there is one. A component without an amount or percent is left out.</p>
+                <div className="lw-f" style={{ maxWidth: 300, marginBottom: 12 }}>
+                  <label htmlFor="ltr-grand">Monthly salary (total, needed only for percents)</label>
+                  <input id="ltr-grand" type="number" min="0" value={grand} placeholder="For example 33000" onChange={e => setGrand(e.target.value)} />
+                </div>
+                <div className="lw-comps">
+                  <div className="lw-comps-h"><span>Component</span><span>Amount</span><span>Percent</span><span /></div>
+                  {comps.map((c, i) => (
+                    <div key={i} className="lw-comp">
+                      <input value={c.name} maxLength={40} placeholder="For example Basic" aria-label="Component name" onChange={e => setComps(x => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} />
+                      <input type="number" min="0" value={c.amount} placeholder="Amount" aria-label="Monthly amount" onChange={e => setComps(x => x.map((y, j) => (j === i ? { ...y, amount: e.target.value, percent: e.target.value ? '' : y.percent } : y)))} />
+                      <input type="number" min="0" max="100" step="0.5" value={c.percent} placeholder="%" aria-label="Percent of the monthly salary" disabled={!(Number(grand) > 0) || Number(c.amount) > 0} title={Number(grand) > 0 ? '' : 'Type the monthly salary first'} onChange={e => setComps(x => x.map((y, j) => (j === i ? { ...y, percent: e.target.value } : y)))} />
+                      <button type="button" className="lw-x" aria-label="Remove the component" disabled={comps.length <= 1} onClick={() => setComps(x => x.filter((_, j) => j !== i))}>&#10005;</button>
+                    </div>
+                  ))}
+                  <div className="lw-comps-f">
+                    <button type="button" className="btn-o" disabled={comps.length >= 15} onClick={() => setComps(x => [...x, { name: '', amount: '', percent: '' }])}>+ Add a component</button>
+                    <span>Monthly total <b>{inr(total)}</b></span><span>Yearly <b>{inr(total * 12)}</b></span>
+                  </div>
+                  {off && <div className="lw-warn">The components add up to {inr(total)}, not the monthly salary {inr(Number(grand))}.</div>}
+                </div>
+              </>
+            )}
+          </section>
+
+          <div className="lw-bar">
+            <span>{emp ? <>Letter: <b>{typeLabel}</b> for <b>{emp.full_name}</b></> : 'Pick an employee to continue.'}</span>
+            <span>
+              {text && <button type="button" className="btn-o" onClick={() => setStep(2)}>Back to the letter</button>}
+              <button className="btn-premium" onClick={preview} disabled={busy}>{busy ? 'Preparing...' : text ? 'Prepare the letter again' : 'Prepare the letter'} &rarr;</button>
+            </span>
           </div>
-          <label style={label}>The letter (you can change anything, like in Word)</label>
-          <LetterEditor value={text} onChange={setText} salary={false} height={560} />
-          <div style={{ fontSize: 12, color: '#64748b', margin: '8px 0 12px' }}><b>Preview the PDF</b> shows the letter exactly as it will print, with the letterhead and page breaks. The company logo, name, address and the signature are added by themselves.</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="btn-o" onClick={() => previewLetterPdf(text, { ref_no: refNo.trim(), letter_date: letterDate })} disabled={busy}>Preview the PDF</button>
-            <button className="btn-premium" onClick={make} disabled={busy}>{busy ? 'Working...' : 'Make the PDF'}</button>
-          </div>
-        </div>
+        </>
       )}
+
+      {step === 2 && text && (
+        <>
+          <div className="lw-sum">
+            <span className="lw-av">{initials}</span>
+            <div><b>{emp ? emp.full_name : ''}</b><small>{emp ? emp.emp_code : ''}</small></div>
+            <div className="lw-chip">{typeLabel}</div>
+            <button type="button" className="btn-o" style={{ marginLeft: 'auto' }} onClick={() => setStep(1)}>&larr; Change the details</button>
+          </div>
+          {missing.length > 0 && <div className="lw-warn" style={{ marginBottom: 12 }}>These details are empty, so the letter has a gap where they belong: <b>{missing.join(', ')}</b>. Go back and fill them, or type them into the letter below.</div>}
+          <section className="lw-card">
+            <header><h2>Letter details</h2><p>Optional. These are printed on the letter.</p></header>
+            <div className="lw-grid">
+              <div className="lw-f"><label htmlFor="ltr-ref">Reference number</label><input id="ltr-ref" maxLength={30} value={refNo} onChange={e => setRefNo(e.target.value)} placeholder="Leave empty for a letter without one" /></div>
+              <div className="lw-f"><label htmlFor="ltr-date">Letter date</label><input id="ltr-date" type="date" value={letterDate} onChange={e => setLetterDate(e.target.value)} /></div>
+            </div>
+          </section>
+          <section className="lw-card lw-ed">
+            <header><h2>The letter</h2><p>Change anything, like in Word. The letterhead, the company name and address and the signature are added by themselves.</p></header>
+            <LetterEditor value={text} onChange={setText} salary={false} salaryMarkup={salaryOn ? () => compensationMarkup(cleanComponents(resolved), currency) : null} height={560} />
+          </section>
+          <div className="lw-bar">
+            <span><button type="button" className="btn-o" onClick={() => setStep(1)}>&larr; Back</button></span>
+            <span>
+              <button className="btn-o" onClick={() => previewLetterPdf(text, { ref_no: refNo.trim(), letter_date: letterDate })} disabled={busy}>Preview the PDF</button>
+              <button className="btn-premium" onClick={make} disabled={busy}>{busy ? 'Working...' : 'Make the PDF'}</button>
+            </span>
+          </div>
+        </>
+      )}
+      {mailFor && <LetterEmailModal id={mailFor} onClose={() => { setMailFor(null); onDone(); }} />}
     </div>
   );
 }
+
+const LW_CSS = `
+.lw { max-width:1100px; }
+.lw-steps { list-style:none; display:flex; align-items:center; gap:12px; margin:0 0 16px; padding:0; }
+.lw-steps li button { display:flex; align-items:center; gap:10px; background:none; border:none; cursor:pointer; font-family:inherit; text-align:left; padding:4px 2px; color:#64748b; }
+.lw-steps li button:disabled { cursor:default; opacity:.65; }
+.lw-steps i { width:30px; height:30px; border-radius:50%; border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-style:normal; font-weight:700; font-size:.85rem; background:#fff; color:#64748b; flex:none; }
+.lw-steps span { display:flex; flex-direction:column; font-weight:700; font-size:.9rem; color:#334155; } .lw-steps small { font-weight:400; font-size:.72rem; color:#94a3b8; }
+.lw-steps li.on i { background:var(--brand,#6f4e37); border-color:var(--brand,#6f4e37); color:#fff; } .lw-steps li.done i { background:#16a34a; border-color:#16a34a; color:#fff; }
+.lw-line { flex:1; height:2px; background:#e2e8f0; max-width:160px; }
+.lw-card { background:#fff; border:1px solid #e7ded5; border-radius:12px; padding:18px 20px; margin-bottom:14px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.lw-card > header { margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #f1ebe5; } .lw-card h2 { font-size:1rem; margin:0; color:#1e293b; } .lw-card header p { margin:3px 0 0; font-size:.8rem; color:#64748b; }
+.lw-row { display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
+.lw-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:14px 16px; }
+.lw-f label { display:block; font-size:.74rem; font-weight:700; color:#475569; margin-bottom:5px; letter-spacing:.2px; }
+.lw-f input, .lw-f select, .lw-comp input { width:100%; box-sizing:border-box; padding:9px 12px; border:1.5px solid #dbe2ea; border-radius:9px; font-size:.88rem; outline:none; background:#fff; font-family:inherit; color:#1e293b; }
+.lw-f input:focus, .lw-f select:focus, .lw-comp input:focus { border-color:var(--brand,#6f4e37); box-shadow:0 0 0 3px rgba(111,78,55,.12); }
+.lw-pick { display:flex; align-items:center; gap:10px; border:1.5px solid #dbe2ea; border-radius:9px; padding:6px 10px; } .lw-pick > span:nth-child(2) { display:flex; flex-direction:column; line-height:1.25; flex:1; } .lw-pick small, .lw-sum small, .lw-drop small { color:#94a3b8; font-size:.74rem; display:block; }
+.lw-pick button { border:none; background:none; cursor:pointer; color:#94a3b8; font-size:.9rem; }
+.lw-av { width:34px; height:34px; border-radius:50%; background:#efe6dd; color:var(--brand,#6f4e37); font-weight:700; font-size:.8rem; display:flex; align-items:center; justify-content:center; flex:none; }
+.lw-drop { position:absolute; z-index:6; left:0; right:0; top:100%; margin-top:4px; background:#fff; border:1px solid #dbe2ea; border-radius:10px; box-shadow:0 10px 28px rgba(15,23,42,.15); overflow:hidden; } .lw-drop > div { padding:8px 12px; cursor:pointer; border-top:1px solid #f1f5f9; } .lw-drop > div:first-child { border-top:none; } .lw-drop > div:hover { background:#faf6f2; }
+.lw-sw { display:flex; align-items:center; gap:8px; font-size:.86rem; font-weight:600; color:#334155; cursor:pointer; }
+.lw-note { font-size:.8rem; color:#64748b; margin:0 0 12px; line-height:1.5; }
+.lw-comps { border:1px solid #eee5dc; border-radius:10px; padding:10px 12px; background:#fdfaf7; max-width:720px; }
+.lw-comps-h, .lw-comp { display:grid; grid-template-columns:minmax(0,1fr) 140px 100px 34px; gap:8px; align-items:center; } .lw-comps-h { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#94a3b8; margin-bottom:6px; } .lw-comp { margin-bottom:8px; }
+.lw-x { border:none; background:none; color:#94a3b8; cursor:pointer; font-size:.9rem; } .lw-x:hover:not(:disabled) { color:#b91c1c; } .lw-x:disabled { opacity:.3; cursor:default; }
+.lw-comps-f { display:flex; gap:16px; align-items:center; flex-wrap:wrap; font-size:.86rem; color:#475569; padding-top:6px; border-top:1px dashed #e6dbcf; }
+.lw-warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; border-radius:9px; padding:8px 12px; font-size:.82rem; margin-top:10px; }
+.lw-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:#fff; border:1px solid #e7ded5; border-radius:12px; padding:12px 18px; font-size:.86rem; color:#475569; } .lw-bar > span:last-child { display:flex; gap:10px; flex-wrap:wrap; }
+.lw-sum { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e7ded5; border-radius:12px; padding:10px 16px; margin-bottom:14px; } .lw-sum b { display:block; }
+.lw-chip { background:#eef2ff; color:#3730a3; font-size:.76rem; font-weight:700; padding:4px 10px; border-radius:20px; }
+.lw-ed { padding-bottom:16px; }
+@media (max-width:700px) { .lw-comps-h { display:none; } .lw-comp { grid-template-columns:1fr 1fr; } }
+`;
 
 // The mail window: who it goes to, the subject and the text (all can be changed), and the PDF that goes with it.
 function LetterEmailModal({ id, onClose }) {
@@ -581,127 +687,6 @@ const LH_CSS = `
 @media (max-width:820px) { .lh-wrap { grid-template-columns:1fr; } }
 `;
 
-// Letters > Salary Breakup: the components of Annexure I and the percent of the fixed salary each takes. The table of an offer, appointment or
-// appraisal letter is worked out from these: fixed salary = monthly salary - variable pay; each component = its percent of the fixed salary.
-function Breakup() {
-  const [rows, setRows] = useState(null);
-  const [saved, setSaved] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [total, setTotal] = useState('33000');
-  const [variable, setVariable] = useState('3000');
-  const [cols, setCols] = useState([]); // headings of the extra columns
-  const norm = (r, c = cols) => r.map(x => ({ name: String(x.name).trim(), percent: x.mode === 'amount' ? 0 : (x.percent !== undefined && x.value === undefined ? Number(x.percent) || 0 : Number(x.value) || 0), amount: x.mode === 'amount' ? Math.round(Number(x.value) || 0) : (x.amount || 0), variable: false, extra: c.map((_, i) => String((x.extra || [])[i] || '').trim()) }));
-  const load = () => fetch(`${API}/letters/breakup`, { headers: auth() }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Could not load'); return d; })
-    .then(d => { const c = d.columns || []; setCols(c); setRows(d.rows.map(r => ({ name: r.name, mode: r.amount > 0 ? 'amount' : 'percent', value: String(r.amount > 0 ? r.amount : r.percent), variable: false, extra: c.map((_, i) => (r.extra || [])[i] || '') }))); setSaved(JSON.stringify({ c, r: norm(d.rows, c) })); })
-    .catch(e => Swal.fire({ icon: 'error', title: 'Error', text: e.message }));
-  useEffect(() => { load(); }, []);
-  if (!rows) return <div style={{ padding: 20, color: '#94a3b8' }}>Loading...</div>;
-
-  const list = norm(rows);
-  const sum = Math.round(list.reduce((a, b) => a + b.percent, 0) * 100) / 100;
-  const noPercent = list.length > 0 && !list.some(x => !(x.amount > 0));
-  const dirty = JSON.stringify({ c: cols.map(x => x.trim()), r: list }) !== saved;
-  const names = list.map(x => x.name.toLowerCase());
-  const problem = list.length === 0 ? 'Add at least one component' : list.some(x => !x.name) ? 'Every component needs a name' : list.some(x => !(x.percent > 0) && !(x.amount > 0)) ? 'Every component needs a percent or an amount' : noPercent ? 'At least one component must take a percent (it gets what is left after the fixed amounts)' : new Set(names).size !== names.length ? 'A component name is there twice' : Math.abs(sum - 100) > 0.01 ? `The percents add up to ${sum}. They must add up to 100 (the amounts are not counted).` : '';
-  const comp = compensation(Number(total) || 0, Number(variable) || 0, problem ? [] : list);
-  const set = (i, k, v) => setRows(r => r.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
-  const setExtra = (i, c, v) => setRows(r => r.map((x, j) => (j === i ? { ...x, extra: cols.map((_, k) => (k === c ? v : (x.extra || [])[k] || '')) } : x)));
-  const addCol = () => { setCols(c => [...c, '']); setRows(r => r.map(x => ({ ...x, extra: [...(x.extra || []), ''] }))); };
-  const delCol = (c) => { setCols(x => x.filter((_, k) => k !== c)); setRows(r => r.map(x => ({ ...x, extra: (x.extra || []).filter((_, k) => k !== c) }))); };
-  const colProblem = cols.some(x => !x.trim()) ? 'Every extra column needs a heading' : '';
-  const grid = { gridTemplateColumns: `minmax(0,1.2fr) 120px 150px ${cols.map(() => 'minmax(0,1fr)').join(' ')} auto` };
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch(`${API}/letters/breakup`, { method: 'PUT', headers: { ...auth(), 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: list, columns: cols.map(x => x.trim()) }) });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.detail || 'Could not save');
-      Swal.fire({ icon: 'success', title: d.message, timer: 1400, showConfirmButton: false });
-      await load();
-    } catch (e) { Swal.fire({ icon: 'error', title: 'Not saved', text: e.message }); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <div className="bk-wrap">
-      <style>{BK_CSS}</style>
-      <section className="bk-card">
-        <h3>Components</h3>
-        <p className="bk-help">Each component takes a percent of the <b>fixed salary</b> (the monthly salary minus the variable pay typed for the letter), or a fixed amount in Rs. a month. The fixed amounts are taken first and the percents share what is left. The percents must add up to 100. The yearly amount is the monthly amount x 12.</p>
-        <div className="bk-rows">
-          <div className="bk-row bk-head" style={grid}><span>Component</span><span>Percent (%)</span><span>Or amount (Rs. a month)</span>{cols.map((c, k) => (
-            <span key={k} className="bk-pct"><input className="bk-in" value={c} maxLength={30} placeholder="Column heading" aria-label="Column heading" onChange={e => setCols(x => x.map((v, j) => (j === k ? e.target.value : v)))} /><button type="button" className="um-b bk-del" title="Remove this column" onClick={() => delCol(k)}>x</button></span>
-          ))}<span /></div>
-          {rows.map((r, i) => (
-            <div key={i} className="bk-row" style={grid}>
-              <input className="bk-in" value={r.name} maxLength={40} onChange={e => set(i, 'name', e.target.value)} aria-label="Component name" placeholder="Name, for example Basic" />
-              <input className="bk-in" type="number" min="0" step="0.5" value={r.mode === 'amount' ? '' : r.value} placeholder="%" onChange={e => setRows(x => x.map((y, j) => (j === i ? { ...y, mode: 'percent', value: e.target.value } : y)))} aria-label="Percent" />
-              <input className="bk-in" type="number" min="0" step="1" value={r.mode === 'amount' ? r.value : ''} placeholder="Rs." onChange={e => setRows(x => x.map((y, j) => (j === i ? { ...y, mode: e.target.value === '' ? 'percent' : 'amount', value: e.target.value } : y)))} aria-label="Amount" />
-
-              {cols.map((c, k) => <input key={k} className="bk-in" value={(r.extra || [])[k] || ''} maxLength={60} onChange={e => setExtra(i, k, e.target.value)} aria-label={c || 'Extra column'} placeholder={c || 'Details'} />)}
-              <button type="button" className="um-b bk-del" disabled={rows.length <= 1} onClick={() => setRows(x => x.filter((_, j) => j !== i))}>Remove</button>
-            </div>
-          ))}
-        </div>
-        <div className="bk-foot">
-          <button type="button" className="um-b" disabled={rows.length >= 10} onClick={() => setRows(x => [...x, { name: '', mode: 'percent', value: '', variable: false, extra: cols.map(() => '') }])}>+ Add a component</button>
-          <button type="button" className="um-b" disabled={cols.length >= 3} onClick={addCol}>+ Add a column</button>
-          <span className={`bk-sum${problem || colProblem ? ' bad' : ' ok'}`}>Total {sum}%{problem || colProblem ? ` - ${problem || colProblem}` : ''}</span>
-        </div>
-        <div className="bk-actions">
-          <button className="btn-premium" onClick={save} disabled={busy || !dirty || !!problem || !!colProblem}>{busy ? 'Saving...' : 'Save'}</button>
-          <button className="btn-o" onClick={() => load()} disabled={busy || !dirty}>Discard</button>
-          {dirty && <span className="lt-dirty">Unsaved changes</span>}
-        </div>
-      </section>
-
-      <section className="bk-card">
-        <h3>Try it</h3>
-        <p className="bk-help">Type a salary to see the table a letter would get. The variable pay is a part of the monthly salary and is shown as its own line.</p>
-        <div className="bk-try">
-          <div><label className="bk-lab" htmlFor="bk-total">Monthly salary (total)</label><input id="bk-total" className="bk-in" type="number" min="0" value={total} onChange={e => setTotal(e.target.value)} /></div>
-          <div><label className="bk-lab" htmlFor="bk-var">Variable pay</label><input id="bk-var" className="bk-in" type="number" min="0" value={variable} onChange={e => setVariable(e.target.value)} /></div>
-        </div>
-        {comp.total > 0 && !problem ? (
-          <table className="lt-table bk-table"><tbody>
-            <tr><th>Salary Component</th><th>Monthly (&#8377;)</th><th>Yearly (&#8377;)</th>{cols.map((c, k) => <th key={k}>{c}</th>)}</tr>
-            {comp.rows.map(r => <tr key={r.name}><td>{r.name}</td><td>{inr(r.monthly)}</td><td>{inr(r.yearly)}</td>{cols.map((_, k) => <td key={k}>{(r.extra || [])[k] || '-'}</td>)}</tr>)}
-            {comp.variable > 0 && !comp.listed && <tr><td>Variable Pay</td><td>{inr(comp.variable)}</td><td>{inr(comp.variable * 12)}</td>{cols.map((_, k) => <td key={k}>-</td>)}</tr>}
-            <tr><th>Grand Total</th><th>{inr(comp.total)}</th><th>{inr(comp.total * 12)}</th>{cols.map((_, k) => <th key={k}>-</th>)}</tr>
-          </tbody></table>
-        ) : <div className="bk-help">{problem || 'Type a monthly salary.'}</div>}
-      </section>
-    </div>
-  );
-}
-
-const BK_CSS = `
-.bk-wrap { display:grid; gap:14px; width:100%; }
-.bk-head { font-size:.75rem; font-weight:600; color:#64748b; }
-.bk-card { background:#fff; border:1px solid #eadfd5; border-radius:12px; padding:14px 18px 18px; }
-.bk-card h3 { margin:0 0 4px; font-size:.98rem; } .bk-help { font-size:.78rem; color:#64748b; line-height:1.5; margin:0 0 10px; }
-.bk-rows { display:grid; gap:8px; }
-.bk-row { display:grid; grid-template-columns:minmax(0,1fr) 120px auto; gap:10px; align-items:center; }
-.bk-in { width:100%; box-sizing:border-box; border:1px solid #e2e8f0; border-radius:9px; padding:8px 11px; font-size:.88rem; font-family:inherit; background:#fff; color:#1e293b; }
-.bk-in:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(111,78,55,.12); }
-.bk-mode { width:64px; padding:8px 4px; }
-.bk-pct { display:flex; align-items:center; gap:6px; } .bk-pct b { color:#64748b; }
-.bk-foot { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px; }
-.bk-sum { font-size:.8rem; font-weight:700; border-radius:20px; padding:3px 12px; } .bk-sum.ok { background:#dcfce7; color:#166534; } .bk-sum.bad { background:#fee2e2; color:#b91c1c; }
-.bk-actions { display:flex; gap:8px; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid #f1e8df; }
-.bk-actions .btn-premium:disabled { opacity:.45; cursor:default; }
-.bk-try { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-.bk-lab { display:block; font-size:.74rem; font-weight:700; color:#475569; margin-bottom:4px; }
-.bk-table { margin:6px 0 0; min-width:100%; }
-.bk-table th, .bk-table td { border:1px solid #334155; }
-.um-b { height:28px; padding:0 11px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; white-space:nowrap; }
-.um-b:hover:not(:disabled) { border-color:var(--brand-line); color:var(--brand-dark); background:var(--brand-soft); } .um-b:disabled { opacity:.45; cursor:default; }
-.um-b.bk-del { color:#b91c1c; }
-.lt-dirty { font-size:.72rem; font-weight:700; color:#b45309; background:#fef3c7; border-radius:20px; padding:3px 10px; }
-.lt-table { border-collapse:collapse; margin:8px auto 14px; min-width:70%; } .lt-table th, .lt-table td { padding:5px 12px; text-align:center; font-size:.84rem; }
-@media (max-width:600px) { .bk-row { grid-template-columns:1fr 96px; } .bk-row .bk-del { grid-column:1 / -1; } .bk-try { grid-template-columns:1fr; } }
-`;
 
 // The words of the letters. Every word can be added, changed and removed. A word is filled from a piece of data (the employee's profile,
 // the company settings, the salary...), from a fixed text, or typed in each time a letter is made.

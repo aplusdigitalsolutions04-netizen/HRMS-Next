@@ -4,9 +4,11 @@ import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, checkPermission } from '@/lib/utils';
 import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
-import { snapshotOf, monthlyTotal } from '@/lib/salary-history';
+import { structureComponents } from '@/lib/letters';
+import { getConfig } from '@/lib/app-config';
+import { componentsTotal } from '@/lib/compensation';
 
-// What the "Make a letter" form can start with for an employee: the monthly salary of the salary structure (empty when there is none).
+// What the "Make a letter" form can start with for an employee: the salary components of the salary structure (empty when there is none).
 // GET ?employee_id=
 async function GET_handler(req: NextRequest) {
   try {
@@ -17,8 +19,8 @@ async function GET_handler(req: NextRequest) {
     const e = (await query<RowDataPacket[]>('SELECT emp_code FROM employees WHERE id = ? AND is_deleted = 0', [id]))[0];
     if (!e) return jsonError('Employee not found', 404);
     const ss = (await query<RowDataPacket[]>('SELECT * FROM salary_structures WHERE emp_code = ?', [e.emp_code]))[0];
-    const monthly = ss ? Math.round(monthlyTotal(snapshotOf(ss))) : 0;
-    return jsonSuccess({ monthly_salary: monthly > 0 ? monthly : null });
+    const components = structureComponents(ss);
+    return jsonSuccess({ currency_label: (await getConfig()).currency_label, components, monthly_salary: components.length ? componentsTotal(components) : null });
   } catch (e: any) { return jsonError(e, 500); }
 }
 

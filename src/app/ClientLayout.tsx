@@ -197,7 +197,6 @@ function MainLayout() {
                   <Route path="/letters/texts/edit/:type" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><LetterTexts mode="edit" /></PrivateRoute>} />
                   <Route path="/letters/words" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="words" /></PrivateRoute>} />
                   <Route path="/letters/letterhead" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="letterhead" /></PrivateRoute>} />
-                  <Route path="/letters/breakup" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Letters section="breakup" /></PrivateRoute>} />
                   <Route path="/exits" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Exits /></PrivateRoute>} />
                   <Route path="/payroll/statutory" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><StatutoryDeductions /></PrivateRoute>} />
                   <Route path="/payroll/guide" element={<PrivateRoute allowedRoles={ADMIN_HR_STAFF}><Guide /></PrivateRoute>} />
@@ -291,7 +290,9 @@ export default function ClientApp() {
   // the formats and file limits (Rules & Limits) are loaded before any page is drawn
   const [ready, setReady] = useState(false);
   useEffect(() => { loadAppConfig().finally(() => setReady(true)); }, []);
-  if (!mounted || !ready) return null;
+  if (!mounted || !ready) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#faf6f2', color: '#6f4e37', fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 600 }}>Loading...</div>
+  );
   return (
     <MotionProvider>
     <LanguageProvider>
