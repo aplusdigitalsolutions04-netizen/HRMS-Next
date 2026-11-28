@@ -154,7 +154,8 @@ export default function EmployeeLeave() {
 
   const handleApply = async (mail = {}) => {
     setFormErr('');
-    if (!form.start_date || !form.end_date) { setFormErr('Please select start and end dates'); return; }
+    if (!form.start_date) { setFormErr('Please select the date'); return; }
+    if (!form.end_date) form.end_date = form.start_date;
     if (!form.reason.trim()) { setFormErr('Please enter a reason'); return; }
     const dur = calcDuration(form.start_date, form.end_date);
     if (dur <= 0) { setFormErr('End date must be after start date'); return; }

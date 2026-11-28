@@ -10,6 +10,7 @@ const EmployeeAttendance = lazy(() => import('./EmployeeAttendance'));
 const EmployeeLeave = lazy(() => import('./EmployeeLeave'));
 const WFH = lazy(() => import('./WFH'));
 const NotificationsPage = lazy(() => import('../communication/NotificationsPage'));
+import { employeeNotificationMenu } from '@/lib/notification-link';
 const MyPayslips = lazy(() => import('../payroll/MyPayslips'));
 const DashboardHome = lazy(() => import('./employee-dashboard/DashboardHome'));
 const DocumentsPanel = lazy(() => import('./employee-dashboard/DocumentsPanel'));
@@ -311,7 +312,7 @@ export default function EmployeeDashboard() {
                     ) : (
                       notifications.map(n => (
                         <div key={n.id} style={{ padding: '10px 16px', cursor: 'pointer', transition: 'background 0.15s', borderBottom: '1px solid #f8fafc', background: n.is_read ? 'transparent' : '#fafaff' }}
-                          onClick={() => { if (!n.is_read) markRead(n.id); }}
+                          onClick={() => { if (!n.is_read) markRead(n.id); const m = employeeNotificationMenu(n); if (m) { setNotifOpen(false); setActiveMenu(m); } }}
                         >
                           <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 600, color: '#0f172a', marginBottom: 2 }}>{n.title}</div>
                           <div style={{ fontSize: 11, color: '#94a3b8' }}>{n.created_at ? new Date(n.created_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</div>
@@ -412,7 +413,7 @@ export default function EmployeeDashboard() {
 
             {activeMenu === 'wfh' && <WFH />}
 
-            {activeMenu === 'notifications' && <NotificationsPage />}
+            {activeMenu === 'notifications' && <NotificationsPage goTo={setActiveMenu} />}
 
             {activeMenu === 'payslips' && <MyPayslips />}
 

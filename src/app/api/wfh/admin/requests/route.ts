@@ -20,8 +20,9 @@ async function GET_handler(req: NextRequest) {
     const countRows = await query<RowDataPacket[]>(`
       SELECT COUNT(*) as cnt 
       FROM wfh_requests lr
+      JOIN employees e ON lr.employee_id = e.id
       LEFT JOIN approval_workflow_steps s ON lr.workflow_id = s.workflow_id AND lr.current_step = s.step_order
-      WHERE s.approver_type = 'HR' OR lr.workflow_id IS NULL OR lr.status != 'Pending'
+      WHERE s.approver_type = 'HR' OR lr.workflow_id IS NULL OR lr.status != 'Pending' OR COALESCE(e.manager_id, '') = ''
     `);
     const total = countRows[0].cnt;
 
@@ -30,7 +31,7 @@ async function GET_handler(req: NextRequest) {
       FROM wfh_requests lr 
       JOIN employees e ON lr.employee_id = e.id
       LEFT JOIN approval_workflow_steps s ON lr.workflow_id = s.workflow_id AND lr.current_step = s.step_order
-      WHERE s.approver_type = 'HR' OR lr.workflow_id IS NULL OR lr.status != 'Pending'
+      WHERE s.approver_type = 'HR' OR lr.workflow_id IS NULL OR lr.status != 'Pending' OR COALESCE(e.manager_id, '') = ''
       ORDER BY lr.applied_on DESC 
       LIMIT ? OFFSET ?
     `, [perPage, offset]);

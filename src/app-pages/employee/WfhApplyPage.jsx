@@ -10,12 +10,14 @@ const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', mon
 const niceDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; } };
 const daysBetween = (a, b) => { if (!a || !b) return 0; const d = Math.floor((new Date(b) - new Date(a)) / 86400000) + 1; return d > 0 ? d : 0; };
 
+// "on 12 Dec 2026" for one day, "from 12 Dec 2026 to 14 Dec 2026" for more
+const rangeText = (a, b) => (!b || a === b ? `on ${niceDate(a)}` : `from ${niceDate(a)} to ${niceDate(b)}`);
 const buildLetter = (f, profile) => {
   const n = daysBetween(f.start_date, f.end_date);
   return [
     'Dear Sir/Madam,',
     '',
-    `I would like to request Work From Home from ${niceDate(f.start_date)} to ${niceDate(f.end_date)} (total ${n} day${n > 1 ? 's' : ''}).`,
+    `I would like to request Work From Home ${rangeText(f.start_date, f.end_date)} (total ${n} day${n > 1 ? 's' : ''}).`,
     `Reason: ${f.reason.trim()}`,
     '',
     'I will stay available on phone, email and chat during working hours and complete my work as usual.',
@@ -42,7 +44,8 @@ export default function WfhApplyPage({ form, setForm, editing, onBack, onSubmit,
 
   const goNext = (e) => {
     e.preventDefault(); setLocalErr('');
-    if (!form.start_date || !form.end_date) return setLocalErr('Please select the start and end dates');
+    if (!form.start_date) return setLocalErr('Please select the date');
+    if (!form.end_date) form.end_date = form.start_date; // one day: the end date is the start date
     if (n <= 0) return setLocalErr('End date must not be before the start date');
     if (!form.reason.trim()) return setLocalErr('Please enter a reason');
     setBody(buildLetter(form, profile)); setEditMail(false); setStep(2);
@@ -82,8 +85,8 @@ export default function WfhApplyPage({ form, setForm, editing, onBack, onSubmit,
         <form onSubmit={goNext} className="el-card" style={{ padding: 24, width: '100%', boxSizing: 'border-box' }}>
           <h3 style={{ margin: '0 0 14px', fontSize: 15, color: '#0f172a' }}>WFH details</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14 }}>
-            <div><label style={lab}>Start Date</label><input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} style={inp} /></div>
-            <div><label style={lab}>End Date</label><input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={inp} /></div>
+            <div><label style={lab}>Start Date</label><input type="date" value={form.start_date} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, start_date: v, end_date: !f.end_date || f.end_date < v ? v : f.end_date })); }} style={inp} /></div>
+            <div><label style={lab}>End Date <span style={{ fontWeight: 400, color: '#64748b' }}>(same as the start date for one day)</span></label><input type="date" value={form.end_date} min={form.start_date || undefined} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={inp} /></div>
           </div>
           {n > 0 && <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 600 }}>Duration: {n} day{n > 1 ? 's' : ''}</div>}
           <div style={{ marginBottom: 14 }}>
@@ -118,7 +121,7 @@ export default function WfhApplyPage({ form, setForm, editing, onBack, onSubmit,
                 <div><span style={{ display: 'inline-block', width: 64, color: '#94a3b8' }}>Subject</span><b style={{ color: '#0f172a' }}>{subject}</b></div>
               </div>
               <div style={{ padding: '16px 18px', fontSize: 14, color: '#1e293b', lineHeight: 1.7, whiteSpace: 'pre-wrap', background: '#fff' }}>{body}</div>
-              <div style={{ padding: '10px 16px', borderTop: '1px solid #e2e8f0', fontSize: 12.5, color: '#64748b' }}>Work From Home &middot; {niceDate(form.start_date)} to {niceDate(form.end_date)} &middot; {n} day{n > 1 ? 's' : ''}</div>
+              <div style={{ padding: '10px 16px', borderTop: '1px solid #e2e8f0', fontSize: 12.5, color: '#64748b' }}>Work From Home &middot; {(!form.end_date || form.end_date === form.start_date) ? niceDate(form.start_date) : <>{niceDate(form.start_date)} to {niceDate(form.end_date)}</>} &middot; {n} day{n > 1 ? 's' : ''}</div>
             </div>
           )}
           {formErr && <div style={{ margin: '12px 0 0', padding: '9px 12px', borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13 }}>{formErr}</div>}

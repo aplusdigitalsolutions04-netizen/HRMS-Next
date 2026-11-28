@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { textToHtml, localYmd } from '@/lib/rich-text';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -38,13 +39,13 @@ export default function HomeWidgets({ goTo }) {
       {notices.length > 0 && (
         <Card title="Notice Board" wide>
           {notices.map(n => (
-            <div key={n.id} className="hw-notice" onClick={() => setOpen(open === n.id ? null : n.id)}>
+            <div key={n.id} className="hw-notice">
               <div className="hw-notice-h">
                 {n.is_pinned ? <span className="hw-pin" title="Pinned">Pinned</span> : null}
                 <b>{n.title}</b>
-                <span className="hw-muted">{dm(String(n.created_at).slice(0, 10))}</span>
+                <span className="hw-muted">{dm(localYmd(n.created_at))}</span>
               </div>
-              {n.body && <div className={`hw-notice-b${open === n.id ? ' open' : ''}`}>{n.body}</div>}
+              {n.body && <div className="hw-notice-b open" dangerouslySetInnerHTML={{ __html: textToHtml(n.body) }} />}
             </div>
           ))}
         </Card>
@@ -178,7 +179,7 @@ const css = `
 .hw-ring:before { content:''; position:absolute; inset:0; border-radius:50%; background:conic-gradient(var(--brand) calc(var(--p) * 1%), var(--brand-soft-2) 0); -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px)); mask:radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px)); }
 .hw-ring b { position:relative; font-family:'Outfit',sans-serif; font-size:1.05rem; }
 .hw-missing { font-size:.82rem; display:flex; flex-direction:column; gap:3px; }
-.hw-notice { padding:10px 2px; border-bottom:1px solid var(--glass-line, #f1f5f9); cursor:pointer; }
+.hw-notice { padding:10px 2px; border-bottom:1px solid var(--glass-line, #f1f5f9); }
 .hw-notice:last-child { border-bottom:none; }
 .hw-notice-h { display:flex; align-items:center; gap:10px; } .hw-notice-h b { flex:1; font-size:.9rem; }
 .hw-pin { font-size:.64rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 7px; border-radius:6px; background:var(--brand); color:#fff; }

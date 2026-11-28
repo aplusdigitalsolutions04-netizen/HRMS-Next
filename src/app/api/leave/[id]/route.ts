@@ -22,7 +22,7 @@ async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id:
     if (await requestHasActions('leave', id)) return jsonError('This request was already reviewed, so it cannot be changed now', 409);
 
     const b = await req.json();
-    const type = String(b.leave_type || '').trim(), start = String(b.start_date || '').slice(0, 10), end = String(b.end_date || '').slice(0, 10), reason = String(b.reason || '').trim();
+    const type = String(b.leave_type || '').trim(), start = String(b.start_date || '').slice(0, 10), end = String(b.end_date || '').slice(0, 10) || String(b.start_date || '').slice(0, 10), reason = String(b.reason || '').trim();
     if (!type || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return jsonError('Leave type, start date and end date required', 422);
     if (type !== lr.leave_type && !(await activeLeaveTypes()).includes(type)) return jsonError('Please pick a leave type from the list', 422);
     if (new Date(end) < new Date(start)) return jsonError('End date must not be before the start date', 422);

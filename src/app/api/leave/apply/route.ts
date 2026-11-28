@@ -24,9 +24,10 @@ async function POST_handler(req: NextRequest) {
       body = Object.fromEntries(fd.entries());
     }
     
-    if (!body.leave_type || !body.start_date || !body.end_date) {
-      return jsonError('Leave type, start date, and end date required', 422);
+    if (!body.leave_type || !body.start_date) {
+      return jsonError('Leave type and the date are required', 422);
     }
+    if (!body.end_date) body.end_date = body.start_date; // one day
     
     if (!(await activeLeaveTypes()).includes(String(body.leave_type))) return jsonError('Please pick a leave type from the list', 422);
 
@@ -84,7 +85,7 @@ async function POST_handler(req: NextRequest) {
         });
         createNotification(
           `Leave Approval Needed: ${body.leave_type}`,
-          `${emp[0].full_name || emp[0].emp_code} applied for ${body.leave_type} (${body.start_date} to ${body.end_date}) and needs your approval.`,
+          `${emp[0].full_name || emp[0].emp_code} applied for ${body.leave_type} (${body.start_date === body.end_date ? body.start_date : body.start_date + ' to ' + body.end_date}) and needs your approval.`,
           'leave_apply',
           leaveId ? String(leaveId) : null,
           false,
@@ -105,7 +106,7 @@ async function POST_handler(req: NextRequest) {
 
       createNotification(
         `Leave Request: ${body.leave_type}`,
-        `${emp[0].full_name || emp[0].emp_code} applied for ${body.leave_type} (${body.start_date} to ${body.end_date})`,
+        `${emp[0].full_name || emp[0].emp_code} applied for ${body.leave_type} (${body.start_date === body.end_date ? body.start_date : body.start_date + ' to ' + body.end_date})`,
         'leave_apply',
         leaveId ? String(leaveId) : null,
         true,

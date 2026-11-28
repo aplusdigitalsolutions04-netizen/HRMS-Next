@@ -78,9 +78,11 @@ export async function getMaxStep(workflowId: string): Promise<number> {
 export async function canActOnStep(step: WorkflowStep | null, user: AuthUser, employeeId: string, hrPermissionKey: string = 'approve_leave'): Promise<boolean> {
   if (!step) return false;
   if (step.approver_type === 'MANAGER') {
-    if (user.type !== 'employee') return false;
     const emp = await query<RowDataPacket[]>('SELECT manager_id FROM employees WHERE id=?', [employeeId]);
-    return !!emp[0]?.manager_id && emp[0].manager_id === user.id;
+    // an employee with no reporting manager: the request waits for HR instead of for nobody
+    if (!emp[0]?.manager_id) return user.type === 'admin' && checkPermission(user, hrPermissionKey);
+    if (user.type !== 'employee') return false;
+    return emp[0].manager_id === user.id;
   }
   if (step.approver_type === 'HR') {
     return user.type === 'admin' && checkPermission(user, hrPermissionKey);

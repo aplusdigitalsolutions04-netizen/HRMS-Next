@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Pagination, { paginate } from '../shared/Pagination';
 import useStatusMaster, { pillStyle } from '../shared/useStatusMaster';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const API = '/api';
 const PAGE_SIZE = 10;
@@ -43,8 +43,17 @@ export default function DailyAttendance() {
   const [selectedEmpCode, setSelectedEmpCode] = useState(null);
 
   const d = new Date();
-  const [month, setMonth] = useState(d.getMonth() + 1);
-  const [year, setYear] = useState(d.getFullYear());
+  // opened from the dashboard (?date=today&status=present) the page shows that one day, with the filter already set
+  const loc = useLocation();
+  const q0 = new URLSearchParams(loc.search);
+  const p2 = (n) => String(n).padStart(2, '0');
+  const todayYmd = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  const YMD = /^\d{4}-\d{2}-\d{2}$/;
+  const [day, setDay] = useState(() => { const v = q0.get('date'); return v === 'today' ? todayYmd : (YMD.test(v || '') ? v : ''); });
+  const [stFilter, setStFilter] = useState(q0.get('status') || '');
+  const [month, setMonth] = useState(day ? Number(day.slice(5, 7)) : d.getMonth() + 1);
+  const [year, setYear] = useState(day ? Number(day.slice(0, 4)) : d.getFullYear());
+  useEffect(() => { if (YMD.test(day)) { setMonth(Number(day.slice(5, 7))); setYear(Number(day.slice(0, 4))); } }, [day]);
 
   useEffect(() => {
     fetchData();
@@ -215,13 +224,27 @@ export default function DailyAttendance() {
   const [mq, setMq] = useState('');
   const [mDept, setMDept] = useState('');
   const mDepts = useMemo(() => [...new Set(employees.map(e => e.department).filter(Boolean))].sort(), [employees]);
-  const shownEmployees = employees.filter(e => {
+  // the record of one day, and which group of statuses it belongs to
+  const dayRec = (e) => e.days.find(r => String(r.attendance_date).slice(0, 10) === day) || null;
+  const groupOf = (rec) => {
+    if (!rec) return 'nomark';
+    const b = sm.find('attendance', rec.status).behavior;
+    if (['present', 'half_day', 'extra_work'].includes(b)) return 'present';
+    if (b === 'wfh') return 'wfh';
+    if (b === 'absent') return 'absent';
+    if (['week_off', 'holiday'].includes(b)) return 'off';
+    return 'leave';
+  };
+  const matchesStatus = (rec) => !stFilter || (['present', 'wfh', 'absent', 'off', 'leave', 'nomark'].includes(stFilter) ? groupOf(rec) === stFilter : !!rec && rec.status === stFilter);
+  const baseEmployees = employees.filter(e => {
     const t = mq.trim().toLowerCase();
     if (t && !((e.name || '') + ' ' + e.emp_code).toLowerCase().includes(t)) return false;
     if (mDept && e.department !== mDept) return false;
     return true;
   });
-  useEffect(() => { setPage(1); }, [employees.length, mq, mDept]);
+  const shownEmployees = day ? baseEmployees.filter(e => matchesStatus(dayRec(e))) : baseEmployees;
+  const dayCounts = day ? baseEmployees.reduce((c, e) => { const g = groupOf(dayRec(e)); c[g] = (c[g] || 0) + 1; return c; }, {}) : {};
+  useEffect(() => { setPage(1); }, [employees.length, mq, mDept, day, stFilter]);
   const pageEmployees = paginate(shownEmployees, page, pageSize);
 
   return (
@@ -280,8 +303,28 @@ export default function DailyAttendance() {
               <option value="">All Departments</option>
               {mDepts.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
-            <button className="btn-reset" onClick={() => { setMq(''); setMDept(''); }}>Reset</button>
+            <input type="date" value={day} max={todayYmd} onChange={e => setDay(e.target.value)} aria-label="Day" title="Show one day" style={{ height: 36, padding: '0 10px', borderRadius: 9, border: '1px solid #e2e8f0', fontSize: 13, color: '#334155', background: '#fff' }} />
+            {day && (
+              <select value={stFilter} onChange={e => setStFilter(e.target.value)} aria-label="Status">
+                <option value="">All statuses</option>
+                <option value="present">Present (incl. half day, extra work)</option>
+                <option value="wfh">Work from home</option>
+                <option value="absent">Absent</option>
+                <option value="leave">On leave / other</option>
+                <option value="off">Week off / holiday</option>
+                <option value="nomark">Not marked</option>
+              </select>
+            )}
+            <button className="btn-reset" onClick={() => { setMq(''); setMDept(''); setDay(''); setStFilter(''); }}>Reset</button>
           </div>
+          {day && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '0 0 12px', fontSize: 12.5, color: '#475569', alignItems: 'center' }}>
+              <b>{fmtDate(day)}</b>
+              {[['present', 'Present'], ['wfh', 'WFH'], ['absent', 'Absent'], ['leave', 'Leave / other'], ['off', 'Off / holiday'], ['nomark', 'Not marked']].map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setStFilter(stFilter === k ? '' : k)} style={{ border: '1px solid ' + (stFilter === k ? 'var(--brand)' : '#e2e8f0'), background: stFilter === k ? 'var(--brand-soft)' : '#fff', borderRadius: 14, padding: '3px 11px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', color: '#334155' }}>{l}: <b>{dayCounts[k] || 0}</b></button>
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -359,11 +402,19 @@ export default function DailyAttendance() {
                   <th style={s.th}>Employee</th>
                   <th style={s.th}>Emp Code</th>
                   <th style={s.th}>Department</th>
-                  <th style={s.th}>{L('present', 'Present')}</th>
-                  <th style={s.th}>{L('half_day', 'Half Day')}</th>
-                  <th style={s.th}>{L('wfh', 'WFH')}</th>
-                  <th style={s.th}>{L('extra_work', 'Extra Work')}</th>
-                  <th style={s.th}>{L('absent', 'Absent')}</th>
+                  {day ? (<>
+                    <th style={s.th}>Status</th>
+                    <th style={s.th}>In</th>
+                    <th style={s.th}>Out</th>
+                    <th style={s.th}>Hours</th>
+                    <th style={s.th}>Remark</th>
+                  </>) : (<>
+                    <th style={s.th}>{L('present', 'Present')}</th>
+                    <th style={s.th}>{L('half_day', 'Half Day')}</th>
+                    <th style={s.th}>{L('wfh', 'WFH')}</th>
+                    <th style={s.th}>{L('extra_work', 'Extra Work')}</th>
+                    <th style={s.th}>{L('absent', 'Absent')}</th>
+                  </>)}
                 </tr>
               </thead>
               <tbody>
@@ -389,11 +440,23 @@ export default function DailyAttendance() {
                       </td>
                       <td style={s.td}>{emp.emp_code}</td>
                       <td style={s.td}>{emp.department || '-'}</td>
-                      <td style={s.td}><span style={s.countPill('#166534', '#dcfce7')}>{emp.present}</span></td>
-                      <td style={s.td}><span style={s.countPill('#92400e', '#fef3c7')}>{emp.half}</span></td>
-                      <td style={s.td}><span style={s.countPill('#155e75', '#cffafe')}>{emp.wfh}</span></td>
-                      <td style={s.td}><span style={s.countPill('#6b21a8', '#f3e8ff')}>{emp.ew}</span></td>
-                      <td style={s.td}><span style={s.countPill('#991b1b', '#fee2e2')}>{emp.absent}</span></td>
+                      {day ? (() => {
+                        const r = dayRec(emp);
+                        const t = (v) => (v ? String(v).slice(0, 5) : '-');
+                        return (<>
+                          <td style={s.td}>{r ? <span style={pillStyle(sm.find('attendance', r.status).color)} title={sm.find('attendance', r.status).label}>{r.status}</span> : <span style={{ color: '#94a3b8' }}>Not marked</span>}</td>
+                          <td style={s.td}>{r ? t(r.in_time) : '-'}</td>
+                          <td style={s.td}>{r ? t(r.out_time) : '-'}</td>
+                          <td style={s.td}>{r ? fmtHours(r.working_hours) : '-'}</td>
+                          <td style={{ ...s.td, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }} title={r ? r.remark : ''}>{(r && r.remark) || '-'}</td>
+                        </>);
+                      })() : (<>
+                        <td style={s.td}><span style={s.countPill('#166534', '#dcfce7')}>{emp.present}</span></td>
+                        <td style={s.td}><span style={s.countPill('#92400e', '#fef3c7')}>{emp.half}</span></td>
+                        <td style={s.td}><span style={s.countPill('#155e75', '#cffafe')}>{emp.wfh}</span></td>
+                        <td style={s.td}><span style={s.countPill('#6b21a8', '#f3e8ff')}>{emp.ew}</span></td>
+                        <td style={s.td}><span style={s.countPill('#991b1b', '#fee2e2')}>{emp.absent}</span></td>
+                      </>)}
                     </tr>
                   ))
                 )}

@@ -178,7 +178,9 @@ function defaultMail(kind: string, event: string, v: Record<string, string>, upd
     approved: `Dear ${esc(v.employee_name)}, your ${esc(what.toLowerCase())} request has been approved.`,
     rejected: `Dear ${esc(v.employee_name)}, your ${esc(what.toLowerCase())} request has been rejected.`,
   };
-  const rows = (ROWS[kind] || []).filter(([, k]) => v[k])
+  // one day: a single "Date" row instead of From and To
+  const oneDay = !!v.from_date && (!v.to_date || v.to_date === v.from_date);
+  const rows = (ROWS[kind] || []).filter(([, k]) => v[k] && !(oneDay && k === 'to_date')).map(([l, k]) => [oneDay && k === 'from_date' ? 'Date' : l, k] as [string, string])
     .map(([label, k]) => `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">${label}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#0f172a;${k === 'reason' ? '' : 'font-weight:600'}">${esc(v[k])}</td></tr>`).join('');
   const remarks = v.remarks ? `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;font-size:13px">${event === 'rejected' ? 'Rejection reason' : 'Note'}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;color:#0f172a">${esc(v.remarks)}</td></tr>` : '';
   const message = v.message && event === 'submitted'

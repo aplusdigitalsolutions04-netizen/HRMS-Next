@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
+import { textToHtml, localYmd } from '@/lib/rich-text';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -12,7 +13,7 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [f, setF] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localYmd(new Date()); // today on this computer's calendar (not the UTC date)
 
   const load = useCallback(() => {
     fetch(`${API}/announcements?all=1`, { headers: auth() }).then(r => r.json()).then(d => setRows(d.announcements || [])).catch(() => setRows([])).finally(() => setLoading(false));
@@ -77,7 +78,7 @@ export default function Announcements() {
           <div><label htmlFor="an-end">Show until (optional)</label><input id="an-end" type="date" value={f.expires_on} onChange={e => setF({ ...f, expires_on: e.target.value })} /></div>
         </div>
         <label htmlFor="an-body">Details (optional)</label>
-        <textarea id="an-body" rows={3} maxLength={5000} value={f.body} onChange={e => setF({ ...f, body: e.target.value })} />
+        <textarea id="an-body" rows={4} maxLength={5000} value={f.body} onChange={e => setF({ ...f, body: e.target.value })} placeholder={'Write the details. A web address becomes a link. For a link with your own words write [Open the form](https://example.com)'} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0, textTransform: 'none', fontSize: '.84rem', color: '#334155', fontWeight: 500 }}>
             <input type="checkbox" checked={f.is_pinned} onChange={e => setF({ ...f, is_pinned: e.target.checked })} /> Pin to the top
@@ -96,8 +97,8 @@ export default function Announcements() {
             <div key={n.id} className="an-item">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h4>{n.title}{n.is_pinned ? <span className="an-pill" style={{ background: 'var(--brand)', color: '#fff' }}>Pinned</span> : null}<span className="an-pill" style={{ background: bg, color }}>{label}</span></h4>
-                {n.body && <p>{n.body}</p>}
-                <div className="an-meta">Posted by {n.created_by || 'HR'} &middot; {String(n.created_at).slice(0, 10)}{n.starts_on ? ` · from ${n.starts_on}` : ''}{n.expires_on ? ` · until ${n.expires_on}` : ''}</div>
+                {n.body && <p dangerouslySetInnerHTML={{ __html: textToHtml(n.body) }} />}
+                <div className="an-meta">Posted by {n.created_by || 'HR'} &middot; {localYmd(n.created_at)}{n.starts_on ? ` · from ${n.starts_on}` : ''}{n.expires_on ? ` · until ${n.expires_on}` : ''}</div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="an-b" disabled={busy} onClick={() => edit(n)}>Edit</button>

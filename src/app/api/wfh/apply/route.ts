@@ -2,7 +2,7 @@
 import { withApiLog } from '@/lib/api-log';
 import { NextRequest } from 'next/server';
 import { getAuthUser, jsonError, jsonSuccess, uuidv4, createNotification } from '@/lib/utils';
-import { execute } from '@/lib/db';
+import { execute, query } from '@/lib/db';
 import { initApproval, ensureManagerHrWorkflow } from '@/lib/approvalEngine';
 import { getAccount } from '@/lib/mailbox';
 import { checkWfhRequest } from '@/lib/wfh';
@@ -35,20 +35,22 @@ async function POST_handler(req: NextRequest) {
     // Notify manager if any
     if (workflowId && startStep === 1) {
       // Find the manager
-      const { query } = await import('@/lib/db');
       const managerRow = await query('SELECT manager_id FROM employees WHERE id=?', [user.id]);
       const managerId = managerRow[0]?.manager_id;
       if (managerId) {
         createNotification(
           `New WFH Request: ${user.name}`,
-          `${user.name} has applied for WFH from ${start_date} to ${end_date}.`,
+          `${user.name} has applied for WFH ${start_date === end_date ? 'on ' + start_date : 'from ' + start_date + ' to ' + end_date}.`,
           'wfh_apply',
           String(requestId),
           false,
           String(managerId)
         );
       }
-    } else if (workflowId && startStep > 1) {
+    }
+    // no reporting manager (also when the workflow has no step after the manager step): HR is told
+    const noMgr = !(await query('SELECT manager_id FROM employees WHERE id=?', [user.id]))[0]?.manager_id;
+    if (!workflowId || noMgr || startStep > 1) {
        // Direct to HR if no manager
        createNotification(
         `New WFH Request (No Manager): ${user.name}`,

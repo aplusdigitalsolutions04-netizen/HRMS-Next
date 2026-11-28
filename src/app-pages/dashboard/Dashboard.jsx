@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useLiveRefresh from '@/lib/live';
 import { Stagger, Item } from '@/lib/ui-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import { textToHtml, localYmd } from '@/lib/rich-text';
 import { appLocale } from '@/lib/app-config-client';
 
 const API = '/api';
@@ -110,6 +112,23 @@ const weekday = (s) => {
 const inDays = (n) => (n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `in ${n} days`);
 
 function Dashboard() {
+  const navigate = useNavigate();
+  // the notices that are running today (Announcements), shown to staff as well as to employees
+  const [notices, setNotices] = useState([]);
+  useEffect(() => {
+    fetch('/api/announcements', { headers: { Authorization: 'Bearer ' + sessionStorage.getItem('token') } }).then(r => r.json()).then(j => setNotices(j.announcements || [])).catch(() => {});
+  }, []);
+  // a click on a recent activity opens what it was (the details), with a button to the page where it is handled
+  const showActivity = (a) => {
+    const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const rows = (a.info || []).filter(([, v]) => v !== '' && v != null).map(([k, v]) => `<tr><td style="padding:6px 10px;color:#64748b;font-size:13px;white-space:nowrap;vertical-align:top">${esc(k)}</td><td style="padding:6px 10px;font-size:13.5px;color:#0f172a;text-align:left">${esc(v)}</td></tr>`).join('');
+    const to = a.kind === 'leave' ? '/leave/manage' : a.kind === 'wfh' ? '/wfh/manage' : a.kind === 'employee' && a.ref ? `/employees/detail/${a.ref}` : '';
+    Swal.fire({
+      title: esc(a.name),
+      html: `<div style="font-size:13px;color:#475569;margin-bottom:8px">${esc(a.text)}</div><table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e8f0">${rows}</table>`,
+      showCancelButton: !!to, showConfirmButton: !!to, confirmButtonText: a.kind === 'employee' ? 'Open the profile' : 'Open the page', cancelButtonText: 'Close', showCloseButton: !to,
+    }).then(r => { if (r.isConfirmed && to) navigate(to); });
+  };
   const [stats, setStats] = useState({ depts: 0, emps: 0, pendingEmps: 0, candidates: 0, empGrowth: 0 });
   const [candidateList, setCandidateList] = useState([]);
   const [attendanceSummaries, setAttendanceSummaries] = useState([]);
@@ -518,10 +537,10 @@ function Dashboard() {
             <div className="kc-foot"><span className={`db-kpi-gr ${stats.empGrowth >= 0 ? 'up' : 'down'}`}>{stats.empGrowth >= 0 ? '+' : ''}{stats.empGrowth}%</span><span className="db-kpi-d">vs last 30 days</span><Link to="/employees/manage" className="db-kpi-lk">View &rarr;</Link></div>
           </Item>
 
-          <Item className="db-kpi-c" key="present">
+          <Item className="db-kpi-c" key="present" onClick={() => navigate('/attendance/daily?date=today&status=present')} style={{ cursor: 'pointer' }}>
             <div className="kc-top"><span className="kc-lbl">Present Today</span><span className="kc-ic" style={{ background: '#ecfdf5', color: '#16a34a' }}><Icon name="check" size={16} /></span></div>
             <div className="kc-val">{at ? <AnimatedValue value={present} /> : '–'}</div>
-            <div className="kc-foot"><span className="db-kpi-d">{at ? 'of ' + at.totalActive + ' employees' : 'Attendance not available'}</span><Link to="/attendance/daily" className="db-kpi-lk">View &rarr;</Link></div>
+            <div className="kc-foot"><span className="db-kpi-d">{at ? 'of ' + at.totalActive + ' employees' : 'Attendance not available'}</span><Link to="/attendance/daily?date=today&status=present" className="db-kpi-lk">View &rarr;</Link></div>
           </Item>
 
           <Item className="db-kpi-c" key="leave">
@@ -556,7 +575,7 @@ function Dashboard() {
             <Item data-w="today_attendance" className="db-card s6">
               <div className="db-card-hdr">
                 <span className="db-card-ttl"><i style={{ background: '#ecfdf5', color: '#10b981' }}><Icon name="clock" size={15} /></i>Today's Attendance</span>
-                <Link to="/attendance/daily" className="db-card-lnk">Details &rarr;</Link>
+                <Link to="/attendance/daily?date=today" className="db-card-lnk">Details &rarr;</Link>
               </div>
               <div className="db-card-bd">
                 {at.totalActive === 0 ? (
@@ -576,10 +595,10 @@ function Dashboard() {
                       </div>
                     </div>
                     <div className="db-today-tiles">
-                      <div className="db-tile" style={{ '--bg': '#f0fdf4', '--bd': '#bbf7d0', '--fg': '#15803d' }}><b><AnimatedValue value={at.present} /></b><span>Present</span></div>
-                      <div className="db-tile" style={{ '--bg': 'var(--brand-soft)', '--bd': '#bae6fd', '--fg': 'var(--brand-dark)' }}><b><AnimatedValue value={at.wfh} /></b><span>Work from home</span></div>
-                      <div className="db-tile" style={{ '--bg': '#fffbeb', '--bd': '#fde68a', '--fg': '#b45309' }}><b><AnimatedValue value={onLeaveToday.length} /></b><span>On leave</span></div>
-                      <div className="db-tile" style={{ '--bg': '#f8fafc', '--bd': '#e2e8f0', '--fg': '#475569' }}><b><AnimatedValue value={notIn} /></b><span>Not checked in</span></div>
+                      <div className="db-tile" role="button" tabIndex={0} onClick={() => navigate('/attendance/daily?date=today&status=present')} style={{ '--bg': '#f0fdf4', '--bd': '#bbf7d0', '--fg': '#15803d', cursor: 'pointer' }}><b><AnimatedValue value={at.present} /></b><span>Present</span></div>
+                      <div className="db-tile" role="button" tabIndex={0} onClick={() => navigate('/attendance/daily?date=today&status=wfh')} style={{ '--bg': 'var(--brand-soft)', '--bd': '#bae6fd', '--fg': 'var(--brand-dark)', cursor: 'pointer' }}><b><AnimatedValue value={at.wfh} /></b><span>Work from home</span></div>
+                      <div className="db-tile" role="button" tabIndex={0} onClick={() => navigate('/attendance/daily?date=today&status=leave')} style={{ '--bg': '#fffbeb', '--bd': '#fde68a', '--fg': '#b45309', cursor: 'pointer' }}><b><AnimatedValue value={onLeaveToday.length} /></b><span>On leave</span></div>
+                      <div className="db-tile" role="button" tabIndex={0} onClick={() => navigate('/attendance/daily?date=today&status=nomark')} style={{ '--bg': '#f8fafc', '--bd': '#e2e8f0', '--fg': '#475569', cursor: 'pointer' }}><b><AnimatedValue value={notIn} /></b><span>Not checked in</span></div>
                     </div>
                   </div>
                 )}
@@ -626,6 +645,26 @@ function Dashboard() {
 
         {/* ── Row: recent activities + birthdays ── */}
         <Stagger className="db-grid">
+          {notices.length > 0 && (
+            <Item data-w="announcements" className="db-card" style={{ gridColumn: '1 / -1' }}>
+              <div className="db-card-hdr">
+                <span className="db-card-ttl"><i style={{ background: '#fff7ed', color: '#ea580c' }}><Icon name="file" size={15} /></i>Announcements</span>
+                <Link to="/announcements" className="db-card-lnk">Manage &rarr;</Link>
+              </div>
+              <div className="db-card-bd">
+                {notices.map(n => (
+                  <div key={n.id} style={{ padding: '9px 2px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      {n.is_pinned ? <span className="db-act-pill" style={{ background: 'var(--brand)', color: '#fff' }}>Pinned</span> : null}
+                      <b style={{ flex: 1, fontSize: '.9rem' }}>{n.title}</b>
+                      <span style={{ fontSize: '.74rem', color: '#94a3b8' }}>{localYmd(n.created_at)}</span>
+                    </div>
+                    {n.body && <div style={{ fontSize: '.84rem', color: '#64748b', marginTop: 4, whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: textToHtml(n.body) }} />}
+                  </div>
+                ))}
+              </div>
+            </Item>
+          )}
           {ov.activities && (
             <Item data-w="recent_activities" className="db-card s6">
               <div className="db-card-hdr">
@@ -639,7 +678,7 @@ function Dashboard() {
                     {ov.activities.map((a, i) => {
                       const sc = ACT_COLORS[String(a.status || '').toLowerCase()] || ACT_COLORS.default;
                       return (
-                        <div className="db-li" key={i}>
+                        <div className="db-li" key={i} role="button" tabIndex={0} title="Click to see the details" onClick={() => showActivity(a)} onKeyDown={e => { if (e.key === 'Enter') showActivity(a); }} style={{ cursor: 'pointer' }}>
                           <div className="db-av" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>{initialsOf(a.name)}</div>
                           <div className="db-li-info">
                             <div className="db-li-name">{a.name}</div>

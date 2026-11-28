@@ -214,17 +214,27 @@ async function GET_handler(req: NextRequest) {
 
       // ---- Latest things that happened (leave, WFH, new people) ----------------------
       section(can('view_leave') || can('view_wfh') || can('view_employees'), async () => {
-        const feed: { kind: string; name: string; text: string; at: string; status: string }[] = [];
+        const feed: { kind: string; name: string; text: string; at: string; status: string; ref: string; info: [string, string][] }[] = [];
         const add = async (allowed: boolean, sql: string) => {
           if (!allowed) return;
-          try { for (const r of await query<RowDataPacket[]>(sql)) feed.push({ kind: r.kind, name: r.name, text: r.text, at: r.at ? new Date(r.at).toISOString() : '', status: r.status || '' }); } catch { /* one source failing must not hide the others */ }
+          try {
+            for (const r of await query<RowDataPacket[]>(sql)) {
+              const at = r.at ? new Date(r.at).toISOString() : '';
+              const info: [string, string][] = r.kind === 'leave'
+                ? [['Employee', `${r.name} (${r.emp_code})`], ['Leave type', r.leave_type], ['From', r.start_date], ['To', r.end_date], ['Days', r.duration], ['Reason', r.reason], ['Status', r.status], ['Applied on', at.slice(0, 16).replace('T', ' ')]]
+                : r.kind === 'wfh'
+                  ? [['Employee', `${r.name} (${r.emp_code})`], ['From', r.start_date], ['To', r.end_date], ['Reason', r.reason], ['Status', r.status], ['Applied on', at.slice(0, 16).replace('T', ' ')]]
+                  : [['Name', r.name], ['Employee code', r.emp_code], ['Designation', r.designation], ['Email', r.email_id], ['Status', r.status], ['Added on', at.slice(0, 16).replace('T', ' ')]];
+              feed.push({ kind: r.kind, name: r.name, text: r.text, at, status: r.status || '', ref: String(r.ref || ''), info: info.map(([k, v]) => [k, v == null ? '' : String(v)]) });
+            }
+          } catch { /* one source failing must not hide the others */ }
         };
         await add(can('view_leave'),
-          "SELECT 'leave' AS kind, e.full_name AS name, CONCAT('Applied for ', lr.leave_type) AS text, lr.applied_on AS at, lr.status FROM leave_requests lr JOIN employees e ON e.id = lr.employee_id ORDER BY lr.applied_on DESC LIMIT 6");
+          "SELECT 'leave' AS kind, lr.id AS ref, e.emp_code, lr.leave_type, DATE_FORMAT(lr.start_date, '%Y-%m-%d') AS start_date, DATE_FORMAT(lr.end_date, '%Y-%m-%d') AS end_date, lr.duration, lr.reason, e.full_name AS name, CONCAT('Applied for ', lr.leave_type) AS text, lr.applied_on AS at, lr.status FROM leave_requests lr JOIN employees e ON e.id = lr.employee_id ORDER BY lr.applied_on DESC LIMIT 6");
         await add(can('view_wfh') || can('approve_wfh'),
-          "SELECT 'wfh' AS kind, e.full_name AS name, 'Applied for Work From Home' AS text, w.applied_on AS at, w.status FROM wfh_requests w JOIN employees e ON e.id = w.employee_id ORDER BY w.applied_on DESC LIMIT 6");
+          "SELECT 'wfh' AS kind, w.id AS ref, e.emp_code, DATE_FORMAT(w.start_date, '%Y-%m-%d') AS start_date, DATE_FORMAT(w.end_date, '%Y-%m-%d') AS end_date, w.reason, e.full_name AS name, 'Applied for Work From Home' AS text, w.applied_on AS at, w.status FROM wfh_requests w JOIN employees e ON e.id = w.employee_id ORDER BY w.applied_on DESC LIMIT 6");
         await add(can('view_employees'),
-          "SELECT 'employee' AS kind, full_name AS name, 'Added to the system' AS text, created_on AS at, status FROM employees WHERE is_deleted = 0 ORDER BY created_on DESC LIMIT 6");
+          "SELECT 'employee' AS kind, id AS ref, emp_code, designation, email_id, full_name AS name, 'Added to the system' AS text, created_on AS at, status FROM employees WHERE is_deleted = 0 ORDER BY created_on DESC LIMIT 6");
         feed.sort((a, b) => b.at.localeCompare(a.at));
         return feed.slice(0, 6);
       }),

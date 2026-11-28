@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Pagination from '../shared/Pagination';
 import { appLocale } from '@/lib/app-config-client';
+import { useNavigate } from 'react-router-dom';
+import { staffNotificationPath, employeeNotificationMenu } from '@/lib/notification-link';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -33,7 +35,8 @@ const TYPE_ICONS = {
   letter: '📄',
 };
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ goTo }) {
+  const navigate = useNavigate();
   const role = sessionStorage.getItem('role');
   const notifBase = role === 'USER' ? '/my-notifications' : '/notifications';
   const [notifications, setNotifications] = useState([]);
@@ -62,6 +65,14 @@ export default function NotificationsPage() {
   const markRead = (id) => {
     fetch(`${API}${notifBase}/${id}/read`, { method: 'PUT', headers: auth() })
       .then(() => fetchNotifications());
+  };
+
+  // a click on a notification reads it and opens the page where it is handled
+  const openNote = (n) => {
+    if (!n.is_read) markRead(n.id);
+    if (role === 'USER') { const m = employeeNotificationMenu(n); if (m && goTo) goTo(m); return; }
+    const to = staffNotificationPath(n);
+    if (to) navigate(to);
   };
 
   const markAllRead = () => {
@@ -123,7 +134,7 @@ export default function NotificationsPage() {
                 <div className="notif-icon" style={{ backgroundColor: TYPE_COLORS[n.category] + '18', color: TYPE_COLORS[n.category] }}>
                   {TYPE_ICONS[n.category] || '🔔'}
                 </div>
-                <div className="notif-body">
+                <div className="notif-body" style={{ cursor: 'pointer' }} title="Open" onClick={() => openNote(n)}>
                   <div className="notif-title">{n.title}</div>
                   {n.message && <div className="notif-message">{n.message}</div>}
                   <div className="notif-meta">

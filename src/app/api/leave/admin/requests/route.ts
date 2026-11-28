@@ -18,11 +18,12 @@ async function GET_handler(req: NextRequest) {
     // Hide requests still pending at the reporting-manager step - HR should
     // only see them once the manager has approved (or if there's no
     // workflow/manager step involved at all).
-    let where = `WHERE NOT EXISTS (
+    // An employee with no reporting manager has nobody at that step, so HR sees the request.
+    let where = `WHERE (NOT EXISTS (
       SELECT 1 FROM approval_workflow_steps s
       WHERE s.workflow_id = lr.workflow_id AND s.step_order = lr.current_step
         AND s.approver_type = 'MANAGER' AND lr.status = 'Pending'
-    )`;
+    ) OR COALESCE(e.manager_id, '') = '')`;
     const params = [];
     if (status) { where += ' AND lr.status=?'; params.push(status); }
     const type = searchParams.get('type') || '';

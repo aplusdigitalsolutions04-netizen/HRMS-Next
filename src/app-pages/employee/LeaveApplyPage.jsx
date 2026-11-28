@@ -9,13 +9,16 @@ const btnP = (off) => ({ padding: '11px 28px', borderRadius: 10, border: 'none',
 const today = () => new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 const niceDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; } };
 
+// "on 12 Dec 2026" for one day, "from 12 Dec 2026 to 14 Dec 2026" for more
+const rangeText = (a, b) => (!b || a === b ? `on ${niceDate(a)}` : `from ${niceDate(a)} to ${niceDate(b)}`);
+
 // The mail that goes to the reporting manager, written from the details the employee just filled in.
 const buildLetter = (f, dur, profile) => [
   'Dear Sir/Madam,',
   '',
   'I hope this message finds you well.',
   '',
-  `I am writing to request ${f.leave_type} from ${niceDate(f.start_date)} to ${niceDate(f.end_date)} (total ${dur} day${dur > 1 ? 's' : ''}).`,
+  `I am writing to request ${f.leave_type} ${rangeText(f.start_date, f.end_date)} (total ${dur} day${dur > 1 ? 's' : ''}).`,
   `Reason: ${f.reason.trim()}`,
   '',
   'I will hand over my pending work before I leave and will stay reachable on phone/email for anything urgent.',
@@ -42,7 +45,8 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
     e.preventDefault();
     setLocalErr('');
     if (!form.leave_type) return setLocalErr('Please pick a leave type');
-    if (!form.start_date || !form.end_date) return setLocalErr('Please select the start and end dates');
+    if (!form.start_date) return setLocalErr('Please select the date');
+    if (!form.end_date) form.end_date = form.start_date; // one day: the end date is the start date
     if (dur <= 0) return setLocalErr('End date must not be before the start date');
     if (!form.reason.trim()) return setLocalErr('Please enter a reason');
     if (!editing && balance && dur > (balance.remaining || 0)) return setLocalErr(`Insufficient ${form.leave_type} balance. Available: ${(balance.remaining || 0).toFixed(0)} days`);
@@ -95,8 +99,8 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
               </select>
               {balance && <div style={{ marginTop: 5, fontSize: 12, color: '#64748b' }}>Balance: <b>{Number(balance.remaining || 0).toFixed(1).replace('.0', '')}</b> day(s)</div>}
             </div>
-            <div><label style={lab}>Start Date</label><input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} style={inp} /></div>
-            <div><label style={lab}>End Date</label><input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={inp} /></div>
+            <div><label style={lab}>Start Date</label><input type="date" value={form.start_date} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, start_date: v, end_date: !f.end_date || f.end_date < v ? v : f.end_date })); }} style={inp} /></div>
+            <div><label style={lab}>End Date <span style={{ fontWeight: 400, color: '#64748b' }}>(same as the start date for one day)</span></label><input type="date" value={form.end_date} min={form.start_date || undefined} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} style={inp} /></div>
           </div>
           {dur > 0 && <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 13, fontWeight: 600 }}>Duration: {dur} day{dur > 1 ? 's' : ''}</div>}
           <div style={{ marginBottom: 14 }}>
@@ -154,7 +158,7 @@ export default function LeaveApplyPage({ form, setForm, editing, onBack, onSubmi
               </div>
               <div style={{ padding: '16px 18px', fontSize: 14, color: '#1e293b', lineHeight: 1.7, whiteSpace: 'pre-wrap', background: '#fff' }}>{body}</div>
               <div style={{ padding: '10px 16px', borderTop: '1px solid #e2e8f0', fontSize: 12.5, color: '#64748b' }}>
-                {form.leave_type} &middot; {niceDate(form.start_date)} to {niceDate(form.end_date)} &middot; {dur} day{dur > 1 ? 's' : ''}{form.file ? ` · Attachment: ${form.file.name}` : ''}
+                {form.leave_type} &middot; {(!form.end_date || form.end_date === form.start_date) ? niceDate(form.start_date) : <>{niceDate(form.start_date)} to {niceDate(form.end_date)}</>} &middot; {dur} day{dur > 1 ? 's' : ''}{form.file ? ` · Attachment: ${form.file.name}` : ''}
               </div>
             </div>
           )}

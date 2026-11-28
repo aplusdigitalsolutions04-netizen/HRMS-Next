@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu } from '@/lib/ui-motion';
 import { appLocale } from '@/lib/app-config-client';
+import { staffNotificationPath } from '@/lib/notification-link';
 
 const API = '/api';
 const auth = () => ({ Authorization: 'Bearer ' + sessionStorage.getItem('token') });
@@ -56,7 +57,7 @@ export default function NotificationDropdown() {
               notifications.map(n => (
                 <div key={n.id} className={`notif-dropdown-item ${!n.is_read ? 'notif-dd-unread' : ''}`}>
                   <div className="notif-dd-dot" />
-                  <div className="notif-dd-body" onClick={() => { if (!n.is_read) markRead(n.id); }}>
+                  <div className="notif-dd-body" style={{ cursor: 'pointer' }} title="Open" onClick={() => { if (!n.is_read) markRead(n.id); const to = staffNotificationPath(n); if (to) { setOpen(false); navigate(to); } }}>
                     <div className="notif-dd-title">{n.title}</div>
                     <div className="notif-dd-time">{new Date(n.created_at).toLocaleString(appLocale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
                   </div>
