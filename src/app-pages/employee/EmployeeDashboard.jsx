@@ -311,7 +311,7 @@ export default function EmployeeDashboard() {
                       <div style={{ padding: '20px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No notifications</div>
                     ) : (
                       notifications.map(n => (
-                        <div key={n.id} style={{ padding: '10px 16px', cursor: 'pointer', transition: 'background 0.15s', borderBottom: '1px solid #f8fafc', background: n.is_read ? 'transparent' : '#fafaff' }}
+                        <div key={n.id} className={`emp-notif-item${n.is_read ? '' : ' unread'}`} style={{ padding: '10px 16px', cursor: 'pointer', transition: 'background 0.15s', borderBottom: '1px solid #f8fafc', background: n.is_read ? 'transparent' : '#fafaff' }}
                           onClick={() => { if (!n.is_read) markRead(n.id); const m = employeeNotificationMenu(n); if (m) { setNotifOpen(false); setActiveMenu(m); } }}
                         >
                           <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 600, color: '#0f172a', marginBottom: 2 }}>{n.title}</div>

@@ -971,6 +971,11 @@ html[data-theme="dark"] .db-tag-violet { color: #c4b5fd; }
 html[data-theme="dark"] .lh-rm, html[data-theme="dark"] .ltx-del { color: #fca5a5; }
 html[data-theme="dark"] .ltx-rm { color: #fca5a5; }
 html[data-theme="dark"] .ltx-rm:hover { background: rgba(220,38,38,.2); }
+html[data-theme="dark"] .emp-notif-item { background: transparent !important; border-bottom-color: var(--d-line) !important; }
+html[data-theme="dark"] .emp-notif-item.unread { background: rgba(255,255,255,.06) !important; }
+html[data-theme="dark"] .emp-notif-item:hover { background: var(--d-surface-2) !important; }
+html[data-theme="dark"] .emp-notif-item > div:first-child { color: var(--d-ink) !important; }
+html[data-theme="dark"] .emp-notif-item > div:last-child { color: var(--d-ink-2) !important; }
 html[data-theme="dark"] .nav-link.active, html[data-theme="dark"] .nav-link.active .nav-icon { color: #fff; }
 html[data-theme="dark"] .nav-link:hover, html[data-theme="dark"] .nav-dropdown-btn:hover { background: rgba(255,255,255,.07); color: var(--d-ink); }
 html[data-theme="dark"] .app-main .db-card, html[data-theme="dark"] .app-main .db-kpi-c, html[data-theme="dark"] .app-main .settings-card, html[data-theme="dark"] .app-main .card, html[data-theme="dark"] .app-main .glass-card, html[data-theme="dark"] .app-main .premium-table-wrapper, html[data-theme="dark"] .app-main .db-q, html[data-theme="dark"] .app-main .db-hero { background: var(--glass); border-color: rgba(255,255,255,.06); outline-color: var(--glass-line); }

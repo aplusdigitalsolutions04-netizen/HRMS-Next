@@ -26,18 +26,22 @@ export default function AdminWFHManagement() {
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [perPage, setPerPage] = useState(10);
-  const perPageRef = useRef(15);
+  const perPageRef = useRef(10);
+  const [scope, setScope] = useState(''); // '' = waiting for HR, 'all' = every request
 
+  const scopeRef = useRef('');
+  scopeRef.current = scope;
   const fetchRequests = (p = 1) => {
     setLoading(true);
     const params = new URLSearchParams({ page: p, per_page: perPageRef.current });
+    if (scopeRef.current) params.set('scope', scopeRef.current);
     fetch(`${API}/wfh/admin/requests?${params}`, { headers: auth() })
       .then(r => r.json())
       .then(d => { setRequests(d.data || []); setTotal(d.total || 0); setPage(d.page || 1); setLoading(false); })
       .catch(() => { setRequests([]); setTotal(0); setLoading(false); });
   };
 
-  useEffect(() => { fetchRequests(1); }, []);
+  useEffect(() => { fetchRequests(1); }, [scope]);
 
   const handleApprove = async (id) => {
     setProcessing(true);
@@ -90,6 +94,10 @@ export default function AdminWFHManagement() {
           </div>
           <div><h4 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#0f172a' }}>WFH Management</h4><p style={{ margin: '2px 0 0', fontSize: 13, color: '#94a3b8' }}>Manage employee work from home requests and HR approvals.</p></div>
         </div>
+        <select value={scope} onChange={e => setScope(e.target.value)} aria-label="Which requests" style={{ height: 38, padding: '0 12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, color: '#334155', background: '#fff' }}>
+          <option value="">Waiting for HR</option>
+          <option value="all">All requests (also those with the manager)</option>
+        </select>
       </div>
 
       <div style={s.card}>
@@ -119,9 +127,9 @@ export default function AdminWFHManagement() {
                       <td style={{ padding: '12px 16px', fontSize: 13, whiteSpace: 'nowrap', color: '#475569' }}>{formatDT(r.start_date)} - {formatDT(r.end_date)}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.reason}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, whiteSpace: 'nowrap', color: '#475569' }}>{formatDT(r.applied_on)}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13 }}>{statusBadge(r.status)}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 13 }}>{statusBadge(r.status)}{r.with_manager ? <div style={{ fontSize: 11.5, color: '#b45309', marginTop: 4 }}>With the manager{r.manager_name ? ': ' + r.manager_name : ''}</div> : null}</td>
                       <td style={{ padding: '12px 16px' }}>
-                        {(r.status || '').toLowerCase() === 'pending' ? (
+                        {(r.status || '').toLowerCase() === 'pending' && !r.with_manager ? (
                           <button onClick={() => setReviewReq(r)} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Review</button>
                         ) : (
                           <button onClick={() => setReviewReq(r)} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>View</button>
@@ -155,10 +163,11 @@ export default function AdminWFHManagement() {
               <div><span style={{ color: '#64748b', fontSize: 12 }}>Start Date</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{formatDT(reviewReq.start_date)}</div></div>
               <div><span style={{ color: '#64748b', fontSize: 12 }}>End Date</span><div style={{ color: '#0f172a', fontSize: 13, fontWeight: 500 }}>{formatDT(reviewReq.end_date)}</div></div>
             </div>
+            {reviewReq.with_manager && <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 10, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', fontSize: 13 }}>This request is with the reporting manager{reviewReq.manager_name ? ' (' + reviewReq.manager_name + ')' : ''}. It comes to HR after the manager approves it.</div>}
             <h5 style={{ fontSize: 13, color: '#10b981', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reason</h5>
             <div style={{ marginBottom: 20, padding: 14, borderRadius: 10, background: '#f8fafc', fontSize: 13, color: '#0f172a', lineHeight: 1.5 }}>{reviewReq.reason || 'No reason provided.'}</div>
             
-            {(reviewReq.status || '').toLowerCase() === 'pending' && (
+            {(reviewReq.status || '').toLowerCase() === 'pending' && !reviewReq.with_manager && (
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {!showRejectInput ? (
                   <>
