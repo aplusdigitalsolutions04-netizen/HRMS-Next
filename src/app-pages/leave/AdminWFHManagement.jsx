@@ -29,16 +29,18 @@ export default function AdminWFHManagement() {
   const perPageRef = useRef(10);
   const [scope, setScope] = useState(''); // '' = waiting for HR, 'all' = every request
 
+  const [loadErr, setLoadErr] = useState('');
   const scopeRef = useRef('');
   scopeRef.current = scope;
   const fetchRequests = (p = 1) => {
     setLoading(true);
     const params = new URLSearchParams({ page: p, per_page: perPageRef.current });
     if (scopeRef.current) params.set('scope', scopeRef.current);
+    setLoadErr('');
     fetch(`${API}/wfh/admin/requests?${params}`, { headers: auth() })
-      .then(r => r.json())
+      .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.detail || d.message || `The list could not be loaded (error ${r.status})`); return d; })
       .then(d => { setRequests(d.data || []); setTotal(d.total || 0); setPage(d.page || 1); setLoading(false); })
-      .catch(() => { setRequests([]); setTotal(0); setLoading(false); });
+      .catch((e) => { setRequests([]); setTotal(0); setLoadErr(e.message || 'The list could not be loaded'); setLoading(false); });
   };
 
   useEffect(() => { fetchRequests(1); }, [scope]);
@@ -103,9 +105,16 @@ export default function AdminWFHManagement() {
       <div style={s.card}>
         {loading ? (
           <div style={{ padding: 50 }}>{[1,2,3,4].map(i => <div key={i} style={{ height: 24, background: '#f1f5f9', borderRadius: 8, margin: '12px 0' }} />)}</div>
+        ) : loadErr ? (
+          <div style={{ textAlign: 'center', padding: 60, color: '#b91c1c' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>The WFH requests could not be loaded</div>
+            <div style={{ fontSize: 13 }}>{loadErr}</div>
+            <button onClick={() => fetchRequests(1)} style={{ marginTop: 14, padding: '8px 18px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Try again</button>
+          </div>
         ) : requests.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80, color: '#94a3b8' }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>No WFH requests found</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>{scope === 'all' ? 'No WFH requests found' : 'No WFH request is waiting for HR'}</div>
+            {scope !== 'all' && <div style={{ fontSize: 13 }}>Choose "All requests" above to see the ones that are with a manager.</div>}
           </div>
         ) : (
           <>

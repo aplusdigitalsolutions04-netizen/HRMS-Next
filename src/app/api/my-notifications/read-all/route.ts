@@ -11,7 +11,7 @@ async function PUT_handler(req: NextRequest) {
     if (!user) return jsonError('Not authenticated', 401);
     const emp = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id=?', [user.email || user.id]);
     if (emp.length === 0) return jsonError('Employee not found', 404);
-    await execute('UPDATE notifications SET is_read=1 WHERE is_company_wide=1 OR user_id=?', [String(emp[0].id)]);
+    await execute('UPDATE notifications SET is_read=1 WHERE is_company_wide=0 AND user_id=?', [String(emp[0].id)]);
     return jsonSuccess({ message: 'All marked as read' });
   } catch (e: any) { return jsonError(e, 500); }
 }

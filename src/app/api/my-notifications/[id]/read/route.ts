@@ -13,7 +13,7 @@ async function PUT_handler(req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params;
     const emp = await query<RowDataPacket[]>('SELECT id FROM employees WHERE email_id=?', [user.email || user.id]);
     const me = emp.length ? String(emp[0].id) : (user.type === 'employee' ? String(user.id) : '');
-    await execute('UPDATE notifications SET is_read=1 WHERE id=? AND (is_company_wide=1 OR user_id=?)', [id, me]);
+    await execute('UPDATE notifications SET is_read=1 WHERE id=? AND is_company_wide=0 AND user_id=?', [id, me]);
     return jsonSuccess({ message: 'Marked as read' });
   } catch (e: any) {
     return jsonError(e, 500);

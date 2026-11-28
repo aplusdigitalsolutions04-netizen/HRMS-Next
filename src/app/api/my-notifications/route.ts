@@ -24,11 +24,11 @@ async function GET_handler(req: NextRequest) {
     const extra = ` AND (category IS NULL OR category NOT IN ('regularization_request','payroll_draft','document_request'))`
       + (muted.length ? ` AND (category IS NULL OR category NOT IN (${muted.map(() => '?').join(',')}))` : '');
     const cnt = await query<RowDataPacket[]>(
-      `SELECT COUNT(*) as cnt FROM notifications WHERE (is_company_wide=1 OR user_id=?)${extra}`,
+      `SELECT COUNT(*) as cnt FROM notifications WHERE is_company_wide=0 AND user_id=?${extra}`,
       [empId, ...muted]
     );
     const rows = await query<RowDataPacket[]>(
-      `SELECT * FROM notifications WHERE (is_company_wide=1 OR user_id=?)${extra} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM notifications WHERE is_company_wide=0 AND user_id=?${extra} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [empId, ...muted, perPage, offset]
     );
     return jsonSuccess({ notifications: rows, total: cnt[0].cnt, page, per_page: perPage });

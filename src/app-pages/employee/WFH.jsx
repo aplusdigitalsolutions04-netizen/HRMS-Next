@@ -49,6 +49,7 @@ export default function WFH() {
   const [submitting, setSubmitting] = useState(false);
   const [formErr, setFormErr] = useState('');
   const [teamRequests, setTeamRequests] = useState([]);
+  const [loadErr, setLoadErr] = useState('');
   const [teamActing, setTeamActing] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -70,9 +71,11 @@ export default function WFH() {
       .then(r => r.json())
       .then(d => {
         setRequests(Array.isArray(d) ? d : []);
+        // a list that could not be read is said so, not shown as "no requests"
+        setLoadErr(Array.isArray(d) ? '' : ((d && (d.detail || d.message)) || 'Your WFH requests could not be loaded'));
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoadErr('Your WFH requests could not be loaded. Check the connection and try again.'); setLoading(false); });
   };
 
   useEffect(() => {
@@ -155,6 +158,7 @@ export default function WFH() {
     <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 0', minWidth: 300 }}>
         {/* Team Approvals */}
+        {loadErr && <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 13 }}>{loadErr} <button type="button" onClick={() => fetchData()} style={{ marginLeft: 8, border: '1px solid #fecaca', background: '#fff', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: '#b91c1c' }}>Try again</button></div>}
         {teamRequests.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', marginBottom: 16, border: '1.5px solid #fde68a', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <div style={{ padding: '14px 15px', background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
